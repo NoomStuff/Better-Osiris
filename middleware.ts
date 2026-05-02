@@ -101,13 +101,7 @@ async function getSigningKey(secret: string): Promise<CryptoKey> {
 
    cachedSecret = secret;
    const encoder = new TextEncoder();
-   cachedKey = await crypto.subtle.importKey(
-      "raw",
-      encoder.encode(secret),
-      { name: "HMAC", hash: "SHA-256" },
-      false,
-      ["sign"]
-   );
+   cachedKey = await crypto.subtle.importKey("raw", encoder.encode(secret), { name: "HMAC", hash: "SHA-256" }, false, ["sign"]);
 
    return cachedKey;
 }

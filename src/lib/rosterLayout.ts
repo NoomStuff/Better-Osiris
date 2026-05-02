@@ -47,7 +47,8 @@ export function getPositionedLessons(lessons: Lesson[]): PositionedLesson[] {
          const end = lesson.endDate.getTime();
 
          for (let index = 0; index < columnsEnd.length; index += 1) {
-            if (columnsEnd[index] <= start) {
+            const columnEnd = columnsEnd[index];
+            if (columnEnd !== undefined && columnEnd <= start) {
                columnsEnd[index] = 0;
             }
          }

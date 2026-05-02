@@ -82,15 +82,17 @@ function getDerivedTitle(offset: number, entries: WeekEntries) {
          offset: Number(entryOffset),
          entry: entries[Number(entryOffset)],
       }))
-      .filter((entry) => entry.entry?.data)
+      .filter((entry): entry is { offset: number; entry: WeekEntry } => Boolean(entry.entry?.data))
       .sort((left, right) => Math.abs(left.offset - offset) - Math.abs(right.offset - offset))[0];
 
-   if (!closestEntry?.entry.data) {
+   const closestData = closestEntry?.entry.data ?? null;
+   const closestOffset = closestEntry?.offset;
+   if (!closestData || closestOffset === undefined) {
       return "Loading week...";
    }
 
-   const offsetDelta = offset - closestEntry.offset;
-   const { start, end } = closestEntry.entry.data.week;
+   const offsetDelta = offset - closestOffset;
+   const { start, end } = closestData.week;
    const derivedStart = shiftIsoDateByDays(start, offsetDelta * 7);
    const derivedEnd = shiftIsoDateByDays(end, offsetDelta * 7);
    return formatWeekTitle(derivedStart, derivedEnd, getIsoWeekNumber(derivedStart));
