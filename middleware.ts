@@ -21,7 +21,7 @@ export async function middleware(request: Request) {
       return;
    }
 
-   const cookieSecret = process.env.COOKIE_SECRET;
+   const cookieSecret = process.env["COOKIE_SECRET"];
    if (!cookieSecret) {
       return redirectToLogin(url);
    }

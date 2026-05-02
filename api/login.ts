@@ -42,7 +42,7 @@ export default async function handler(req: IncomingMessage, res: ServerResponse)
    }
 
    const authValue = createSignedAuthCookieValue(cookieSecret);
-   const cookieHeader = buildAuthCookieHeader(authValue, process.env.NODE_ENV === "production");
+   const cookieHeader = buildAuthCookieHeader(authValue, process.env["NODE_ENV"] === "production");
 
    res.statusCode = 200;
    res.setHeader("Set-Cookie", cookieHeader);
