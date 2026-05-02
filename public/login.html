@@ -150,7 +150,24 @@
          window.sessionStorage.removeItem("auth-redirected");
 
          const params = new URLSearchParams(window.location.search);
-         const nextPath = params.get("next") || "/";
+         const requestedNext = params.get("next") || "/";
+         const nextPath = sanitizeNextPath(requestedNext);
+
+         function sanitizeNextPath(pathname) {
+            if (!pathname || typeof pathname !== "string") {
+               return "/";
+            }
+
+            if (!pathname.startsWith("/")) {
+               return "/";
+            }
+
+            if (pathname.startsWith("//") || pathname.includes("://") || pathname.includes("\\")) {
+               return "/";
+            }
+
+            return pathname;
+         }
 
          form.addEventListener("submit", async (event) => {
             event.preventDefault();

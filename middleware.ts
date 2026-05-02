@@ -2,6 +2,10 @@ const AUTH_COOKIE_NAME = "auth";
 const LOGIN_PATH = "/login.html";
 const LOGIN_API_PATH = "/api/login";
 
+export const config = {
+   matcher: ["/((?!api/login|login|login.html).*)"],
+};
+
 let cachedKey: CryptoKey | null = null;
 let cachedSecret = "";
 
