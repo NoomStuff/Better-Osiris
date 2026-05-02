@@ -2,7 +2,7 @@ import express from "express";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { AUTH_COOKIE_NAME, buildAuthCookieHeader, createSignedAuthCookieValue, isValidAuthCookieValue, parseCookie } from "./server/auth";
-import { getEnvValue } from "./server/env";
+import { getEnvValue } from "./server/env.js";
 import { fetchOsirisRosterWeek } from "./server/osirisClient";
 import { normalizeRosterWeekResponse } from "./server/osirisRosterNormalizer";
 
