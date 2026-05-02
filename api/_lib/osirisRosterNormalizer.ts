@@ -1,5 +1,5 @@
-import type { Lesson, LessonStatus, RosterResponse } from "../src/types/roster";
-import type { OsirisRosterEntry, OsirisRosterResponse } from "./osirisClient";
+import type { Lesson, LessonStatus, RosterResponse } from "../../src/types/roster";
+import type { OsirisRosterEntry, OsirisRosterResponse } from "./osirisClient.js";
 
 function splitSubject(rawSubject: string) {
    const parts = rawSubject

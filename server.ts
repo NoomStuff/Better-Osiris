@@ -1,10 +1,10 @@
 import express from "express";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { AUTH_COOKIE_NAME, buildAuthCookieHeader, createSignedAuthCookieValue, isValidAuthCookieValue, parseCookie } from "./server/auth";
-import { getEnvValue } from "./server/env.js";
-import { fetchOsirisRosterWeek } from "./server/osirisClient";
-import { normalizeRosterWeekResponse } from "./server/osirisRosterNormalizer";
+import { AUTH_COOKIE_NAME, buildAuthCookieHeader, createSignedAuthCookieValue, isValidAuthCookieValue, parseCookie } from "./api/_lib/auth.js";
+import { getEnvValue } from "./api/_lib/env.js";
+import { fetchOsirisRosterWeek } from "./api/_lib/osirisClient.js";
+import { normalizeRosterWeekResponse } from "./api/_lib/osirisRosterNormalizer.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
