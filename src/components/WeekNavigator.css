@@ -1,0 +1,42 @@
+.weekbar {
+   display: grid;
+   grid-template-columns: 36px 1fr 36px;
+   align-items: center;
+   gap: 10px;
+   padding: 4px 0 10px;
+}
+
+.weekbar__label {
+   margin: 0;
+   text-transform: uppercase;
+   letter-spacing: 0.18em;
+   font-size: 0.72rem;
+   color: var(--text-muted);
+}
+
+.weekbar__content {
+   text-align: center;
+   min-width: 0;
+   border-radius: 12px;
+   cursor: pointer;
+   transition:
+      background-color 160ms ease,
+      transform 180ms cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.weekbar__content:hover {
+   background: rgba(255, 255, 255, 0.035);
+   transform: translateY(-1px);
+}
+
+.weekbar__content h2 {
+   margin: 0;
+   font-size: clamp(0.96rem, 1.55vw, 1.22rem);
+   letter-spacing: 0;
+}
+
+@media (max-width: 640px) {
+   .weekbar {
+      padding: 2px 0 8px;
+   }
+}

@@ -1,0 +1,40 @@
+{
+   "name": "new-project-2",
+   "private": true,
+   "version": "0.0.0",
+   "type": "module",
+   "scripts": {
+      "dev": "concurrently \"bun --watch server.ts\" \"bunx vite\"",
+      "server": "bun server.ts",
+      "build": "bunx tsc -p tsconfig.json && bunx tsc -p tsconfig.server.json && bunx vite build",
+      "lint": "eslint . --max-warnings 0",
+      "serve": "bunx vite preview",
+      "start": "bun server.ts",
+      "format": "prettier --write .",
+      "format:check": "prettier --check ."
+   },
+   "devDependencies": {
+      "@eslint/js": "^10.0.1",
+      "@types/express": "^5.0.6",
+      "@types/node": "^25.6.0",
+      "@types/react": "^19.2.14",
+      "@types/react-dom": "^19.2.3",
+      "concurrently": "^9.2.1",
+      "eslint-config-prettier": "^10.1.8",
+      "eslint-plugin-react": "^7.37.5",
+      "eslint-plugin-react-hooks": "^7.1.1",
+      "eslint-plugin-react-refresh": "^0.5.2",
+      "globals": "^17.6.0",
+      "typescript": "~6.0.2",
+      "typescript-eslint": "^8.59.1",
+      "vite": "^8.0.10"
+   },
+   "dependencies": {
+      "eslint": "^9.39.1",
+      "express": "^5.2.1",
+      "notyf": "^3.10.0",
+      "prettier": "^3.8.3",
+      "react": "^19.2.5",
+      "react-dom": "^19.2.5"
+   }
+}

@@ -1,0 +1,182 @@
+<!doctype html>
+<html lang="en">
+   <head>
+      <meta charset="UTF-8" />
+      <meta name="viewport" content="width=device-width, initial-scale=1" />
+      <title>Sign In</title>
+      <style>
+         @import url("https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600&display=swap");
+
+         :root {
+            color-scheme: dark;
+            --line: rgba(169, 184, 255, 0.14);
+            --line-strong: rgba(169, 184, 255, 0.28);
+            --text-dim: #97a5c6;
+            --text-muted: #7482a6;
+            --text-strong: #f3f7ff;
+            --accent: #7cc7ff;
+            --accent-strong: #4fb0ff;
+            --shadow: 0 24px 80px rgba(0, 0, 0, 0.35);
+         }
+
+         * {
+            box-sizing: border-box;
+         }
+
+         body {
+            margin: 0;
+            min-height: 100vh;
+            font-family: "Sora", "Segoe UI", sans-serif;
+            color: var(--text-strong);
+            background: radial-gradient(circle at top, rgba(67, 97, 238, 0.16), transparent 30%),
+               linear-gradient(180deg, #090b12 0%, #0d1018 52%, #111522 100%);
+            display: grid;
+            place-items: center;
+            padding: 24px;
+         }
+
+         .card {
+            width: min(420px, 92vw);
+            background: linear-gradient(180deg, rgba(255, 255, 255, 0.02), rgba(255, 255, 255, 0.012)),
+               rgba(10, 13, 20, 0.82);
+            border-radius: 24px;
+            border: 1px solid var(--line);
+            box-shadow: var(--shadow);
+            padding: 28px 28px 30px;
+            position: relative;
+            overflow: hidden;
+         }
+
+         .card::before {
+            content: "";
+            position: absolute;
+            inset: -140px auto auto -140px;
+            width: 240px;
+            height: 240px;
+            border-radius: 50%;
+            background: rgba(124, 199, 255, 0.08);
+         }
+
+         h1 {
+            font-size: 28px;
+            margin: 0 0 8px;
+            font-weight: 600;
+         }
+
+         p {
+            margin: 0 0 24px;
+            color: var(--text-dim);
+            line-height: 1.5;
+         }
+
+         label {
+            display: block;
+            font-size: 14px;
+            margin-bottom: 8px;
+            color: var(--text-muted);
+         }
+
+         input {
+            width: 100%;
+            padding: 12px 14px;
+            border-radius: 12px;
+            border: 1px solid var(--line);
+            font-size: 16px;
+            background: rgba(11, 15, 24, 0.75);
+            color: var(--text-strong);
+         }
+
+         input:focus {
+            outline: 2px solid rgba(124, 199, 255, 0.35);
+            outline-offset: 2px;
+         }
+
+         button {
+            width: 100%;
+            margin-top: 16px;
+            border: none;
+            border-radius: 999px;
+            padding: 12px 18px;
+            font-size: 16px;
+            font-weight: 600;
+            background: var(--accent);
+            color: #041320;
+            cursor: pointer;
+            transition: transform 0.2s ease, background 0.2s ease;
+         }
+
+         button:hover {
+            background: var(--accent-strong);
+            transform: translateY(-1px);
+         }
+
+         button:disabled {
+            opacity: 0.6;
+            cursor: wait;
+         }
+
+         .error {
+            min-height: 20px;
+            margin-top: 12px;
+            color: #ff6b81;
+            font-size: 14px;
+         }
+
+         .note {
+            margin-top: 18px;
+            font-size: 12px;
+            color: var(--text-muted);
+         }
+      </style>
+   </head>
+   <body>
+      <main class="card">
+         <h1>Sign in</h1>
+         <p>Enter the shared password to continue.</p>
+         <form id="login-form">
+            <label for="password">Password</label>
+            <input id="password" name="password" type="password" autocomplete="current-password" required />
+            <button id="submit" type="submit">Continue</button>
+            <div class="error" id="error" aria-live="polite"></div>
+         </form>
+         <div class="note">Access is limited to people with the password.</div>
+      </main>
+      <script>
+         const form = document.getElementById("login-form");
+         const passwordInput = document.getElementById("password");
+         const error = document.getElementById("error");
+         const submit = document.getElementById("submit");
+
+         window.sessionStorage.removeItem("auth-redirected");
+
+         const params = new URLSearchParams(window.location.search);
+         const nextPath = params.get("next") || "/";
+
+         form.addEventListener("submit", async (event) => {
+            event.preventDefault();
+            error.textContent = "";
+            submit.disabled = true;
+
+            try {
+               const response = await fetch("/api/login", {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({ password: passwordInput.value }),
+               });
+
+               if (!response.ok) {
+                  const payload = await response.json().catch(() => ({}));
+                  error.textContent = payload.error || "Password rejected.";
+                  submit.disabled = false;
+                  return;
+               }
+
+               window.location.href = nextPath;
+            } catch (err) {
+               error.textContent = "Login failed. Try again.";
+               submit.disabled = false;
+            }
+         });
+      </script>
+   </body>
+</html>

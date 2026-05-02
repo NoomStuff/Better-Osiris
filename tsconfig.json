@@ -1,0 +1,38 @@
+{
+   "compilerOptions": {
+      "target": "es2023",
+      "module": "esnext",
+      "lib": ["ES2023", "DOM"],
+      "types": ["vite/client"],
+      "skipLibCheck": true,
+
+      "jsx": "react-jsx",
+      "moduleResolution": "bundler",
+      "allowImportingTsExtensions": true,
+      "moduleDetection": "force",
+      "noEmit": true,
+      "strict": true,
+      "noImplicitAny": true,
+      "strictNullChecks": true,
+      "strictFunctionTypes": true,
+      "strictBindCallApply": true,
+      "strictPropertyInitialization": true,
+      "noImplicitThis": true,
+      "useUnknownInCatchVariables": true,
+
+      "noUncheckedIndexedAccess": true,
+      "noPropertyAccessFromIndexSignature": true,
+      "exactOptionalPropertyTypes": true,
+      "noImplicitOverride": true,
+      "noFallthroughCasesInSwitch": true,
+
+      "verbatimModuleSyntax": true,
+      "allowSyntheticDefaultImports": true,
+      "esModuleInterop": true,
+
+      "noUnusedLocals": true,
+      "noUnusedParameters": true,
+      "erasableSyntaxOnly": true
+   },
+   "include": ["src"]
+}
