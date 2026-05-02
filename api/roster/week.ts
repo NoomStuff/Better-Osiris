@@ -1,8 +1,8 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
-import { AUTH_COOKIE_NAME, isValidAuthCookieValue, parseCookie } from "../../server/auth";
-import { getEnvValue } from "../../server/env";
-import { fetchOsirisRosterWeek } from "../../server/osirisClient";
-import { normalizeRosterWeekResponse } from "../../server/osirisRosterNormalizer";
+import { AUTH_COOKIE_NAME, isValidAuthCookieValue, parseCookie } from "../../server/auth.js";
+import { getEnvValue } from "../../server/env.js";
+import { fetchOsirisRosterWeek } from "../../server/osirisClient.js";
+import { normalizeRosterWeekResponse } from "../../server/osirisRosterNormalizer.js";
 
 const MIN_WEEK_OFFSET = 0;
 const MAX_WEEK_OFFSET = 50;

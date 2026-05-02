@@ -1,6 +1,6 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
-import { buildAuthCookieHeader, createSignedAuthCookieValue } from "../server/auth";
-import { getEnvValue } from "../server/env";
+import { buildAuthCookieHeader, createSignedAuthCookieValue } from "../server/auth.js";
+import { getEnvValue } from "../server/env.js";
 
 interface LoginPayload {
    password?: string;
