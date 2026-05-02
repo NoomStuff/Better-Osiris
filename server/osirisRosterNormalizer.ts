@@ -1,4 +1,4 @@
-import type { RosterResponse } from "../src/types/roster";
+import type { Lesson, LessonStatus, RosterResponse } from "../src/types/roster";
 import type { OsirisRosterEntry, OsirisRosterResponse } from "./osirisClient";
 
 function splitSubject(rawSubject: string) {
@@ -43,8 +43,9 @@ function toIsoDateTime(dayIso: string, timeValue: string) {
    return day.toISOString();
 }
 
-function normalizeLesson(item: OsirisRosterEntry) {
+function normalizeLesson(item: OsirisRosterEntry): Lesson {
    const parsed = splitSubject(item.onderwerp);
+   const status: LessonStatus = item.actueel === "J" ? "changed" : "scheduled";
 
    return {
       id: item.id_rooster,
@@ -56,7 +57,7 @@ function normalizeLesson(item: OsirisRosterEntry) {
       room: item.locatie || "Unknown",
       location: item.locatie_adres || item.locatie || "Unknown",
       description: item.subonderwerp || parsed.description,
-      status: item.actueel === "J" ? "changed" : "scheduled",
+      status,
    };
 }
 
