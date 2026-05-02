@@ -1,4 +1,4 @@
-import { getEnvValue } from "./env";
+import { getEnvValue } from "./env.js";
 
 const OSIRIS_ROSTER_URL = "https://mborijnland.osiris-student.nl/student/osiris/student/rooster/per_week";
 
