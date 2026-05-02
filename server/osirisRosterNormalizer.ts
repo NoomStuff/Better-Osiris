@@ -7,32 +7,38 @@ function splitSubject(rawSubject: string) {
       .map((part) => part.trim())
       .filter(Boolean);
 
+   const title = parts[0] ?? rawSubject;
+   const subject = parts[1] ?? title;
+   const description = parts[2] ?? subject;
+
    if (parts.length >= 3) {
       return {
-         title: parts[0],
-         subject: parts[1],
-         description: parts[2],
+         title,
+         subject,
+         description,
       };
    }
 
    if (parts.length === 2) {
       return {
-         title: parts[0],
-         subject: parts[1],
-         description: parts[1],
+         title,
+         subject,
+         description: subject,
       };
    }
 
    return {
-      title: rawSubject,
-      subject: rawSubject,
-      description: rawSubject,
+      title,
+      subject,
+      description,
    };
 }
 
 function toIsoDateTime(dayIso: string, timeValue: string) {
    const day = new Date(dayIso);
-   const [hours, minutes] = timeValue.split(":").map(Number);
+   const [hoursText = "0", minutesText = "0"] = timeValue.split(":");
+   const hours = Number(hoursText);
+   const minutes = Number(minutesText);
    day.setUTCHours(hours, minutes, 0, 0);
    return day.toISOString();
 }
@@ -51,7 +57,7 @@ function normalizeLesson(item: OsirisRosterEntry) {
       location: item.locatie_adres || item.locatie || "Unknown",
       description: item.subonderwerp || parsed.description,
       status: item.actueel === "J" ? "changed" : "scheduled",
-   } as const;
+   };
 }
 
 export function normalizeRosterWeekResponse(rawData: OsirisRosterResponse, requestedOffset: number): RosterResponse {

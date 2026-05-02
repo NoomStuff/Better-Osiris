@@ -54,22 +54,20 @@ async function readBody(req: IncomingMessage): Promise<string> {
    return new Promise((resolve, reject) => {
       let data = "";
 
-      req.on("data", (chunk: unknown) => {
+      req.on("data", (chunk: Buffer | string) => {
          if (typeof chunk === "string") {
             data += chunk;
             return;
          }
 
-         if (Buffer.isBuffer(chunk)) {
-            data += chunk.toString("utf8");
-         }
+         data += chunk.toString("utf8");
       });
 
       req.on("end", () => {
          resolve(data);
       });
 
-      req.on("error", (error) => {
+      req.on("error", (error: Error) => {
          reject(error);
       });
    });

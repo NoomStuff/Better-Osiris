@@ -14,7 +14,7 @@ export function getEnvValue(key: string): string | undefined {
       }
 
       const envContents = fs.readFileSync(envPath, "utf8");
-      const line = envContents.split(/\r?\n/).find((entry) => entry.trim().startsWith(`${key}=`));
+      const line = envContents.split(/\r?\n/).find((entry: string) => entry.trim().startsWith(`${key}=`));
 
       if (!line) {
          continue;
