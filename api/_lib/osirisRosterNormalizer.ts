@@ -34,12 +34,31 @@ function splitSubject(rawSubject: string) {
    };
 }
 
+function parseLocalDate(dateIso: string) {
+   const match = /^\d{4}-\d{2}-\d{2}$/.exec(dateIso);
+   if (match) {
+      const [yearText, monthText, dayText] = dateIso.split("-");
+      const year = Number(yearText);
+      const month = Number(monthText);
+      const day = Number(dayText);
+      return new Date(year, month - 1, day);
+   }
+
+   return new Date(dateIso);
+}
+
 function toIsoDateTime(dayIso: string, timeValue: string) {
-   const day = new Date(dayIso);
+   const day = parseLocalDate(dayIso);
    const [hoursText = "0", minutesText = "0"] = timeValue.split(":");
    const hours = Number(hoursText);
    const minutes = Number(minutesText);
-   day.setUTCHours(hours, minutes, 0, 0);
+   day.setHours(hours, minutes, 0, 0);
+   return day.toISOString();
+}
+
+function toLocalMidnightIso(dayIso: string) {
+   const day = parseLocalDate(dayIso);
+   day.setHours(0, 0, 0, 0);
    return day.toISOString();
 }
 
@@ -66,8 +85,8 @@ function normalizeRosterWeekItem(week: OsirisWeek, requestedOffset: number): Ros
       week: {
          offset: requestedOffset,
          number: week.week,
-         start: week.startdatum,
-         end: week.einddatum,
+         start: toLocalMidnightIso(week.startdatum),
+         end: toLocalMidnightIso(week.einddatum),
       },
       lessons: week.dagen.flatMap((day) => day.rooster.map(normalizeLesson)),
       source: {

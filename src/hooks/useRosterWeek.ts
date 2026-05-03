@@ -14,7 +14,7 @@ interface WeekEntry {
 
 type WeekEntries = Partial<Record<number, WeekEntry>>;
 
-const CURRENT_WEEK_CACHE_KEY = "roster-current-week-cache-v1";
+const CURRENT_WEEK_CACHE_KEY = "roster-current-week-cache-v2";
 const LOAD_ERROR_MESSAGE = "Something went wrong while loading the roster.";
 const BATCH_SIZE = 5;
 const PREFETCH_BATCHES = [-1, 1];
