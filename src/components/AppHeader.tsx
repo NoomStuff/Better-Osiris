@@ -6,6 +6,8 @@ interface AppHeaderProps {
    gridZoom: GridZoom;
    onChangeView: (view: ViewMode) => void;
    onChangeGridZoom: (zoom: GridZoom) => void;
+   onExpandAllAgenda: () => void;
+   onCloseAllAgenda: () => void;
 }
 
 const zoomOptions: { id: GridZoom; label: string }[] = [
@@ -14,28 +16,48 @@ const zoomOptions: { id: GridZoom; label: string }[] = [
    { id: "quarter", label: "15m" },
 ];
 
-export function AppHeader({ viewMode, gridZoom, onChangeView, onChangeGridZoom }: AppHeaderProps) {
+export function AppHeader({ viewMode, gridZoom, onChangeView, onChangeGridZoom, onExpandAllAgenda, onCloseAllAgenda }: AppHeaderProps) {
    return (
       <header className="topbar">
          <div className="topbar__identity">
             <p className="eyebrow">MBORijnland</p>
-            <h1>School roster but actually good</h1>
+            <h1>Better Osiris</h1>
          </div>
 
          <div className="topbar__actions">
             {viewMode === "grid" ? (
-               <div className="zoom-toggle" data-zoom={gridZoom} role="group" aria-label="Timeline zoom">
-                  {zoomOptions.map((option) => (
-                     <button className={option.id === gridZoom ? "is-selected" : ""} type="button" key={option.id} onClick={() => onChangeGridZoom(option.id)}>
-                        {option.label}
-                     </button>
-                  ))}
+               <div className="view-actions" data-view="grid" key="view-grid">
+                  <div className="zoom-toggle" data-zoom={gridZoom} role="group" aria-label="Timeline zoom">
+                     {zoomOptions.map((option) => (
+                        <button
+                           className={option.id === gridZoom ? "is-selected" : ""}
+                           type="button"
+                           key={option.id}
+                           onClick={() => onChangeGridZoom(option.id)}
+                        >
+                           {option.label}
+                        </button>
+                     ))}
+                  </div>
                </div>
-            ) : null}
+            ) : (
+               <div className="view-actions" data-view="agenda" key="view-agenda">
+                  <div className="agenda-toggle" role="group" aria-label="Agenda sections">
+                     <button type="button" onClick={onExpandAllAgenda}>
+                        Expand
+                     </button>
+                     <button type="button" onClick={onCloseAllAgenda}>
+                        Close
+                     </button>
+                  </div>
+               </div>
+            )}
+
+            <span className="topbar__divider" aria-hidden="true" />
 
             <div className="view-toggle" role="tablist" aria-label="View mode">
                <button
-                  className={`view-toggle__button ${viewMode === "agenda" ? "is-selected" : ""}`}
+                  className={`icon-button view-toggle__button ${viewMode === "agenda" ? "is-selected" : ""}`}
                   type="button"
                   onClick={() => onChangeView("agenda")}
                   role="tab"
@@ -45,7 +67,7 @@ export function AppHeader({ viewMode, gridZoom, onChangeView, onChangeGridZoom }
                   <i className="fa-solid fa-list" />
                </button>
                <button
-                  className={`view-toggle__button ${viewMode === "grid" ? "is-selected" : ""}`}
+                  className={`icon-button view-toggle__button ${viewMode === "grid" ? "is-selected" : ""}`}
                   type="button"
                   onClick={() => onChangeView("grid")}
                   role="tab"

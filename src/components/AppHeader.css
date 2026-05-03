@@ -16,7 +16,7 @@
 
 .topbar__identity h1 {
    margin: 0;
-   font-size: clamp(1.08rem, 1.45vw, 1.32rem);
+   font-size: 1.32em;
    line-height: 1.05;
    font-weight: 700;
 }
@@ -25,6 +25,18 @@
    display: flex;
    align-items: center;
    gap: 8px;
+}
+
+.view-actions {
+   display: inline-flex;
+   align-items: center;
+   animation: view-actions-enter 240ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.topbar__divider {
+   width: 1px;
+   height: 28px;
+   background: var(--line);
 }
 
 .zoom-toggle {
@@ -36,6 +48,48 @@
    border: 1px solid var(--line);
    border-radius: 11px;
    background: rgba(255, 255, 255, 0.026);
+}
+
+.agenda-toggle {
+   position: relative;
+   display: inline-grid;
+   grid-template-columns: repeat(2, minmax(64px, 1fr));
+   gap: 3px;
+   padding: 3px;
+   border: 1px solid var(--line);
+   border-radius: 11px;
+   background: rgba(255, 255, 255, 0.026);
+}
+
+.agenda-toggle button {
+   height: 28px;
+   padding: 0 10px;
+   border-radius: 8px;
+   color: var(--text-dim);
+   cursor: pointer;
+   font-size: 0.7rem;
+   letter-spacing: 0.01em;
+   transition: color 200ms ease, scale 220ms var(--bounce-overshoot);
+}
+
+.agenda-toggle button:hover {
+   color: var(--text-strong);
+}
+
+.agenda-toggle button:active {
+   scale: 0.92;
+}
+
+@keyframes view-actions-enter {
+   from {
+      opacity: 0;
+      transform: translateX(10px) scale(0.98);
+   }
+
+   to {
+      opacity: 1;
+      transform: translateX(0) scale(1);
+   }
 }
 
 .zoom-toggle::before {
@@ -68,6 +122,8 @@
    cursor: pointer;
    font-size: 0.7rem;
    font-variant-numeric: tabular-nums;
+   transition: scale 220ms var(--bounce-overshoot);
+   scale: 1;
 }
 
 .zoom-toggle button:hover,
@@ -75,53 +131,8 @@
    color: var(--text-strong);
 }
 
-.icon-button,
-.view-toggle__button {
-   width: 36px;
-   height: 36px;
-   border-radius: 10px;
-   display: inline-flex;
-   align-items: center;
-   justify-content: center;
-   border: 1px solid var(--line);
-   background: rgba(255, 255, 255, 0.03);
-   cursor: pointer;
-   transition:
-      border-color 120ms ease,
-      background-color 120ms ease,
-      color 120ms ease,
-      transform 180ms cubic-bezier(0.34, 1.56, 0.64, 1);
-}
-
-.icon-button:disabled,
-.view-toggle__button:disabled {
-   cursor: not-allowed;
-   opacity: 0.4;
-}
-
-.icon-button:hover,
-.view-toggle__button:hover {
-   border-color: var(--line-strong);
-   background: rgba(255, 255, 255, 0.055);
-}
-
-.icon-button:hover:not(:disabled) i,
-.view-toggle__button:hover i {
-   animation: icon-pop 0.4s cubic-bezier(0.34, 2.56, 0.64, 1);
-}
-
-.icon-button[aria-label="Previous week"]:hover:not(:disabled) i {
-   animation-name: icon-nudge-left;
-}
-
-.icon-button[aria-label="Next week"]:hover:not(:disabled) i {
-   animation-name: icon-nudge-right;
-}
-
-.icon-button:disabled:hover,
-.view-toggle__button:disabled:hover {
-   border-color: var(--line);
-   background: rgba(255, 255, 255, 0.03);
+.zoom-toggle button:active {
+   scale: 0.92;
 }
 
 .view-toggle {
@@ -133,38 +144,20 @@
    color: var(--text-dim);
 }
 
+.view-toggle__button:active:not(:disabled) {
+   transform: none;
+}
+
 .view-toggle__button.is-selected {
    color: var(--text-strong);
    border-color: rgba(124, 199, 255, 0.28);
    background: rgba(124, 199, 255, 0.12);
 }
 
-@keyframes icon-pop {
-   50% {
-      transform: scale(1.14);
-   }
-}
-
-@keyframes icon-nudge-left {
-   50% {
-      transform: translateX(-2px);
-   }
-}
-
-@keyframes icon-nudge-right {
-   50% {
-      transform: translateX(2px);
-   }
-}
-
 @media (max-width: 640px) {
    .topbar {
       align-items: center;
       gap: 10px;
-   }
-
-   .eyebrow {
-      display: none;
    }
 
    .topbar__actions {
@@ -178,5 +171,20 @@
    .zoom-toggle button {
       padding: 0 5px;
       font-size: 0.66rem;
+   }
+
+   .agenda-toggle {
+      grid-template-columns: repeat(2, minmax(72px, 1fr));
+   }
+
+   .agenda-toggle button {
+      padding: 0 6px;
+      font-size: 0.64rem;
+   }
+}
+
+@media (max-width: 400px) {
+   .topbar__identity * {
+      display: none;
    }
 }

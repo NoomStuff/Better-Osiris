@@ -3,8 +3,8 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { AUTH_COOKIE_NAME, buildAuthCookieHeader, createSignedAuthCookieValue, isValidAuthCookieValue, parseCookie } from "./api/_lib/auth.js";
 import { getEnvValue } from "./api/_lib/env.js";
-import { fetchOsirisRosterWeek } from "./api/_lib/osirisClient.js";
-import { normalizeRosterWeekResponse } from "./api/_lib/osirisRosterNormalizer.js";
+import { fetchOsirisRosterWeeks } from "./api/_lib/osirisClient.js";
+import { normalizeRosterWeekResponse, normalizeRosterWeeksResponse } from "./api/_lib/osirisRosterNormalizer.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -12,6 +12,7 @@ const app = express();
 const port = Number(process.env.PORT) || 8787;
 const MIN_WEEK_OFFSET = 0;
 const MAX_WEEK_OFFSET = 50;
+const MAX_WEEK_LIMIT = 5;
 
 app.use(express.json());
 
@@ -72,8 +73,36 @@ app.get("/api/roster/week", async (req, res) => {
    const offset = Number.isNaN(rawOffset) ? MIN_WEEK_OFFSET : Math.min(Math.max(rawOffset, MIN_WEEK_OFFSET), MAX_WEEK_OFFSET);
 
    try {
-      const rawResponse = await fetchOsirisRosterWeek(offset);
+      const rawResponse = await fetchOsirisRosterWeeks(offset, 1);
       res.json(normalizeRosterWeekResponse(rawResponse, offset));
+   } catch (error) {
+      console.error("OSIRIS roster fetch failed:", error);
+      const message = error instanceof Error ? error.message : "Unknown roster fetch error.";
+      res.status(502).json({ error: message });
+   }
+});
+
+app.get("/api/roster/weeks", async (req, res) => {
+   const offsetParam = req.query.offset;
+   const limitParam = req.query.limit;
+   const offsetValue = Array.isArray(offsetParam) ? offsetParam[0] : offsetParam;
+   const limitValue = Array.isArray(limitParam) ? limitParam[0] : limitParam;
+   const offsetString = typeof offsetValue === "string" ? offsetValue : "0";
+   const limitString = typeof limitValue === "string" ? limitValue : String(MAX_WEEK_LIMIT);
+   const rawOffset = Number.parseInt(offsetString, 10);
+   const rawLimit = Number.parseInt(limitString, 10);
+   const offset = Number.isNaN(rawOffset) ? MIN_WEEK_OFFSET : Math.min(Math.max(rawOffset, MIN_WEEK_OFFSET), MAX_WEEK_OFFSET);
+   const limit = Number.isNaN(rawLimit) ? MAX_WEEK_LIMIT : Math.min(Math.max(rawLimit, 1), MAX_WEEK_LIMIT);
+   const safeLimit = Math.min(limit, MAX_WEEK_OFFSET - offset + 1);
+
+   try {
+      const rawResponse = await fetchOsirisRosterWeeks(offset, safeLimit);
+      res.json({
+         weeks: normalizeRosterWeeksResponse(rawResponse, offset),
+         offset,
+         limit: safeLimit,
+         hasMore: rawResponse.hasMore && offset + safeLimit - 1 < MAX_WEEK_OFFSET,
+      });
    } catch (error) {
       console.error("OSIRIS roster fetch failed:", error);
       const message = error instanceof Error ? error.message : "Unknown roster fetch error.";

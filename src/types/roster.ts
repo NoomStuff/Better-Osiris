@@ -33,6 +33,13 @@ export interface RosterResponse {
    source: RosterSource;
 }
 
+export interface RosterBatchResponse {
+   weeks: RosterResponse[];
+   offset: number;
+   limit: number;
+   hasMore: boolean;
+}
+
 export interface PositionedLesson extends Lesson {
    startDate: Date;
    endDate: Date;

@@ -1,4 +1,4 @@
-import { useState, type MouseEvent } from "react";
+import { useEffect, useRef, useState, type MouseEvent } from "react";
 import { dayShortLabel, getMinutesFromMidnight, timeLabel, toDayKey } from "../lib/date";
 import { WORKDAY_END, WORKDAY_START } from "../lib/rosterLayout";
 import type { DayGroup, GridZoom, Lesson } from "../types/roster";
@@ -28,9 +28,18 @@ function getOffsetPercent(minutes: number) {
 
 export function GridView({ groups, zoom: zoomId, onSelectLesson }: GridViewProps) {
    const [hoverGuide, setHoverGuide] = useState<{ top: number; label: string } | null>(null);
+   const [animateZoom, setAnimateZoom] = useState(false);
+   const previousZoomRef = useRef<GridZoom | null>(null);
    const zoom = zoomOptions.find((option) => option.id === zoomId) ?? zoomOptions[0];
    const timeMarks: number[] = [];
    const todayKey = toDayKey(new Date());
+
+   useEffect(() => {
+      if (previousZoomRef.current && previousZoomRef.current !== zoomId) {
+         setAnimateZoom(true);
+      }
+      previousZoomRef.current = zoomId;
+   }, [zoomId]);
 
    for (let minutes = WORKDAY_START; minutes <= WORKDAY_END; minutes += zoom.interval) {
       timeMarks.push(minutes);
@@ -63,7 +72,14 @@ export function GridView({ groups, zoom: zoomId, onSelectLesson }: GridViewProps
                ))}
             </div>
 
-            <div className="grid-body" key={zoomId} onMouseMove={updateHoverGuide} onMouseLeave={() => setHoverGuide(null)}>
+            <div
+               className="grid-body"
+               key={zoomId}
+               data-animate={animateZoom}
+               onAnimationEnd={() => setAnimateZoom(false)}
+               onMouseMove={updateHoverGuide}
+               onMouseLeave={() => setHoverGuide(null)}
+            >
                <div className="grid-scroll-content">
                   {hoverGuide ? (
                      <div className="grid-hover-guide" style={{ top: `${hoverGuide.top}%` }}>
@@ -93,8 +109,8 @@ export function GridView({ groups, zoom: zoomId, onSelectLesson }: GridViewProps
                                    const end = getMinutesFromMidnight(lesson.endDate);
                                    const top = getOffsetPercent(start);
                                    const height = ((end - start) / (WORKDAY_END - WORKDAY_START)) * 100;
-                                   const width = `calc(${100 / lesson.overlapCount}% - 8px)`;
-                                   const left = `calc(${(100 / lesson.overlapCount) * lesson.overlapIndex}% + 4px)`;
+                                   const width = `calc(${100 / lesson.overlapCount}% - 6px)`;
+                                   const left = `calc(${(100 / lesson.overlapCount) * lesson.overlapIndex}% + 3px)`;
                                    const visibleHeight = ((end - start) / (WORKDAY_END - WORKDAY_START)) * 560 * zoom.scale;
                                    const densityClass =
                                       visibleHeight < 48 ? "is-tiny" : visibleHeight < 68 ? "is-tight" : visibleHeight < 92 ? "is-compact" : "is-roomy";

@@ -41,28 +41,35 @@ export interface OsirisRosterResponse {
 }
 
 const WEEK_CACHE_TTL_MS = 60_000;
-const weekCache = new Map<number, { data: OsirisRosterResponse; expiresAt: number }>();
-const inFlightRequests = new Map<number, Promise<OsirisRosterResponse>>();
+const weekCache = new Map<string, { data: OsirisRosterResponse; expiresAt: number }>();
+const inFlightRequests = new Map<string, Promise<OsirisRosterResponse>>();
 
-export async function fetchOsirisRosterWeek(offset: number): Promise<OsirisRosterResponse> {
+function getCacheKey(offset: number, limit: number) {
+   return `${offset}:${limit}`;
+}
+
+export async function fetchOsirisRosterWeeks(offset: number, limit = 1): Promise<OsirisRosterResponse> {
    const bearerToken = getEnvValue("BEARER_TOKEN");
 
    if (!bearerToken) {
       throw new Error("BEARER_TOKEN is missing. Add it to .env before using live OSIRIS data.");
    }
 
-   const cachedWeek = weekCache.get(offset);
+   const safeLimit = Math.max(1, limit);
+   const cacheKey = getCacheKey(offset, safeLimit);
+
+   const cachedWeek = weekCache.get(cacheKey);
    if (cachedWeek && cachedWeek.expiresAt > Date.now()) {
       return cachedWeek.data;
    }
 
-   const inFlight = inFlightRequests.get(offset);
+   const inFlight = inFlightRequests.get(cacheKey);
    if (inFlight) {
       return inFlight;
    }
 
    const searchParams = new URLSearchParams({
-      limit: "1",
+      limit: String(safeLimit),
       offset: String(offset),
    });
 
@@ -78,16 +85,16 @@ export async function fetchOsirisRosterWeek(offset: number): Promise<OsirisRoste
          }
 
          const data = (await response.json()) as OsirisRosterResponse;
-         weekCache.set(offset, {
+         weekCache.set(cacheKey, {
             data,
             expiresAt: Date.now() + WEEK_CACHE_TTL_MS,
          });
          return data;
       })
       .finally(() => {
-         inFlightRequests.delete(offset);
+         inFlightRequests.delete(cacheKey);
       });
 
-   inFlightRequests.set(offset, request);
+   inFlightRequests.set(cacheKey, request);
    return request;
 }

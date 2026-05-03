@@ -25,7 +25,7 @@ export function toDayKey(date: Date) {
 export function formatWeekTitle(startIso: string, endIso: string, weekNumber: number) {
    const start = new Date(startIso);
    const end = new Date(endIso);
-   return `Week ${weekNumber} - ${weekRangeLabel.format(start)} to ${weekRangeLabel.format(end)}`;
+   return `Week ${weekNumber}: ${weekRangeLabel.format(start)} - ${weekRangeLabel.format(end)}`;
 }
 
 export function shiftIsoDateByDays(isoDate: string, days: number) {

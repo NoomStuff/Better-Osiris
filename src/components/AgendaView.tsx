@@ -42,13 +42,13 @@ export function AgendaView({ groups, expandedDays, animate, onToggleDay, onSelec
                            <p className="empty-state">No classes scheduled.</p>
                         ) : (
                            group.lessons.map((lesson) => (
-                              <button className={`lesson-row status-${lesson.status}`} type="button" key={lesson.id} onClick={() => onSelectLesson(lesson)}>
-                                 <div className="lesson-row__time">
+                              <button className={`list-lesson status-${lesson.status}`} type="button" key={lesson.id} onClick={() => onSelectLesson(lesson)}>
+                                 <div className="list-lesson__time">
                                     <span>{timeLabel.format(lesson.startDate)}</span>
                                     <span>{timeLabel.format(lesson.endDate)}</span>
                                  </div>
 
-                                 <div className="lesson-row__body">
+                                 <div className="list-lesson__body">
                                     <strong title={lesson.title}>{lesson.title}</strong>
                                     <p title={lesson.subject}>{lesson.subject}</p>
                                     <small title={`${lesson.teacher} · ${lesson.room} · ${lesson.location}`}>
@@ -56,7 +56,7 @@ export function AgendaView({ groups, expandedDays, animate, onToggleDay, onSelec
                                     </small>
                                  </div>
 
-                                 <i className="fa-solid fa-angle-right lesson-row__icon" />
+                                 <i className="fa-solid fa-angle-right list-lesson__icon" />
                               </button>
                            ))
                         )}

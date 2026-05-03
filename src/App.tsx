@@ -12,8 +12,8 @@ import type { GridZoom, Lesson, ViewMode } from "./types/roster";
 import "./styles/App.css";
 
 const STORAGE_KEY = "roster-view-mode";
-const MIN_WEEK_OFFSET = 0;
-const MAX_WEEK_OFFSET = 52;
+const MIN_WEEK_OFFSET = 0; // we cant fetch past weeks, so min is 0 (current week)
+const MAX_WEEK_OFFSET = 50; // the max we can fetch from the API
 
 function getInitialViewMode(): ViewMode {
    if (typeof window === "undefined") {
@@ -101,6 +101,8 @@ export default function App() {
       return merged;
    }, [autoExpandedDays, expandedOverrides, data]);
 
+   const allDayKeys = useMemo(() => dayGroups.map((group) => group.key), [dayGroups]);
+
    const updateWeekOffset = (updater: number | ((current: number) => number)) => {
       setWeekOffset((current) => (typeof updater === "function" ? updater(current) : updater));
       setSelectedLessonId(null);
@@ -129,12 +131,46 @@ export default function App() {
       });
    };
 
+   const expandAllDays = () => {
+      if (!data) {
+         return;
+      }
+
+      setAnimateAgenda(true);
+      setExpandedOverrides(() => {
+         const next = new Set<string>();
+         allDayKeys.forEach((key) => {
+            if (!autoExpandedDays.has(key)) {
+               next.add(key);
+            }
+         });
+         return next;
+      });
+   };
+
+   const closeAllDays = () => {
+      if (!data) {
+         return;
+      }
+
+      setAnimateAgenda(true);
+      setExpandedOverrides(() => new Set(autoExpandedDays));
+   };
+
    return (
       <div className="shell">
-         <AppHeader viewMode={viewMode} gridZoom={gridZoom} onChangeView={setViewMode} onChangeGridZoom={setGridZoom} />
+         <AppHeader
+            viewMode={viewMode}
+            gridZoom={gridZoom}
+            onChangeView={setViewMode}
+            onChangeGridZoom={setGridZoom}
+            onExpandAllAgenda={expandAllDays}
+            onCloseAllAgenda={closeAllDays}
+         />
 
          <WeekNavigator
             title={title}
+            weekOffset={weekOffset}
             onPreviousWeek={() => updateWeekOffset((current) => Math.max(current - 1, MIN_WEEK_OFFSET))}
             onNextWeek={() => updateWeekOffset((current) => Math.min(current + 1, MAX_WEEK_OFFSET))}
             onCurrentWeek={() => updateWeekOffset(0)}

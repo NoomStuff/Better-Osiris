@@ -1,5 +1,5 @@
 import type { Lesson, LessonStatus, RosterResponse } from "../../src/types/roster";
-import type { OsirisRosterEntry, OsirisRosterResponse } from "./osirisClient.js";
+import type { OsirisRosterEntry, OsirisRosterResponse, OsirisWeek } from "./osirisClient.js";
 
 function splitSubject(rawSubject: string) {
    const parts = rawSubject
@@ -61,12 +61,7 @@ function normalizeLesson(item: OsirisRosterEntry): Lesson {
    };
 }
 
-export function normalizeRosterWeekResponse(rawData: OsirisRosterResponse, requestedOffset: number): RosterResponse {
-   const week = rawData.items[0];
-   if (!week) {
-      throw new Error("OSIRIS roster response did not include a week item.");
-   }
-
+function normalizeRosterWeekItem(week: OsirisWeek, requestedOffset: number): RosterResponse {
    return {
       week: {
          offset: requestedOffset,
@@ -80,4 +75,21 @@ export function normalizeRosterWeekResponse(rawData: OsirisRosterResponse, reque
          note: "Using live OSIRIS roster data.",
       },
    };
+}
+
+export function normalizeRosterWeekResponse(rawData: OsirisRosterResponse, requestedOffset: number): RosterResponse {
+   const week = rawData.items[0];
+   if (!week) {
+      throw new Error("OSIRIS roster response did not include a week item.");
+   }
+
+   return normalizeRosterWeekItem(week, requestedOffset);
+}
+
+export function normalizeRosterWeeksResponse(rawData: OsirisRosterResponse, requestedOffset: number): RosterResponse[] {
+   if (!rawData.items.length) {
+      throw new Error("OSIRIS roster response did not include week items.");
+   }
+
+   return rawData.items.map((week, index) => normalizeRosterWeekItem(week, requestedOffset + index));
 }

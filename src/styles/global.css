@@ -18,6 +18,7 @@
    --warning: #ffbf69;
    --danger: #ff6b81;
    --shadow: 0 24px 80px rgba(0, 0, 0, 0.35);
+   --bounce-overshoot: cubic-bezier(0.2, 3.2, 0.2, 1);
 }
 
 *,
@@ -49,6 +50,95 @@ button {
    border: 0;
    background: transparent;
    color: inherit;
+}
+
+.icon-button {
+   width: 36px;
+   height: 36px;
+   border-radius: 10px;
+   display: inline-flex;
+   align-items: center;
+   justify-content: center;
+   border: 1px solid var(--line);
+   background: rgba(255, 255, 255, 0.03);
+   cursor: pointer;
+   transition:
+      transform 260ms var(--bounce-overshoot),
+      border-color 120ms ease,
+      background-color 120ms ease,
+      color 120ms ease;
+}
+
+.icon-button--ghost {
+   background: transparent;
+}
+
+.icon-button:active:not(:disabled) {
+   transform: scale(0.9);
+}
+
+.icon-button:disabled {
+   cursor: not-allowed;
+   opacity: 0.4;
+}
+
+.icon-button:hover {
+   border-color: var(--line-strong);
+   background: rgba(255, 255, 255, 0.055);
+}
+
+.icon-button:hover:not(:disabled) i {
+   animation: icon-pop 0.4s cubic-bezier(0.34, 2.56, 0.64, 1);
+}
+
+.icon-button[aria-label="Previous week"]:hover:not(:disabled) i {
+   animation-name: icon-nudge-left;
+}
+
+.icon-button[aria-label="Next week"]:hover:not(:disabled) i {
+   animation-name: icon-nudge-right;
+}
+
+.icon-button:disabled:hover {
+   border-color: var(--line);
+   background: rgba(255, 255, 255, 0.03);
+}
+
+.status-changed {
+   border-color: rgba(255, 191, 105, 0.4);
+}
+
+.status-changed .list-lesson__time,
+.status-changed .grid-lesson strong {
+   color: var(--warning);
+}
+
+.status-cancelled {
+   border-color: rgba(255, 107, 129, 0.32);
+   opacity: 0.72;
+}
+
+.status-cancelled .list-lesson__time,
+.status-cancelled .grid-lesson strong {
+   color: var(--danger);
+}
+
+@keyframes icon-pop {
+   50% {
+      transform: scale(1.14);
+   }
+}
+
+@keyframes icon-nudge-left {
+   50% {
+      transform: translateX(-2px);
+   }
+}
+
+@keyframes icon-nudge-right {
+   50% {
+      transform: translateX(2px);
+   }
 }
 
 .notyf {
