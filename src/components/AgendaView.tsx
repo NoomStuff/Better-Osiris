@@ -21,7 +21,15 @@ export function AgendaView({ groups, expandedDays, animate, onToggleDay, onSelec
             const isToday = group.key === todayKey;
 
             return (
-               <section className="day-group" data-day={group.key} data-animate={animate} data-expanded={expanded} data-today={isToday} key={group.key}>
+               <section
+                  className="day-group"
+                  data-day={group.key}
+                  data-animate={animate}
+                  data-expanded={expanded}
+                  data-today={isToday}
+                  data-empty={group.lessons.length === 0}
+                  key={group.key}
+               >
                   <button className="day-group__header" type="button" onClick={() => onToggleDay(group.key)} aria-expanded={expanded}>
                      <div className="day-group__title">
                         <span className="day-group__daymark">

@@ -1,4 +1,4 @@
-import { toDayKey } from "./date";
+import { parseIsoDateToLocal, toDayKey } from "./date";
 import type { DayGroup, Lesson, PositionedLesson, RosterWeek } from "../types/roster";
 
 export const WORKDAY_START = 8 * 60;
@@ -77,12 +77,19 @@ export function getPositionedLessons(lessons: Lesson[]): PositionedLesson[] {
 }
 
 export function getDayGroups(week: RosterWeek, lessons: PositionedLesson[]): DayGroup[] {
-   const weekStart = new Date(week.start);
+   const weekStart = parseIsoDateToLocal(week.start);
+   const startDay = weekStart.getDay();
+   const monday = new Date(weekStart);
+   if (startDay === 0) {
+      monday.setDate(weekStart.getDate() + 1);
+   } else {
+      monday.setDate(weekStart.getDate() - (startDay - 1));
+   }
    const groups: DayGroup[] = [];
 
    for (let index = 0; index < 5; index += 1) {
-      const date = new Date(weekStart);
-      date.setDate(weekStart.getDate() + index);
+      const date = new Date(monday);
+      date.setDate(monday.getDate() + index);
       const key = toDayKey(date);
 
       groups.push({

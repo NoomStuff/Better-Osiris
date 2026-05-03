@@ -63,7 +63,7 @@ export function GridView({ groups, zoom: zoomId, onSelectLesson }: GridViewProps
             <div className="grid-header">
                <div className="grid-header__time" />
                {groups.map((group) => (
-                  <div className="grid-header__day" data-today={group.key === todayKey} key={group.key}>
+                  <div className="grid-header__day" data-today={group.key === todayKey} data-empty={group.lessons.length === 0} key={group.key}>
                      <span className="grid-header__day-pill">
                         <span>{dayShortLabel.format(group.date)}</span>
                         <strong>{String(group.date.getDate()).padStart(2, "0")}</strong>

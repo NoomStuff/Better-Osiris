@@ -15,6 +15,20 @@ export const weekRangeLabel = new Intl.DateTimeFormat("en-GB", {
    month: "short",
 });
 
+export function parseIsoDateToLocal(isoDate: string) {
+   const datePart = isoDate.split("T")[0] ?? isoDate;
+   const match = /^\d{4}-\d{2}-\d{2}$/.exec(datePart);
+   if (!match) {
+      return new Date(isoDate);
+   }
+
+   const [yearText, monthText, dayText] = datePart.split("-");
+   const year = Number(yearText);
+   const month = Number(monthText);
+   const day = Number(dayText);
+   return new Date(year, month - 1, day);
+}
+
 export function toDayKey(date: Date) {
    const year = date.getFullYear();
    const month = String(date.getMonth() + 1).padStart(2, "0");
@@ -23,8 +37,8 @@ export function toDayKey(date: Date) {
 }
 
 export function formatWeekTitle(startIso: string, endIso: string, weekNumber: number) {
-   const start = new Date(startIso);
-   const end = new Date(endIso);
+   const start = parseIsoDateToLocal(startIso);
+   const end = parseIsoDateToLocal(endIso);
    return `Week ${weekNumber}: ${weekRangeLabel.format(start)} - ${weekRangeLabel.format(end)}`;
 }
 

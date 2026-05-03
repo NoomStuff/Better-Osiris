@@ -71,9 +71,17 @@
    font-weight: 650;
 }
 
+.day-group[data-empty="true"][data-today="false"] .day-group__weekday {
+   color: var(--text-muted);
+}
+
 .day-group__date,
 .day-group__meta {
    color: var(--text-muted);
+}
+
+.day-group[data-empty="true"][data-today="false"] .day-group__date {
+   color: var(--text-dim);
 }
 
 .day-group__body {

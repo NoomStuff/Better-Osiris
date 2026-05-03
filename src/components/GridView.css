@@ -49,9 +49,17 @@
    box-shadow: inset 0 0 0 1px rgba(124, 199, 255, 0.18);
 }
 
+.grid-header__day[data-empty="true"][data-today="false"] .grid-header__day-pill {
+   color: var(--text-muted);
+}
+
 .grid-header__day strong {
    font-size: 1.05rem;
    color: var(--text-strong);
+}
+
+.grid-header__day[data-empty="true"][data-today="false"] strong {
+   color: var(--text-muted);
 }
 
 .grid-body {

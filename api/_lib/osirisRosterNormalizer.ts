@@ -1,4 +1,5 @@
 import type { Lesson, LessonStatus, RosterResponse } from "../../src/types/roster";
+import { toDayKey } from "../../src/lib/date";
 import type { OsirisRosterEntry, OsirisRosterResponse, OsirisWeek } from "./osirisClient.js";
 
 function splitSubject(rawSubject: string) {
@@ -56,10 +57,9 @@ function toIsoDateTime(dayIso: string, timeValue: string) {
    return day.toISOString();
 }
 
-function toLocalMidnightIso(dayIso: string) {
+function toLocalDateOnly(dayIso: string) {
    const day = parseLocalDate(dayIso);
-   day.setHours(0, 0, 0, 0);
-   return day.toISOString();
+   return toDayKey(day);
 }
 
 function normalizeLesson(item: OsirisRosterEntry): Lesson {
@@ -85,8 +85,8 @@ function normalizeRosterWeekItem(week: OsirisWeek, requestedOffset: number): Ros
       week: {
          offset: requestedOffset,
          number: week.week,
-         start: toLocalMidnightIso(week.startdatum),
-         end: toLocalMidnightIso(week.einddatum),
+         start: toLocalDateOnly(week.startdatum),
+         end: toLocalDateOnly(week.einddatum),
       },
       lessons: week.dagen.flatMap((day) => day.rooster.map(normalizeLesson)),
       source: {
