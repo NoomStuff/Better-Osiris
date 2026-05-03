@@ -1,7 +1,7 @@
 {
-   "name": "new-project-2",
+   "name": "osiris-but-better",
    "private": true,
-   "version": "0.0.0",
+   "version": "1.1.0",
    "type": "module",
    "scripts": {
       "dev": "concurrently \"bun --watch server.ts\" \"bunx vite\"",
