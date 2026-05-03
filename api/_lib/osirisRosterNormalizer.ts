@@ -48,13 +48,11 @@ function parseLocalDate(dateIso: string) {
    return new Date(dateIso);
 }
 
-function toIsoDateTime(dayIso: string, timeValue: string) {
-   const day = parseLocalDate(dayIso);
+function toLocalDateTime(dayIso: string, timeValue: string) {
    const [hoursText = "0", minutesText = "0"] = timeValue.split(":");
-   const hours = Number(hoursText);
-   const minutes = Number(minutesText);
-   day.setHours(hours, minutes, 0, 0);
-   return day.toISOString();
+   const hours = String(Number(hoursText)).padStart(2, "0");
+   const minutes = String(Number(minutesText)).padStart(2, "0");
+   return `${dayIso}T${hours}:${minutes}:00`;
 }
 
 function toLocalDateOnly(dayIso: string) {
@@ -70,8 +68,8 @@ function normalizeLesson(item: OsirisRosterEntry): Lesson {
       id: item.id_rooster,
       title: parsed.title,
       subject: parsed.subject,
-      start: toIsoDateTime(item.datum, item.tijd_vanaf),
-      end: toIsoDateTime(item.datum, item.tijd_tm),
+      start: toLocalDateTime(item.datum, item.tijd_vanaf),
+      end: toLocalDateTime(item.datum, item.tijd_tm),
       teacher: item.docenten.map((teacher) => teacher.naam).join(", ") || "Unknown",
       room: item.locatie || "Unknown",
       location: item.locatie_adres || item.locatie || "Unknown",
