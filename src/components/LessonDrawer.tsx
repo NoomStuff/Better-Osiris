@@ -1,4 +1,4 @@
-import { fullDayLabel, timeLabel } from "../lib/date";
+import { fullDayLabel, parseLocalDateTime, timeLabel } from "../lib/date";
 import type { Lesson } from "../types/roster";
 import "./LessonDrawer.css";
 
@@ -12,8 +12,8 @@ export function LessonDrawer({ lesson, onClose }: LessonDrawerProps) {
       return null;
    }
 
-   const startDate = new Date(lesson.start);
-   const endDate = new Date(lesson.end);
+   const startDate = parseLocalDateTime(lesson.start);
+   const endDate = parseLocalDateTime(lesson.end);
 
    return (
       <aside className="lesson-panel" aria-hidden={false} onClick={onClose}>

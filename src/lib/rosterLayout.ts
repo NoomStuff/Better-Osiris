@@ -1,4 +1,4 @@
-import { parseIsoDateToLocal, toDayKey } from "./date";
+import { parseIsoDateToLocal, parseLocalDateTime, toDayKey } from "./date";
 import type { DayGroup, Lesson, PositionedLesson, RosterWeek } from "../types/roster";
 
 export const WORKDAY_START = 8 * 60;
@@ -6,19 +6,27 @@ export const WORKDAY_END = 18 * 60;
 export const PIXELS_PER_MINUTE = 1.2;
 
 export function getPositionedLessons(lessons: Lesson[]): PositionedLesson[] {
-   const positioned = lessons.map<PositionedLesson>((lesson) => {
-      const startDate = new Date(lesson.start);
-      const endDate = new Date(lesson.end);
+   const positioned = lessons
+      .map<PositionedLesson | null>((lesson) => {
+         const startDate = parseLocalDateTime(lesson.start);
+         const endDate = parseLocalDateTime(lesson.end);
+         const startTime = startDate.getTime();
+         const endTime = endDate.getTime();
 
-      return {
-         ...lesson,
-         startDate,
-         endDate,
-         dayKey: toDayKey(startDate),
-         overlapIndex: 0,
-         overlapCount: 1,
-      };
-   });
+         if (Number.isNaN(startTime) || Number.isNaN(endTime)) {
+            return null;
+         }
+
+         return {
+            ...lesson,
+            startDate,
+            endDate,
+            dayKey: toDayKey(startDate),
+            overlapIndex: 0,
+            overlapCount: 1,
+         };
+      })
+      .filter((lesson): lesson is PositionedLesson => lesson !== null);
 
    const byDay = new Map<string, PositionedLesson[]>();
    positioned.forEach((lesson) => {

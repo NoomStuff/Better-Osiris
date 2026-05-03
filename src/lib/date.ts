@@ -1,18 +1,23 @@
-export const dayLabel = new Intl.DateTimeFormat("en-GB", { weekday: "long" });
-export const dayShortLabel = new Intl.DateTimeFormat("en-GB", { weekday: "short" });
-export const monthDayLabel = new Intl.DateTimeFormat("en-GB", { day: "numeric", month: "short" });
+const AMSTERDAM_TIME_ZONE = "Europe/Amsterdam";
+
+export const dayLabel = new Intl.DateTimeFormat("en-GB", { weekday: "long", timeZone: AMSTERDAM_TIME_ZONE });
+export const dayShortLabel = new Intl.DateTimeFormat("en-GB", { weekday: "short", timeZone: AMSTERDAM_TIME_ZONE });
+export const monthDayLabel = new Intl.DateTimeFormat("en-GB", { day: "numeric", month: "short", timeZone: AMSTERDAM_TIME_ZONE });
 export const fullDayLabel = new Intl.DateTimeFormat("en-GB", {
    weekday: "long",
    day: "numeric",
    month: "long",
+   timeZone: AMSTERDAM_TIME_ZONE,
 });
 export const timeLabel = new Intl.DateTimeFormat("en-GB", {
    hour: "2-digit",
    minute: "2-digit",
+   timeZone: AMSTERDAM_TIME_ZONE,
 });
 export const weekRangeLabel = new Intl.DateTimeFormat("en-GB", {
    day: "numeric",
    month: "short",
+   timeZone: AMSTERDAM_TIME_ZONE,
 });
 
 export function parseIsoDateToLocal(isoDate: string) {
@@ -29,11 +34,46 @@ export function parseIsoDateToLocal(isoDate: string) {
    return new Date(year, month - 1, day);
 }
 
+export function parseLocalDateTime(isoDateTime: string) {
+   const normalized = isoDateTime.replace(" ", "T");
+   const hasTimeZone = /Z$|[+-]\d{2}:?\d{2}$/.test(normalized);
+   const [datePart, rawTimePart = "00:00:00"] = normalized.split("T");
+   const match = /^\d{4}-\d{2}-\d{2}$/.exec(datePart ?? "");
+
+   if (!match) {
+      return new Date(isoDateTime);
+   }
+
+   if (hasTimeZone) {
+      return new Date(normalized);
+   }
+
+   const [hoursText = "0", minutesText = "0", secondsText = "0"] = rawTimePart.split(":");
+   const secondsClean = secondsText.split(".")[0] ?? "0";
+   const [yearText, monthText, dayText] = datePart.split("-");
+   const year = Number(yearText);
+   const month = Number(monthText);
+   const day = Number(dayText);
+   const hours = Number(hoursText);
+   const minutes = Number(minutesText);
+   const seconds = Number(secondsClean);
+
+   if ([year, month, day, hours, minutes, seconds].some((value) => Number.isNaN(value))) {
+      return new Date(isoDateTime);
+   }
+
+   return new Date(year, month - 1, day, hours, minutes, seconds, 0);
+}
+
+const AMSTERDAM_DATE_FORMATTER = new Intl.DateTimeFormat("en-CA", {
+   timeZone: AMSTERDAM_TIME_ZONE,
+   year: "numeric",
+   month: "2-digit",
+   day: "2-digit",
+});
+
 export function toDayKey(date: Date) {
-   const year = date.getFullYear();
-   const month = String(date.getMonth() + 1).padStart(2, "0");
-   const day = String(date.getDate()).padStart(2, "0");
-   return `${year}-${month}-${day}`;
+   return AMSTERDAM_DATE_FORMATTER.format(date);
 }
 
 export function formatWeekTitle(startIso: string, endIso: string, weekNumber: number) {

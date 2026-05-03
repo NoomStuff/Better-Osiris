@@ -35,10 +35,33 @@ function splitSubject(rawSubject: string) {
    };
 }
 
+const AMSTERDAM_DATE_FORMATTER = new Intl.DateTimeFormat("en-CA", {
+   timeZone: "Europe/Amsterdam",
+   year: "numeric",
+   month: "2-digit",
+   day: "2-digit",
+});
+
+function getDatePart(dateIso: string) {
+   const dateOnlyMatch = /^\d{4}-\d{2}-\d{2}$/.exec(dateIso);
+   if (dateOnlyMatch) {
+      return dateIso;
+   }
+
+   const parsed = new Date(dateIso);
+   if (!Number.isNaN(parsed.getTime())) {
+      return AMSTERDAM_DATE_FORMATTER.format(parsed);
+   }
+
+   const match = /\d{4}-\d{2}-\d{2}/.exec(dateIso);
+   return match ? match[0] : dateIso;
+}
+
 function parseLocalDate(dateIso: string) {
-   const match = /^\d{4}-\d{2}-\d{2}$/.exec(dateIso);
+   const datePart = getDatePart(dateIso);
+   const match = /^\d{4}-\d{2}-\d{2}$/.exec(datePart);
    if (match) {
-      const [yearText, monthText, dayText] = dateIso.split("-");
+      const [yearText, monthText, dayText] = datePart.split("-");
       const year = Number(yearText);
       const month = Number(monthText);
       const day = Number(dayText);
@@ -49,14 +72,15 @@ function parseLocalDate(dateIso: string) {
 }
 
 function toLocalDateTime(dayIso: string, timeValue: string) {
+   const dateOnly = getDatePart(dayIso);
    const [hoursText = "0", minutesText = "0"] = timeValue.split(":");
    const hours = String(Number(hoursText)).padStart(2, "0");
    const minutes = String(Number(minutesText)).padStart(2, "0");
-   return `${dayIso}T${hours}:${minutes}:00`;
+   return `${dateOnly}T${hours}:${minutes}:00`;
 }
 
 function toLocalDateOnly(dayIso: string) {
-   const day = parseLocalDate(dayIso);
+   const day = parseLocalDate(getDatePart(dayIso));
    return toDayKey(day);
 }
 
