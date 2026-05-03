@@ -37,8 +37,10 @@ export function parseIsoDateToLocal(isoDate: string) {
 export function parseLocalDateTime(isoDateTime: string) {
    const normalized = isoDateTime.replace(" ", "T");
    const hasTimeZone = /Z$|[+-]\d{2}:?\d{2}$/.test(normalized);
-   const [datePart, rawTimePart = "00:00:00"] = normalized.split("T");
-   const match = /^\d{4}-\d{2}-\d{2}$/.exec(datePart ?? "");
+   const [rawDatePart, rawTimePart] = normalized.split("T");
+   const datePart = rawDatePart ?? "";
+   const timePart = rawTimePart ?? "00:00:00";
+   const match = /^\d{4}-\d{2}-\d{2}$/.exec(datePart);
 
    if (!match) {
       return new Date(isoDateTime);
@@ -48,7 +50,7 @@ export function parseLocalDateTime(isoDateTime: string) {
       return new Date(normalized);
    }
 
-   const [hoursText = "0", minutesText = "0", secondsText = "0"] = rawTimePart.split(":");
+   const [hoursText = "0", minutesText = "0", secondsText = "0"] = timePart.split(":");
    const secondsClean = secondsText.split(".")[0] ?? "0";
    const [yearText, monthText, dayText] = datePart.split("-");
    const year = Number(yearText);
