@@ -1,5 +1,5 @@
 import type { Lesson, LessonStatus, RosterResponse } from "../../src/types/roster";
-import { toDayKey } from "../../src/lib/date";
+import { toDayKey } from "./date.js";
 import type { OsirisRosterEntry, OsirisRosterResponse, OsirisWeek } from "./osirisClient.js";
 
 function splitSubject(rawSubject: string) {
