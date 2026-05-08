@@ -69,7 +69,7 @@
    color: var(--text-muted);
    font-size: 0.82rem;
    text-transform: uppercase;
-   letter-spacing: 0.08em;
+   letter-spacing: 0.1em;
 }
 
 .lesson-panel__details dd {

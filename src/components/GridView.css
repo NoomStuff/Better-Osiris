@@ -185,7 +185,7 @@
    flex-direction: column;
    gap: 2px;
    min-height: 28px;
-   background: linear-gradient(180deg, rgba(124, 199, 255, 0.16), rgba(124, 199, 255, 0.05)), rgba(15, 20, 32, 0.96);
+   background: linear-gradient(180deg, rgba(124, 199, 255, 0.16), rgba(116, 188, 243, 0.05)), rgba(10, 13, 21, 0.96);
    background-clip: padding-box;
    transition: scale 220ms var(--bounce-overshoot);
    scale: 1;
@@ -227,7 +227,7 @@
 .grid-lesson strong {
    flex: 0 0 auto;
    font-size: 0.96rem;
-   letter-spacing: -0.02em;
+   letter-spacing: -0.00em;
 }
 
 .grid-lesson__title {

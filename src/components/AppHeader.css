@@ -9,7 +9,7 @@
 .eyebrow {
    margin: 0;
    text-transform: uppercase;
-   letter-spacing: 0.18em;
+   letter-spacing: 0.24em;
    font-size: 0.65rem;
    color: var(--text-muted);
 }
