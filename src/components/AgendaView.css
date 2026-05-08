@@ -227,6 +227,7 @@
 
    .day-group__daymark {
       flex-wrap: wrap;
+      padding: 6px 12px;
    }
 
    .day-group[data-today="true"] .day-group__daymark {
@@ -257,6 +258,7 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
+
    .day-group__body,
    .day-group__chevron,
    .agenda-lesson__icon {

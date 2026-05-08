@@ -170,24 +170,26 @@ export default function App() {
 
    return (
       <div className="shell">
-         <AppHeader
-            viewMode={viewMode}
-            gridZoom={gridZoom}
-            onChangeView={setViewMode}
-            onChangeGridZoom={setGridZoom}
-            onExpandAllAgenda={expandAllDays}
-            onCloseAllAgenda={closeAllDays}
-         />
+         <div className="mobile-bottom-bar">
+            <AppHeader
+               viewMode={viewMode}
+               gridZoom={gridZoom}
+               onChangeView={setViewMode}
+               onChangeGridZoom={setGridZoom}
+               onExpandAllAgenda={expandAllDays}
+               onCloseAllAgenda={closeAllDays}
+            />
 
-         <WeekNavigator
-            title={title}
-            weekOffset={weekOffset}
-            onPreviousWeek={() => updateWeekOffset((current) => Math.max(current - 1, MIN_WEEK_OFFSET))}
-            onNextWeek={() => updateWeekOffset((current) => Math.min(current + 1, MAX_WEEK_OFFSET))}
-            onCurrentWeek={handleCurrentWeek}
-            canGoPrevious={weekOffset > MIN_WEEK_OFFSET}
-            canGoNext={weekOffset < MAX_WEEK_OFFSET}
-         />
+            <WeekNavigator
+               title={title}
+               weekOffset={weekOffset}
+               onPreviousWeek={() => updateWeekOffset((current) => Math.max(current - 1, MIN_WEEK_OFFSET))}
+               onNextWeek={() => updateWeekOffset((current) => Math.min(current + 1, MAX_WEEK_OFFSET))}
+               onCurrentWeek={handleCurrentWeek}
+               canGoPrevious={weekOffset > MIN_WEEK_OFFSET}
+               canGoNext={weekOffset < MAX_WEEK_OFFSET}
+            />
+         </div>
 
          <main className="app-content">
             {loading ? (

@@ -159,15 +159,25 @@
 @media (max-width: 640px) {
    .topbar {
       align-items: center;
-      gap: 10px;
+      justify-content: center;
+      gap: 8px;
+      padding: 0;
    }
 
    .topbar__actions {
+      width: 100%;
+      justify-content: center;
       gap: 6px;
    }
 
+   .topbar__identity {
+      display: none;
+   }
+
    .zoom-toggle {
-      grid-template-columns: repeat(3, 31px);
+      flex: 1 1 auto;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      max-width: 180px;
    }
 
    .zoom-toggle button {
@@ -176,17 +186,13 @@
    }
 
    .agenda-toggle {
-      grid-template-columns: repeat(2, minmax(72px, 1fr));
+      flex: 1 1 auto;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      max-width: 180px;
    }
 
    .agenda-toggle button {
       padding: 0 6px;
       font-size: 0.64rem;
-   }
-}
-
-@media (max-width: 400px) {
-   .topbar__identity * {
-      display: none;
    }
 }
