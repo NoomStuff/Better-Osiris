@@ -1,4 +1,5 @@
 import { dayLabel, monthDayLabel, timeLabel, toDayKey } from "../lib/date";
+import { DETAILS_SEPARATOR, getLessonLocationLabel } from "../lib/lessonFormat";
 import type { DayGroup, Lesson } from "../types/roster";
 import "./AgendaView.css";
 
@@ -12,16 +13,6 @@ interface AgendaViewProps {
 
 export function AgendaView({ groups, expandedDays, animate, onToggleDay, onSelectLesson }: AgendaViewProps) {
    const todayKey = toDayKey(new Date());
-   const formatLocation = (lesson: Lesson) => {
-      const room = lesson.room.trim();
-      const location = lesson.location.trim();
-
-      if (room && location) {
-         return room.toLowerCase() === location.toLowerCase() ? room : `${room} · ${location}`;
-      }
-
-      return room || location || "";
-   };
 
    return (
       <section className="agenda-view">
@@ -41,12 +32,10 @@ export function AgendaView({ groups, expandedDays, animate, onToggleDay, onSelec
                   key={group.key}
                >
                   <button className="day-group__header" type="button" onClick={() => onToggleDay(group.key)} aria-expanded={expanded}>
-                     <div className="day-group__title">
-                        <span className="day-group__daymark">
-                           <span className="day-group__weekday">{dayLabel.format(group.date)}</span>
-                           <span className="day-group__date">{monthDayLabel.format(group.date)}</span>
-                        </span>
-                     </div>
+                     <span className="day-group__daymark">
+                        <span className="day-group__weekday">{dayLabel.format(group.date)}</span>
+                        <span className="day-group__date">{monthDayLabel.format(group.date)}</span>
+                     </span>
 
                      <div className="day-group__meta">
                         <span>{countLabel}</span>
@@ -60,25 +49,28 @@ export function AgendaView({ groups, expandedDays, animate, onToggleDay, onSelec
                            <p className="empty-state">No classes scheduled.</p>
                         ) : (
                            group.lessons.map((lesson) => {
-                              const locationLabel = formatLocation(lesson);
+                              const locationLabel = getLessonLocationLabel(lesson);
+                              const teacherLocationLabel = locationLabel ? `${lesson.teacher}${DETAILS_SEPARATOR}${locationLabel}` : lesson.teacher;
 
                               return (
-                                 <button className={`list-lesson status-${lesson.status}`} type="button" key={lesson.id} onClick={() => onSelectLesson(lesson)}>
-                                    <div className="list-lesson__time">
+                                 <button
+                                    className={`agenda-lesson status-${lesson.status}`}
+                                    type="button"
+                                    key={lesson.id}
+                                    onClick={() => onSelectLesson(lesson)}
+                                 >
+                                    <div className="agenda-lesson__time">
                                        <span>{timeLabel.format(lesson.startDate)}</span>
                                        <span>{timeLabel.format(lesson.endDate)}</span>
                                     </div>
 
-                                    <div className="list-lesson__body">
+                                    <div className="agenda-lesson__body">
                                        <strong title={lesson.title}>{lesson.title}</strong>
                                        <p title={lesson.subject}>{lesson.subject}</p>
-                                       <small title={`${lesson.teacher}${locationLabel ? ` · ${locationLabel}` : ""}`}>
-                                          {lesson.teacher}
-                                          {locationLabel ? ` · ${locationLabel}` : ""}
-                                       </small>
+                                       <small title={teacherLocationLabel}>{teacherLocationLabel}</small>
                                     </div>
 
-                                    <i className="fa-solid fa-angle-right list-lesson__icon" />
+                                    <i className="fa-solid fa-angle-right agenda-lesson__icon" />
                                  </button>
                               );
                            })

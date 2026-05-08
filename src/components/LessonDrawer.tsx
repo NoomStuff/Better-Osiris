@@ -1,4 +1,5 @@
 import { fullDayLabel, parseLocalDateTime, timeLabel } from "../lib/date";
+import { DETAILS_SEPARATOR } from "../lib/lessonFormat";
 import type { Lesson } from "../types/roster";
 import "./LessonDrawer.css";
 
@@ -16,7 +17,7 @@ export function LessonDrawer({ lesson, onClose }: LessonDrawerProps) {
    const endDate = parseLocalDateTime(lesson.end);
 
    return (
-      <aside className="lesson-panel" aria-hidden={false} onClick={onClose}>
+      <aside className="lesson-panel" onClick={onClose}>
          <div className="lesson-panel__backdrop" />
          <div className="lesson-panel__card" onClick={(event) => event.stopPropagation()}>
             <div className="lesson-panel__header">
@@ -33,7 +34,9 @@ export function LessonDrawer({ lesson, onClose }: LessonDrawerProps) {
                <div>
                   <dt>Time</dt>
                   <dd>
-                     {fullDayLabel.format(startDate)} · {timeLabel.format(startDate)} - {timeLabel.format(endDate)}
+                     {fullDayLabel.format(startDate)}
+                     {DETAILS_SEPARATOR}
+                     {timeLabel.format(startDate)} - {timeLabel.format(endDate)}
                   </dd>
                </div>
                <div>

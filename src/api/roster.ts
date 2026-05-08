@@ -1,4 +1,4 @@
-import type { RosterBatchResponse, RosterResponse } from "../types/roster";
+import type { RosterBatchResponse } from "../types/roster";
 
 export async function fetchRosterWeeks(offset: number, limit: number, signal?: AbortSignal): Promise<RosterBatchResponse> {
    const response = await fetch(`/api/roster/weeks?offset=${offset}&limit=${limit}`, signal ? { signal } : undefined);
@@ -29,15 +29,4 @@ export async function fetchRosterWeeks(offset: number, limit: number, signal?: A
    }
 
    return (await response.json()) as RosterBatchResponse;
-}
-
-export async function fetchRosterWeek(offset: number, signal?: AbortSignal): Promise<RosterResponse> {
-   const batch = await fetchRosterWeeks(offset, 1, signal);
-   const first = batch.weeks[0];
-
-   if (!first) {
-      throw new Error("Roster response did not include a week.");
-   }
-
-   return first;
 }

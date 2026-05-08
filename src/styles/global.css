@@ -2,7 +2,16 @@
 
 :root {
    color-scheme: dark;
-   font-family: "Quicksand", "Roboto", "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+   font-family:
+      "Quicksand",
+      "Roboto",
+      "Inter",
+      -apple-system,
+      BlinkMacSystemFont,
+      "Segoe UI",
+      Helvetica,
+      Arial,
+      sans-serif;
    line-height: 1.4;
    font-weight: 400;
    color: #f3f7ff;
@@ -38,7 +47,8 @@ body,
 
 html {
    background-color: #111522;
-   background: radial-gradient(circle at top, rgba(67, 97, 238, 0.16), transparent 30%), linear-gradient(180deg, #090b12 0%, #0d1018 52%, #111522 100%) !important;
+   background:
+      radial-gradient(circle at top, rgba(67, 97, 238, 0.16), transparent 30%), linear-gradient(180deg, #090b12 0%, #0d1018 52%, #111522 100%) !important;
 }
 
 body,
@@ -112,26 +122,29 @@ button {
 }
 
 .grid-lesson.status-changed {
-   border-color: rgba(255, 191, 105, 0.4);
+   border-color: rgba(255, 191, 105, 0.32);
+   border-left-color: var(--warning);
+   background: rgba(28, 24, 18, 0.96);
 }
 
-.status-changed .list-lesson__time,
-.status-changed .grid-lesson strong {
+.status-changed .agenda-lesson__time,
+.grid-lesson.status-changed strong {
    color: var(--warning);
 }
 
 .grid-lesson.status-cancelled {
-   border-color: rgba(255, 107, 129, 0.6);
-   background: linear-gradient(180deg, rgba(255, 107, 129, 0.38), rgba(255, 107, 129, 0.18)), rgba(30, 12, 18, 0.92);
+   border-color: rgba(255, 107, 129, 0.34);
+   border-left-color: var(--danger);
+   background: rgba(30, 16, 22, 0.96);
 }
 
-.list-lesson.status-cancelled {
+.agenda-lesson.status-cancelled {
    border-color: rgba(255, 107, 129, 0.6);
    background: linear-gradient(90deg, rgba(255, 107, 129, 0.28), rgba(255, 107, 129, 0.08));
 }
 
-.status-cancelled .list-lesson__time,
-.status-cancelled .grid-lesson strong {
+.status-cancelled .agenda-lesson__time,
+.grid-lesson.status-cancelled strong {
    color: #ffe9ee;
 }
 

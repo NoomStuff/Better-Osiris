@@ -8,7 +8,7 @@
 
 .day-group__header {
    width: 100%;
-   padding: 16px 14px 16px 0;
+   padding: 14px 14px 14px 0;
    display: flex;
    align-items: center;
    justify-content: space-between;
@@ -18,7 +18,7 @@
 }
 
 .day-group__header:hover,
-.list-lesson:hover {
+.agenda-lesson:hover {
    border-color: var(--line-strong);
    background: rgba(255, 255, 255, 0.055);
 }
@@ -35,22 +35,17 @@
    transform: rotate(180deg);
 }
 
-.day-group__title,
 .day-group__meta {
    display: flex;
    align-items: center;
-   gap: 10px;
-}
-
-.day-group__title {
-   min-width: 0;
+   gap: 12px;
 }
 
 .day-group__daymark {
    display: inline-flex;
    align-items: baseline;
-   gap: 10px;
-   padding: 5px 14px;
+   gap: 12px;
+   padding: 8px 14px;
    border-radius: 0;
    transition:
       background 180ms ease,
@@ -78,6 +73,18 @@
 .day-group__date,
 .day-group__meta {
    color: var(--text-muted);
+}
+
+.day-group__header:hover .day-group__meta {
+   color: var(--accent);
+}
+
+.day-group__header .day-group__meta i {
+   scale: 1;
+}
+
+.day-group__header:hover .day-group__meta i {
+   scale: 1.2;
 }
 
 .day-group[data-today="true"] .day-group__date {
@@ -123,7 +130,7 @@
    padding-bottom: 10px;
 }
 
-.list-lesson {
+.agenda-lesson {
    width: 100%;
    display: grid;
    grid-template-columns: 86px minmax(0, 1fr) 18px;
@@ -139,11 +146,11 @@
    scale: 1;
 }
 
-.list-lesson:active {
+.agenda-lesson:active {
    scale: 0.99;
 }
 
-.list-lesson__time {
+.agenda-lesson__time {
    display: grid;
    gap: 0;
    color: var(--accent);
@@ -152,20 +159,20 @@
    white-space: nowrap;
 }
 
-.list-lesson__time span:last-child {
+.agenda-lesson__time span:last-child {
    color: var(--text-muted);
 }
 
-.list-lesson__body {
+.agenda-lesson__body {
    min-width: 0;
    display: grid;
    gap: 1px;
    justify-items: start;
 }
 
-.list-lesson__body strong,
-.list-lesson__body p,
-.list-lesson__body small {
+.agenda-lesson__body strong,
+.agenda-lesson__body p,
+.agenda-lesson__body small {
    margin: 0;
    max-width: 100%;
    overflow: hidden;
@@ -173,27 +180,30 @@
    white-space: nowrap;
 }
 
-.list-lesson__body strong {
+.agenda-lesson__body strong {
    font-size: 0.96rem;
    letter-spacing: -0.01em;
 }
 
-.list-lesson__body p {
+.agenda-lesson__body p {
    color: var(--text-dim);
 }
 
-.list-lesson__body small {
+.agenda-lesson__body small {
    color: var(--text-muted);
 }
 
-.list-lesson__icon {
-   color: var(--text-muted);
+.agenda-lesson__icon {
    transition: transform 180ms cubic-bezier(0.34, 2.56, 0.64, 1);
    transform: translateX(-4px);
+   color: var(--text-muted);
+   opacity: 0.5;
 }
 
-.list-lesson:hover .list-lesson__icon {
+.agenda-lesson:hover .agenda-lesson__icon {
    transform: translateX(0px);
+   color: var(--accent);
+   opacity: 1;
 }
 
 .empty-state {
@@ -203,7 +213,7 @@
 }
 
 @media (max-width: 900px) {
-   .list-lesson {
+   .agenda-lesson {
       grid-template-columns: 72px minmax(0, 1fr) 14px;
       gap: 10px;
    }
@@ -211,17 +221,11 @@
 
 @media (max-width: 640px) {
    .day-group__header {
-      padding: 14px 10px 14px 0;
+      padding: 12px 10px 12px 0;
       gap: 8px;
    }
 
-   .day-group__title {
-      min-width: 0;
-   }
-
    .day-group__daymark {
-      gap: 7px;
-      padding: 5px 10px;
       flex-wrap: wrap;
    }
 
@@ -237,17 +241,17 @@
       font-size: 0.76rem;
    }
 
-   .list-lesson {
+   .agenda-lesson {
       grid-template-columns: 64px minmax(0, 1fr) 12px;
       padding: 9px 10px;
    }
 
-   .list-lesson__body strong {
+   .agenda-lesson__body strong {
       font-size: 0.88rem;
    }
 
-   .list-lesson__body p,
-   .list-lesson__body small {
+   .agenda-lesson__body p,
+   .agenda-lesson__body small {
       font-size: 0.74rem;
    }
 }
@@ -255,7 +259,7 @@
 @media (prefers-reduced-motion: reduce) {
    .day-group__body,
    .day-group__chevron,
-   .list-lesson__icon {
+   .agenda-lesson__icon {
       transition: none;
    }
 }

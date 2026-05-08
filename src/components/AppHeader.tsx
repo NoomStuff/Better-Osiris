@@ -26,30 +26,21 @@ export function AppHeader({ viewMode, gridZoom, onChangeView, onChangeGridZoom, 
 
          <div className="topbar__actions">
             {viewMode === "grid" ? (
-               <div className="view-actions" data-view="grid" key="view-grid">
-                  <div className="zoom-toggle" data-zoom={gridZoom} role="group" aria-label="Timeline zoom">
-                     {zoomOptions.map((option) => (
-                        <button
-                           className={option.id === gridZoom ? "is-selected" : ""}
-                           type="button"
-                           key={option.id}
-                           onClick={() => onChangeGridZoom(option.id)}
-                        >
-                           {option.label}
-                        </button>
-                     ))}
-                  </div>
+               <div className="zoom-toggle view-actions" data-zoom={gridZoom} role="group" aria-label="Timeline zoom" key="view-grid">
+                  {zoomOptions.map((option) => (
+                     <button className={option.id === gridZoom ? "is-selected" : ""} type="button" key={option.id} onClick={() => onChangeGridZoom(option.id)}>
+                        {option.label}
+                     </button>
+                  ))}
                </div>
             ) : (
-               <div className="view-actions" data-view="agenda" key="view-agenda">
-                  <div className="agenda-toggle" role="group" aria-label="Agenda sections">
-                     <button type="button" onClick={onExpandAllAgenda}>
-                        Expand
-                     </button>
-                     <button type="button" onClick={onCloseAllAgenda}>
-                        Close
-                     </button>
-                  </div>
+               <div className="agenda-toggle view-actions" role="group" aria-label="Agenda sections" key="view-agenda">
+                  <button type="button" onClick={onExpandAllAgenda}>
+                     Expand
+                  </button>
+                  <button type="button" onClick={onCloseAllAgenda}>
+                     Close
+                  </button>
                </div>
             )}
 
