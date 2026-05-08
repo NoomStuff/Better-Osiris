@@ -12,6 +12,16 @@ interface AgendaViewProps {
 
 export function AgendaView({ groups, expandedDays, animate, onToggleDay, onSelectLesson }: AgendaViewProps) {
    const todayKey = toDayKey(new Date());
+   const formatLocation = (lesson: Lesson) => {
+      const room = lesson.room.trim();
+      const location = lesson.location.trim();
+
+      if (room && location) {
+         return room.toLowerCase() === location.toLowerCase() ? room : `${room} · ${location}`;
+      }
+
+      return room || location || "";
+   };
 
    return (
       <section className="agenda-view">
@@ -49,24 +59,29 @@ export function AgendaView({ groups, expandedDays, animate, onToggleDay, onSelec
                         {group.lessons.length === 0 ? (
                            <p className="empty-state">No classes scheduled.</p>
                         ) : (
-                           group.lessons.map((lesson) => (
-                              <button className={`list-lesson status-${lesson.status}`} type="button" key={lesson.id} onClick={() => onSelectLesson(lesson)}>
-                                 <div className="list-lesson__time">
-                                    <span>{timeLabel.format(lesson.startDate)}</span>
-                                    <span>{timeLabel.format(lesson.endDate)}</span>
-                                 </div>
+                           group.lessons.map((lesson) => {
+                              const locationLabel = formatLocation(lesson);
 
-                                 <div className="list-lesson__body">
-                                    <strong title={lesson.title}>{lesson.title}</strong>
-                                    <p title={lesson.subject}>{lesson.subject}</p>
-                                    <small title={`${lesson.teacher} · ${lesson.room} · ${lesson.location}`}>
-                                       {lesson.teacher} · {lesson.room} · {lesson.location}
-                                    </small>
-                                 </div>
+                              return (
+                                 <button className={`list-lesson status-${lesson.status}`} type="button" key={lesson.id} onClick={() => onSelectLesson(lesson)}>
+                                    <div className="list-lesson__time">
+                                       <span>{timeLabel.format(lesson.startDate)}</span>
+                                       <span>{timeLabel.format(lesson.endDate)}</span>
+                                    </div>
 
-                                 <i className="fa-solid fa-angle-right list-lesson__icon" />
-                              </button>
-                           ))
+                                    <div className="list-lesson__body">
+                                       <strong title={lesson.title}>{lesson.title}</strong>
+                                       <p title={lesson.subject}>{lesson.subject}</p>
+                                       <small title={`${lesson.teacher}${locationLabel ? ` · ${locationLabel}` : ""}`}>
+                                          {lesson.teacher}
+                                          {locationLabel ? ` · ${locationLabel}` : ""}
+                                       </small>
+                                    </div>
+
+                                    <i className="fa-solid fa-angle-right list-lesson__icon" />
+                                 </button>
+                              );
+                           })
                         )}
                      </div>
                   </div>

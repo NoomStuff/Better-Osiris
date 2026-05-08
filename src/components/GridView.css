@@ -99,6 +99,9 @@
    font-size: 0.72rem;
    font-variant-numeric: tabular-nums;
    white-space: nowrap;
+   --line-opacity: 1;
+   opacity: var(--line-opacity);
+   transition: opacity 240ms ease;
 }
 
 .grid-days {
@@ -120,11 +123,18 @@
    right: 0;
    height: 1px;
    background: var(--line);
-   opacity: 0.35;
+   --line-opacity: 0.35;
+   opacity: var(--line-opacity);
+   transition: opacity 240ms ease;
 }
 
 .grid-line[data-major="true"] {
-   opacity: 0.7;
+   --line-opacity: 0.75;
+}
+
+.grid-line[data-visible="false"],
+.grid-time-slot[data-visible="false"] {
+   opacity: 0;
 }
 
 .grid-hover-guide {
@@ -152,11 +162,22 @@
    text-align: center;
 }
 
+.grid-now-line {
+   position: absolute;
+   left: 0;
+   right: 0;
+   height: 2px;
+   background: rgba(255, 107, 129, 0.9);
+   box-shadow: 0 0 0 1px rgba(255, 107, 129, 0.35);
+   z-index: 11;
+   pointer-events: none;
+}
+
 .grid-lesson {
    position: absolute;
    padding: 7px 7px;
    border-radius: 10px;
-   border: 1px solid rgba(255, 255, 255, 0.08);
+   border: 2px solid rgba(255, 255, 255, 0.08);
    text-align: left;
    cursor: pointer;
    overflow: hidden;
@@ -165,6 +186,7 @@
    gap: 2px;
    min-height: 28px;
    background: linear-gradient(180deg, rgba(124, 199, 255, 0.16), rgba(124, 199, 255, 0.05)), rgba(15, 20, 32, 0.96);
+   background-clip: padding-box;
    transition: scale 220ms var(--bounce-overshoot);
    scale: 1;
 }
@@ -236,24 +258,19 @@
 
 .grid-lesson.is-tight {
    justify-content: center;
-   padding-block: 5px;
-}
-
-.grid-lesson.is-tight .grid-lesson__title {
-   display: none;
-}
-
-.grid-lesson.is-tight .grid-lesson__meta small + small {
-   display: block;
-}
-
-.grid-lesson.is-tiny {
-   justify-content: center;
    padding-block: 4px;
 }
 
-.grid-lesson.is-tiny .grid-lesson__title,
-.grid-lesson.is-tiny .grid-lesson__meta small:first-child {
+.grid-lesson.is-tight .grid-lesson__meta-time,
+.grid-lesson.is-tight .grid-lesson__meta-place {
+   display: none;
+}
+
+.grid-lesson.is-tight .grid-lesson__meta-compact {
+   display: block;
+}
+
+.grid-lesson.is-roomy .grid-lesson__meta-compact {
    display: none;
 }
 
@@ -328,5 +345,12 @@
    .grid-lesson span,
    .grid-lesson small {
       font-size: 0.58rem;
+   }
+}
+
+@media (prefers-reduced-motion: reduce) {
+   .grid-line,
+   .grid-time-slot {
+      transition: none;
    }
 }

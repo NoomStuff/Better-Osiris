@@ -51,7 +51,7 @@
    align-items: baseline;
    gap: 10px;
    padding: 5px 14px;
-   border-radius: 0 999px 999px 0;
+   border-radius: 0;
    transition:
       background 180ms ease,
       box-shadow 180ms ease,
@@ -59,8 +59,8 @@
 }
 
 .day-group[data-today="true"] .day-group__daymark {
-   min-width: min(68vw, 260px);
-   background: linear-gradient(90deg, rgba(124, 199, 255, 0.24), rgba(124, 199, 255, 0.11));
+   min-width: min(68vw, 240px);
+   background: linear-gradient(90deg, rgba(124, 199, 255, 0.15) 0%, rgba(124, 199, 255, 0.1) 60%, rgba(124, 199, 255, 0) 100%);
    box-shadow: inset 3px 0 0 var(--accent);
 }
 
@@ -78,6 +78,10 @@
 .day-group__date,
 .day-group__meta {
    color: var(--text-muted);
+}
+
+.day-group[data-today="true"] .day-group__date {
+   color: var(--accent);
 }
 
 .day-group[data-empty="true"][data-today="false"] .day-group__date {
@@ -127,7 +131,7 @@
    align-items: center;
    padding: 10px 12px;
    border-radius: 14px;
-   border: 1px solid transparent;
+   border: 2px solid transparent;
    cursor: pointer;
    color: inherit;
    text-align: left;

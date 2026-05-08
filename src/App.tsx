@@ -157,6 +157,17 @@ export default function App() {
       setExpandedOverrides(() => new Set(autoExpandedDays));
    };
 
+   const handleCurrentWeek = () => {
+      if (weekOffset === 0) {
+         setSelectedLessonId(null);
+         setAnimateAgenda(true);
+         setExpandedOverrides(new Set());
+         return;
+      }
+
+      updateWeekOffset(0);
+   };
+
    return (
       <div className="shell">
          <AppHeader
@@ -173,7 +184,7 @@ export default function App() {
             weekOffset={weekOffset}
             onPreviousWeek={() => updateWeekOffset((current) => Math.max(current - 1, MIN_WEEK_OFFSET))}
             onNextWeek={() => updateWeekOffset((current) => Math.min(current + 1, MAX_WEEK_OFFSET))}
-            onCurrentWeek={() => updateWeekOffset(0)}
+            onCurrentWeek={handleCurrentWeek}
             canGoPrevious={weekOffset > MIN_WEEK_OFFSET}
             canGoNext={weekOffset < MAX_WEEK_OFFSET}
          />

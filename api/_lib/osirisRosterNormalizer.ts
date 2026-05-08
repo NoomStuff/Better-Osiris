@@ -86,7 +86,7 @@ function toLocalDateOnly(dayIso: string) {
 
 function normalizeLesson(item: OsirisRosterEntry): Lesson {
    const parsed = splitSubject(item.onderwerp);
-   const status: LessonStatus = item.actueel === "J" ? "changed" : "scheduled";
+   const status: LessonStatus = resolveLessonStatus(item);
 
    return {
       id: item.id_rooster,
@@ -100,6 +100,23 @@ function normalizeLesson(item: OsirisRosterEntry): Lesson {
       description: item.subonderwerp || parsed.description,
       status,
    };
+}
+
+function resolveLessonStatus(item: OsirisRosterEntry): LessonStatus {
+   const statusHints = ["status", "roosterstatus", "status_omschrijving", "statusomschrijving"];
+   const itemRecord = item as unknown as Record<string, unknown>;
+   const raw = statusHints.map((key) => itemRecord[key]).find((value) => typeof value === "string");
+   const normalized = typeof raw === "string" ? raw.toLowerCase() : "";
+
+   if (normalized.includes("cancel") || normalized.includes("vervallen") || normalized.includes("geannuleerd")) {
+      return "cancelled";
+   }
+
+   if (normalized.includes("change") || normalized.includes("wijzig")) {
+      return "changed";
+   }
+
+   return "scheduled";
 }
 
 function normalizeRosterWeekItem(week: OsirisWeek, requestedOffset: number): RosterResponse {

@@ -23,7 +23,7 @@
    overflow: auto;
    padding: 24px;
    border-radius: 24px 24px 18px 18px;
-   border: 1px solid var(--line);
+   border: 2px solid var(--line);
    background: radial-gradient(circle at top right, rgba(56, 108, 148, 0.16), transparent 28%), rgba(12, 15, 24, 0.38);
    box-shadow: var(--shadow);
    backdrop-filter: blur(24px);

@@ -11,10 +11,26 @@ interface GridViewProps {
 }
 
 const zoomOptions = [
-   { id: "hour", interval: 60, scale: 1 },
-   { id: "half", interval: 30, scale: 2 },
-   { id: "quarter", interval: 15, scale: 4 },
+   { id: "hour", interval: 60 },
+   { id: "half", interval: 30 },
+   { id: "quarter", interval: 15 },
 ] as const;
+
+const WORKDAY_RANGE = WORKDAY_END - WORKDAY_START;
+const BASE_INTERVAL = zoomOptions[2].interval;
+const TIME_MARKS = Array.from({ length: Math.floor(WORKDAY_RANGE / BASE_INTERVAL) + 1 }, (_, index) => WORKDAY_START + index * BASE_INTERVAL);
+const TIME_LABELS = TIME_MARKS.filter((minutes) => minutes !== WORKDAY_START && minutes !== WORKDAY_END);
+
+function formatLocation(lesson: Lesson) {
+   const room = lesson.room.trim();
+   const location = lesson.location.trim();
+
+   if (room && location) {
+      return room.toLowerCase() === location.toLowerCase() ? room : `${room} · ${location}`;
+   }
+
+   return room || location || "";
+}
 
 function formatMinutes(minutes: number) {
    const hour = Math.floor(minutes / 60);
@@ -23,15 +39,20 @@ function formatMinutes(minutes: number) {
 }
 
 function getOffsetPercent(minutes: number) {
-   return ((minutes - WORKDAY_START) / (WORKDAY_END - WORKDAY_START)) * 100;
+   return ((minutes - WORKDAY_START) / WORKDAY_RANGE) * 100;
+}
+
+function clamp(value: number, min: number, max: number) {
+   return Math.min(Math.max(value, min), max);
 }
 
 export function GridView({ groups, zoom: zoomId, onSelectLesson }: GridViewProps) {
    const [hoverGuide, setHoverGuide] = useState<{ top: number; label: string } | null>(null);
    const [animateZoom, setAnimateZoom] = useState(false);
+   const [contentHeight, setContentHeight] = useState(0);
    const previousZoomRef = useRef<GridZoom | null>(null);
+   const contentRef = useRef<HTMLDivElement | null>(null);
    const zoom = zoomOptions.find((option) => option.id === zoomId) ?? zoomOptions[0];
-   const timeMarks: number[] = [];
    const todayKey = toDayKey(new Date());
 
    useEffect(() => {
@@ -41,15 +62,30 @@ export function GridView({ groups, zoom: zoomId, onSelectLesson }: GridViewProps
       previousZoomRef.current = zoomId;
    }, [zoomId]);
 
-   for (let minutes = WORKDAY_START; minutes <= WORKDAY_END; minutes += zoom.interval) {
-      timeMarks.push(minutes);
-   }
+   useEffect(() => {
+      if (!contentRef.current) {
+         return;
+      }
+
+      const element = contentRef.current;
+      const observer = new ResizeObserver((entries) => {
+         const entry = entries[0];
+         if (entry) {
+            setContentHeight(entry.contentRect.height);
+         }
+      });
+
+      observer.observe(element);
+      setContentHeight(element.getBoundingClientRect().height);
+
+      return () => observer.disconnect();
+   }, []);
 
    const updateHoverGuide = (event: MouseEvent<HTMLDivElement>) => {
       const rect = event.currentTarget.getBoundingClientRect();
-      const contentHeight = event.currentTarget.offsetHeight;
-      const y = Math.min(Math.max(event.clientY - rect.top, 0), contentHeight);
-      const minutes = Math.min(WORKDAY_END, Math.max(WORKDAY_START, Math.round(WORKDAY_START + (y / contentHeight) * (WORKDAY_END - WORKDAY_START))));
+      const height = event.currentTarget.offsetHeight;
+      const y = clamp(event.clientY - rect.top, 0, height);
+      const minutes = clamp(Math.round(WORKDAY_START + (y / height) * WORKDAY_RANGE), WORKDAY_START, WORKDAY_END);
 
       setHoverGuide({
          top: getOffsetPercent(minutes),
@@ -74,13 +110,12 @@ export function GridView({ groups, zoom: zoomId, onSelectLesson }: GridViewProps
 
             <div
                className="grid-body"
-               key={zoomId}
                data-animate={animateZoom}
                onAnimationEnd={() => setAnimateZoom(false)}
                onMouseMove={updateHoverGuide}
                onMouseLeave={() => setHoverGuide(null)}
             >
-               <div className="grid-scroll-content">
+               <div className="grid-scroll-content" ref={contentRef}>
                   {hoverGuide ? (
                      <div className="grid-hover-guide" style={{ top: `${hoverGuide.top}%` }}>
                         <span>{hoverGuide.label}</span>
@@ -88,8 +123,14 @@ export function GridView({ groups, zoom: zoomId, onSelectLesson }: GridViewProps
                   ) : null}
 
                   <div className="grid-time-column">
-                     {timeMarks.map((minutes) => (
-                        <div className="grid-time-slot" key={minutes} data-major={minutes % 60 === 0} style={{ top: `${getOffsetPercent(minutes)}%` }}>
+                     {TIME_LABELS.map((minutes) => (
+                        <div
+                           className="grid-time-slot"
+                           key={minutes}
+                           data-major={minutes % 60 === 0}
+                           data-visible={minutes % zoom.interval === 0}
+                           style={{ top: `${getOffsetPercent(minutes)}%` }}
+                        >
                            {formatMinutes(minutes)}
                         </div>
                      ))}
@@ -98,8 +139,14 @@ export function GridView({ groups, zoom: zoomId, onSelectLesson }: GridViewProps
                   <div className="grid-days">
                      {groups.map((group) => (
                         <div className="grid-day-column" key={group.key}>
-                           {timeMarks.map((minutes) => (
-                              <div className="grid-line" key={minutes} data-major={minutes % 60 === 0} style={{ top: `${getOffsetPercent(minutes)}%` }} />
+                           {TIME_MARKS.map((minutes) => (
+                              <div
+                                 className="grid-line"
+                                 key={minutes}
+                                 data-major={minutes % 60 === 0}
+                                 data-visible={minutes % zoom.interval === 0}
+                                 style={{ top: `${getOffsetPercent(minutes)}%` }}
+                              />
                            ))}
 
                            {group.lessons.length === 0
@@ -107,13 +154,31 @@ export function GridView({ groups, zoom: zoomId, onSelectLesson }: GridViewProps
                               : group.lessons.map((lesson) => {
                                    const start = getMinutesFromMidnight(lesson.startDate);
                                    const end = getMinutesFromMidnight(lesson.endDate);
+                                   const duration = end - start;
                                    const top = getOffsetPercent(start);
-                                   const height = ((end - start) / (WORKDAY_END - WORKDAY_START)) * 100;
-                                   const width = `calc(${100 / lesson.overlapCount}% - 6px)`;
-                                   const left = `calc(${(100 / lesson.overlapCount) * lesson.overlapIndex}% + 3px)`;
-                                   const visibleHeight = ((end - start) / (WORKDAY_END - WORKDAY_START)) * 560 * zoom.scale;
-                                   const densityClass =
-                                      visibleHeight < 48 ? "is-tiny" : visibleHeight < 68 ? "is-tight" : visibleHeight < 92 ? "is-compact" : "is-roomy";
+                                   const height = (duration / WORKDAY_RANGE) * 100;
+                                   const width = `calc(${100 / lesson.overlapCount}% - 5px)`;
+                                   const left = `calc(${(100 / lesson.overlapCount) * lesson.overlapIndex}% + 2.5px)`;
+                                   const visibleHeight = (duration / WORKDAY_RANGE) * contentHeight;
+                                   const isCompact = visibleHeight > 0 && visibleHeight < 85;
+                                   const densityClass = isCompact ? "is-tight" : "is-roomy";
+                                   const timeRange = `${timeLabel.format(lesson.startDate)}-${timeLabel.format(lesson.endDate)}`;
+                                   const classLabel = lesson.title || lesson.subject;
+                                   const subtitleLabel = lesson.subject;
+                                   const roomLabel = lesson.room.trim();
+                                   const locationLabel = lesson.location.trim();
+                                   const hasSameLocation =
+                                      Boolean(roomLabel) && Boolean(locationLabel) && roomLabel.toLowerCase() === locationLabel.toLowerCase();
+                                   const roomLocationLabel = formatLocation(lesson);
+                                   const showLocation = !isCompact && Boolean(roomLocationLabel);
+                                   const compactParts = [timeRange];
+                                   if (roomLabel) {
+                                      compactParts.push(roomLabel);
+                                   }
+                                   if (locationLabel && !hasSameLocation) {
+                                      compactParts.push(locationLabel);
+                                   }
+                                   const compactMeta = compactParts.join(" · ");
 
                                    return (
                                       <button
@@ -122,20 +187,19 @@ export function GridView({ groups, zoom: zoomId, onSelectLesson }: GridViewProps
                                          key={lesson.id}
                                          onClick={() => onSelectLesson(lesson)}
                                          style={{
-                                            top: `calc(${top}% + 3px)`,
-                                            height: `calc(${height}% - 6px)`,
+                                            top: `calc(${top}% + 2.5px)`,
+                                            height: `calc(${height}% - 5px)`,
                                             width,
                                             left,
                                          }}
                                          title={lesson.title}
                                       >
-                                         <strong>{lesson.subject}</strong>
-                                         <span className="grid-lesson__title">{lesson.title}</span>
+                                         <strong>{classLabel}</strong>
+                                         {subtitleLabel ? <span className="grid-lesson__title">{subtitleLabel}</span> : null}
                                          <span className="grid-lesson__meta">
-                                            <small>
-                                               {timeLabel.format(lesson.startDate)} - {timeLabel.format(lesson.endDate)}
-                                            </small>
-                                            <small>{lesson.location || lesson.room}</small>
+                                            {showLocation ? <small className="grid-lesson__meta-place">{roomLocationLabel}</small> : null}
+                                            <small className="grid-lesson__meta-time">{timeRange}</small>
+                                            <small className="grid-lesson__meta-compact">{compactMeta}</small>
                                          </span>
                                       </button>
                                    );

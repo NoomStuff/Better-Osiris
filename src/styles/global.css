@@ -4,7 +4,7 @@
    line-height: 1.4;
    font-weight: 400;
    color: #f3f7ff;
-   background: radial-gradient(circle at top, rgba(67, 97, 238, 0.16), transparent 30%), linear-gradient(180deg, #090b12 0%, #0d1018 52%, #111522 100%);
+
    font-synthesis: none;
    text-rendering: optimizeLegibility;
    -webkit-font-smoothing: antialiased;
@@ -32,6 +32,11 @@ body,
 #app {
    margin: 0;
    min-height: 100%;
+   overscroll-behavior: none;
+}
+
+body {
+   background: radial-gradient(circle at top, rgba(67, 97, 238, 0.16), transparent 30%), linear-gradient(180deg, #090b12 0%, #0d1018 52%, #111522 100%);
 }
 
 body,
@@ -59,7 +64,7 @@ button {
    display: inline-flex;
    align-items: center;
    justify-content: center;
-   border: 1px solid var(--line);
+   border: 2px solid var(--line);
    background: rgba(255, 255, 255, 0.03);
    cursor: pointer;
    transition:
@@ -104,7 +109,7 @@ button {
    background: rgba(255, 255, 255, 0.03);
 }
 
-.status-changed {
+.grid-lesson.status-changed {
    border-color: rgba(255, 191, 105, 0.4);
 }
 
@@ -113,14 +118,19 @@ button {
    color: var(--warning);
 }
 
-.status-cancelled {
-   border-color: rgba(255, 107, 129, 0.32);
-   opacity: 0.72;
+.grid-lesson.status-cancelled {
+   border-color: rgba(255, 107, 129, 0.6);
+   background: linear-gradient(180deg, rgba(255, 107, 129, 0.38), rgba(255, 107, 129, 0.18)), rgba(30, 12, 18, 0.92);
+}
+
+.list-lesson.status-cancelled {
+   border-color: rgba(255, 107, 129, 0.6);
+   background: linear-gradient(90deg, rgba(255, 107, 129, 0.28), rgba(255, 107, 129, 0.08));
 }
 
 .status-cancelled .list-lesson__time,
 .status-cancelled .grid-lesson strong {
-   color: var(--danger);
+   color: #ffe9ee;
 }
 
 @keyframes icon-pop {

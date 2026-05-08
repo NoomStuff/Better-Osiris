@@ -1,7 +1,7 @@
-.shell {
-   --shell-padding: 20px;
+#app {
+   --app-padding: 20px;
    min-height: 100vh;
-   padding: var(--shell-padding);
+   padding: var(--app-padding);
 }
 
 .app-content {
@@ -10,7 +10,7 @@
 
 .app-content-frame {
    border-radius: 24px;
-   border: 1px solid var(--line);
+   border: 2px solid var(--line);
    background: linear-gradient(180deg, rgba(255, 255, 255, 0.02), rgba(255, 255, 255, 0.012)), rgba(10, 13, 20, 0.82);
    overflow: hidden;
 }
@@ -20,16 +20,16 @@
 }
 
 .app-content-frame--grid {
-   height: max(520px, calc(100vh - 127px - (var(--shell-padding) * 2)));
+   height: max(520px, calc(100vh - 127px - (var(--app-padding) * 2)));
    transition: height 420ms cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 .app-content-frame--grid.app-content-frame--zoom-half {
-   height: max(1040px, calc(200vh - 254px - (var(--shell-padding) * 2)));
+   height: max(1040px, calc(200vh - 254px - (var(--app-padding) * 2)));
 }
 
 .app-content-frame--grid.app-content-frame--zoom-quarter {
-   height: max(2080px, calc(400vh - 508px - (var(--shell-padding) * 2)));
+   height: max(2080px, calc(400vh - 508px - (var(--app-padding) * 2)));
 }
 
 .view-enter {
@@ -57,14 +57,14 @@
 }
 
 @media (max-width: 900px) {
-   .shell {
-      --shell-padding: 14px;
+   #app {
+      --app-padding: 14px;
    }
 }
 
 @media (max-width: 640px) {
-   .shell {
-      --shell-padding: 10px;
+   #app {
+      --app-padding: 10px;
    }
 
    .app-content-frame {
