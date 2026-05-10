@@ -22,15 +22,12 @@ export function AppToolbar({ viewMode, gridZoom, isRefreshing = false, onChangeV
       <header className="app-toolbar">
          <div className="app-toolbar__identity">
             <p className="eyebrow">MBORijnland</p>
-            <h1>
-               Better Osiris
-               {isRefreshing ? <span className="app-toolbar__spinner" aria-label="Refreshing roster data" role="status" /> : null}
-            </h1>
+            <h1>Better Osiris</h1>
          </div>
 
-         <div className="app-toolbar__actions">
-            {isRefreshing ? <span className="app-toolbar__spinner app-toolbar__spinner--mobile" aria-label="Refreshing roster data" role="status" /> : null}
+         {isRefreshing ? <span className="app-toolbar__spinner" aria-label="Refreshing roster data" role="status" /> : null}
 
+         <div className="app-toolbar__actions">
             {viewMode === "grid" ? (
                <div className="zoom-toggle view-actions" data-zoom={gridZoom} role="group" aria-label="Timeline zoom" key="view-grid">
                   {zoomOptions.map((option) => (

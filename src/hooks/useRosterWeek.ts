@@ -87,7 +87,7 @@ function storeCachedCurrentWeek(data: RosterResponse) {
       JSON.stringify({
          data,
          weekNumber: data.week.number,
-      } satisfies CachedCurrentWeek),
+      } satisfies CachedCurrentWeek)
    );
 }
 

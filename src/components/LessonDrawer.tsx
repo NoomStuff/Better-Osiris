@@ -102,6 +102,13 @@ export function LessonDrawer({ lesson, onClose }: LessonDrawerProps) {
 
    const startDate = parseLocalDateTime(displayLesson.start);
    const endDate = parseLocalDateTime(displayLesson.end);
+   const room = displayLesson.room.trim();
+   const location = displayLesson.location.trim();
+   const title = displayLesson.title.trim();
+   const subtitle = displayLesson.subject.trim();
+   const details = displayLesson.description.trim();
+   const showLocation = Boolean(location) && normalizeField(location) !== normalizeField(room);
+   const showDetails = Boolean(details) && normalizeField(details) !== normalizeField(title) && normalizeField(details) !== normalizeField(subtitle);
 
    return (
       <aside className="lesson-panel" data-closing={isClosing} onClick={closePanel} onTouchStart={handleTouchStart} onTouchEnd={handleTouchEnd}>
@@ -143,20 +150,24 @@ export function LessonDrawer({ lesson, onClose }: LessonDrawerProps) {
                </div>
                <div>
                   <dt>Room</dt>
-                  <dd>{displayLesson.room}</dd>
+                  <dd>{room}</dd>
                </div>
-               <div>
-                  <dt>Location</dt>
-                  <dd>{displayLesson.location}</dd>
-               </div>
+               {showLocation ? (
+                  <div>
+                     <dt>Location</dt>
+                     <dd>{location}</dd>
+                  </div>
+               ) : null}
                <div>
                   <dt>Status</dt>
                   <dd>{displayLesson.status}</dd>
                </div>
-               <div>
-                  <dt>Details</dt>
-                  <dd>{displayLesson.description}</dd>
-               </div>
+               {showDetails ? (
+                  <div>
+                     <dt>Details</dt>
+                     <dd>{details}</dd>
+                  </div>
+               ) : null}
             </dl>
          </div>
       </aside>
@@ -165,4 +176,8 @@ export function LessonDrawer({ lesson, onClose }: LessonDrawerProps) {
 
 function isScrollablePopoverTarget(target: EventTarget) {
    return target instanceof Element && Boolean(target.closest(".lesson-panel__details"));
+}
+
+function normalizeField(value: string) {
+   return value.trim().toLowerCase();
 }

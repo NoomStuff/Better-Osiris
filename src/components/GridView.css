@@ -212,8 +212,7 @@
    background: rgba(17, 22, 34, 0.96);
    background-clip: padding-box;
    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.035);
-   transition:
-      scale 220ms var(--bounce-overshoot);
+   transition: scale 220ms var(--bounce-overshoot);
    scale: 1;
 }
 
@@ -287,6 +286,15 @@
 .grid-lesson.is-tight {
    justify-content: center;
    padding-block: 4px;
+}
+
+.grid-lesson.is-tight .grid-lesson__title {
+   display: block;
+   white-space: nowrap;
+}
+
+.grid-lesson.is-tiny .grid-lesson__title {
+   display: none;
 }
 
 .grid-lesson.is-tight .grid-lesson__meta-time,

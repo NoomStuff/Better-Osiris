@@ -196,6 +196,7 @@ export function GridView({ groups, zoom: zoomId, onSelectLesson }: GridViewProps
                            const hasSameLocation = Boolean(roomLabel) && Boolean(locationLabel) && roomLabel.toLowerCase() === locationLabel.toLowerCase();
                            const roomLocationLabel = getLessonLocationLabel(lesson);
                            const showLocation = !isCompact && Boolean(roomLocationLabel);
+                           const isTiny = visibleHeight > 0 && visibleHeight < 64;
                            const compactParts = [timeRange];
 
                            if (roomLabel) {
@@ -207,7 +208,7 @@ export function GridView({ groups, zoom: zoomId, onSelectLesson }: GridViewProps
 
                            return (
                               <button
-                                 className={`grid-lesson ${densityClass} status-${lesson.status}`}
+                                 className={`grid-lesson ${densityClass} ${isCompact ? "is-compact" : ""} ${isTiny ? "is-tiny" : ""} status-${lesson.status}`}
                                  type="button"
                                  key={lesson.id}
                                  onClick={() => onSelectLesson(lesson)}

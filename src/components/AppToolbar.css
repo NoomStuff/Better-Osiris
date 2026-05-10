@@ -1,6 +1,5 @@
 .app-toolbar {
    display: flex;
-   justify-content: space-between;
    align-items: center;
    gap: 20px;
    padding: 0 0 6px;
@@ -15,9 +14,6 @@
 }
 
 .app-toolbar__identity h1 {
-   display: flex;
-   align-items: center;
-   gap: 8px;
    margin: 0;
    font-size: 1.32em;
    line-height: 1.05;
@@ -25,10 +21,10 @@
 }
 
 .app-toolbar__spinner {
-   width: 14px;
-   height: 14px;
+   width: 18px;
+   height: 18px;
    flex: 0 0 auto;
-   border: 2px solid rgba(124, 199, 255, 0.2);
+   border: 2.5px solid rgba(124, 199, 255, 0.2);
    border-top-color: var(--accent);
    border-radius: 50%;
    animation: app-toolbar-spinner 720ms linear infinite;
@@ -39,6 +35,7 @@
 }
 
 .app-toolbar__actions {
+   margin-left: auto;
    display: flex;
    align-items: center;
    gap: 8px;
@@ -59,7 +56,10 @@
 .zoom-toggle {
    position: relative;
    display: inline-grid;
-   grid-template-columns: repeat(3, minmax(34px, 1fr));
+   flex: 1 1 auto;
+   grid-template-columns: repeat(3, minmax(0, 1fr));
+   min-width: 140px;
+   max-width: 180px;
    gap: 3px;
    padding: 3px;
    border: 2px solid var(--line);
@@ -70,7 +70,10 @@
 .agenda-toggle {
    position: relative;
    display: inline-grid;
-   grid-template-columns: repeat(2, minmax(64px, 1fr));
+   flex: 1 1 auto;
+   grid-template-columns: repeat(2, minmax(0, 1fr));
+   min-width: 140px;
+   max-width: 180px;
    gap: 3px;
    padding: 3px;
    border: 2px solid var(--line);
@@ -80,11 +83,11 @@
 
 .agenda-toggle button {
    height: 28px;
-   padding: 0 10px;
+   padding: 0 6px;
+   font-size: 0.7rem;
    border-radius: 8px;
    color: var(--text-dim);
    cursor: pointer;
-   font-size: 0.7rem;
    letter-spacing: 0.01em;
    transition:
       color 200ms ease,
@@ -141,7 +144,8 @@
    position: relative;
    z-index: 1;
    height: 28px;
-   padding: 0 7px;
+   padding: 0 6px;
+   font-size: 0.66rem;
    border-radius: 8px;
    color: var(--text-dim);
    cursor: pointer;
@@ -188,7 +192,9 @@
    }
 
    .app-toolbar__actions {
-      width: 100%;
+      margin-left: auto;
+      flex: 1 1 auto;
+      min-width: 0;
       justify-content: end;
       gap: 6px;
    }
@@ -197,30 +203,7 @@
       display: none;
    }
 
-   .app-toolbar__spinner--mobile {
+   .app-toolbar__spinner {
       display: inline-block;
-      margin-right: auto;
-   }
-
-   .zoom-toggle {
-      flex: 1 1 auto;
-      grid-template-columns: repeat(3, minmax(0, 1fr));
-      max-width: 180px;
-   }
-
-   .zoom-toggle button {
-      padding: 0 5px;
-      font-size: 0.66rem;
-   }
-
-   .agenda-toggle {
-      flex: 1 1 auto;
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-      max-width: 180px;
-   }
-
-   .agenda-toggle button {
-      padding: 0 6px;
-      font-size: 0.64rem;
    }
 }

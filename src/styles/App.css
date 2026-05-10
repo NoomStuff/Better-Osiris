@@ -94,14 +94,14 @@
    }
 
    .app-content-frame--grid {
-      height: max(520px, calc(100svh - 127px - (var(--app-padding) * 2) - env(safe-area-inset-bottom)));
+      height: max(520px, calc(100lvh - 127px - (var(--app-padding) * 2) - env(safe-area-inset-bottom)));
    }
 
    .app-content-frame--grid.app-content-frame--zoom-half {
-      height: max(1040px, calc(200svh - 254px - (var(--app-padding) * 2) - env(safe-area-inset-bottom)));
+      height: max(1040px, calc(200lvh - 254px - (var(--app-padding) * 2) - env(safe-area-inset-bottom)));
    }
 
    .app-content-frame--grid.app-content-frame--zoom-quarter {
-      height: max(2080px, calc(400svh - 508px - (var(--app-padding) * 2) - env(safe-area-inset-bottom)));
+      height: max(2080px, calc(400lvh - 508px - (var(--app-padding) * 2) - env(safe-area-inset-bottom)));
    }
 }
