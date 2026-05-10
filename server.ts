@@ -111,11 +111,30 @@ app.get("/api/roster/weeks", async (req, res) => {
 });
 
 const distPath = path.join(__dirname, "dist");
-app.use(express.static(distPath));
 
 app.get("/login", (_req, res) => {
    res.redirect(302, "/login.html");
 });
+
+app.use((req, res, next) => {
+   if (req.path.startsWith("/api/") || req.path === "/login.html" || req.path.startsWith("/login")) {
+      next();
+      return;
+   }
+
+   const cookieSecret = getEnvValue("COOKIE_SECRET");
+   const authCookie = parseCookie(req.headers.cookie, AUTH_COOKIE_NAME);
+
+   if (!cookieSecret || !authCookie || !isValidAuthCookieValue(authCookie, cookieSecret)) {
+      const nextPath = req.originalUrl && req.originalUrl !== "/" ? `?next=${encodeURIComponent(req.originalUrl)}` : "";
+      res.redirect(302, `/login.html${nextPath}`);
+      return;
+   }
+
+   next();
+});
+
+app.use(express.static(distPath));
 
 app.use((req, res, next) => {
    if (req.path.startsWith("/api/")) {

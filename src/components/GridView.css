@@ -159,6 +159,8 @@
 
 .grid-now-line {
    position: absolute;
+   left: 0;
+   right: 0;
    height: 2px;
    background: #ff435f;
    box-shadow:
@@ -371,6 +373,11 @@
    .grid-lesson span,
    .grid-lesson small {
       font-size: 0.58rem;
+   }
+
+   .grid-now-line span {
+      right: 4px;
+      font-size: 0.56rem;
    }
 }
 

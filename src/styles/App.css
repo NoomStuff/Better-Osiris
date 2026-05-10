@@ -24,16 +24,16 @@
 }
 
 .app-content-frame--grid {
-   height: max(520px, calc(100vh - 127px - (var(--app-padding) * 2)));
+   height: max(520px, calc(100svh - 127px - (var(--app-padding) * 2)));
    transition: height 420ms cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 .app-content-frame--grid.app-content-frame--zoom-half {
-   height: max(1040px, calc(200vh - 254px - (var(--app-padding) * 2)));
+   height: max(1040px, calc(200svh - 254px - (var(--app-padding) * 2)));
 }
 
 .app-content-frame--grid.app-content-frame--zoom-quarter {
-   height: max(2080px, calc(400vh - 508px - (var(--app-padding) * 2)));
+   height: max(2080px, calc(400svh - 508px - (var(--app-padding) * 2)));
 }
 
 .view-enter {
@@ -91,5 +91,17 @@
 
    .app-content-frame {
       border-radius: 18px;
+   }
+
+   .app-content-frame--grid {
+      height: max(520px, calc(100svh - 127px - (var(--app-padding) * 2) - env(safe-area-inset-bottom)));
+   }
+
+   .app-content-frame--grid.app-content-frame--zoom-half {
+      height: max(1040px, calc(200svh - 254px - (var(--app-padding) * 2) - env(safe-area-inset-bottom)));
+   }
+
+   .app-content-frame--grid.app-content-frame--zoom-quarter {
+      height: max(2080px, calc(400svh - 508px - (var(--app-padding) * 2) - env(safe-area-inset-bottom)));
    }
 }

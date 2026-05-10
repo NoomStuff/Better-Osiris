@@ -24,10 +24,12 @@ function getErrorMessage(error: unknown, fallback = "Something went wrong.") {
 }
 
 export function notifyError(error: unknown, fallback?: string) {
-   notyf.error(getErrorMessage(error, fallback));
+   const detail = getErrorMessage(error, fallback);
+   const message = fallback && detail !== fallback ? `${fallback} ${detail}` : detail;
+   notyf.error(message);
 }
 
 export function logError(error: unknown, fallback?: string) {
-   console.error(error);
+   console.error(fallback ?? "Application error", error);
    notifyError(error, fallback);
 }

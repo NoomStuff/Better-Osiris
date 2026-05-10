@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { AgendaView } from "./components/AgendaView";
-import { AppHeader } from "./components/AppHeader";
+import { AppToolbar } from "./components/AppToolbar";
 import { GridView } from "./components/GridView";
 import { LessonDrawer } from "./components/LessonDrawer";
 import { LoadingState } from "./components/LoadingState";
@@ -43,7 +43,7 @@ export default function App() {
    const [selectedLessonId, setSelectedLessonId] = useState<string | null>(null);
    const [expandedOverrides, setExpandedOverrides] = useState<Set<string>>(new Set());
    const [animateAgenda, setAnimateAgenda] = useState(false);
-   const { data, error, loading, title } = useRosterWeek(weekOffset);
+   const { data, error, loading, refreshing, title } = useRosterWeek(weekOffset);
 
    useEffect(() => {
       ensureFontAwesomeKit();
@@ -171,9 +171,10 @@ export default function App() {
    return (
       <div className="shell">
          <div className="mobile-bottom-bar">
-            <AppHeader
+            <AppToolbar
                viewMode={viewMode}
                gridZoom={gridZoom}
+               isRefreshing={refreshing}
                onChangeView={setViewMode}
                onChangeGridZoom={setGridZoom}
                onExpandAllAgenda={expandAllDays}

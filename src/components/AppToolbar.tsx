@@ -1,9 +1,10 @@
 import type { GridZoom, ViewMode } from "../types/roster";
-import "./AppHeader.css";
+import "./AppToolbar.css";
 
-interface AppHeaderProps {
+interface AppToolbarProps {
    viewMode: ViewMode;
    gridZoom: GridZoom;
+   isRefreshing?: boolean;
    onChangeView: (view: ViewMode) => void;
    onChangeGridZoom: (zoom: GridZoom) => void;
    onExpandAllAgenda: () => void;
@@ -16,15 +17,20 @@ const zoomOptions: { id: GridZoom; label: string }[] = [
    { id: "quarter", label: "15m" },
 ];
 
-export function AppHeader({ viewMode, gridZoom, onChangeView, onChangeGridZoom, onExpandAllAgenda, onCloseAllAgenda }: AppHeaderProps) {
+export function AppToolbar({ viewMode, gridZoom, isRefreshing = false, onChangeView, onChangeGridZoom, onExpandAllAgenda, onCloseAllAgenda }: AppToolbarProps) {
    return (
-      <header className="topbar">
-         <div className="topbar__identity">
+      <header className="app-toolbar">
+         <div className="app-toolbar__identity">
             <p className="eyebrow">MBORijnland</p>
-            <h1>Better Osiris</h1>
+            <h1>
+               Better Osiris
+               {isRefreshing ? <span className="app-toolbar__spinner" aria-label="Refreshing roster data" role="status" /> : null}
+            </h1>
          </div>
 
-         <div className="topbar__actions">
+         <div className="app-toolbar__actions">
+            {isRefreshing ? <span className="app-toolbar__spinner app-toolbar__spinner--mobile" aria-label="Refreshing roster data" role="status" /> : null}
+
             {viewMode === "grid" ? (
                <div className="zoom-toggle view-actions" data-zoom={gridZoom} role="group" aria-label="Timeline zoom" key="view-grid">
                   {zoomOptions.map((option) => (
@@ -44,7 +50,7 @@ export function AppHeader({ viewMode, gridZoom, onChangeView, onChangeGridZoom, 
                </div>
             )}
 
-            <span className="topbar__divider" aria-hidden="true" />
+            <span className="app-toolbar__divider" aria-hidden="true" />
 
             <div className="view-toggle" role="tablist" aria-label="View mode">
                <button

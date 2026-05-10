@@ -15,6 +15,10 @@
    animation: panel-fade 220ms ease both;
 }
 
+.lesson-panel[data-closing="true"] .lesson-panel__backdrop {
+   animation: panel-fade-out 220ms ease both;
+}
+
 .lesson-panel__card {
    position: relative;
    z-index: 1;
@@ -28,6 +32,10 @@
    box-shadow: var(--shadow);
    backdrop-filter: blur(24px);
    animation: panel-rise 420ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.lesson-panel[data-closing="true"] .lesson-panel__card {
+   animation: panel-drop 220ms ease both;
 }
 
 .lesson-panel__close {
@@ -96,6 +104,28 @@
 
    to {
       opacity: 1;
+   }
+}
+
+@keyframes panel-fade-out {
+   from {
+      opacity: 1;
+   }
+
+   to {
+      opacity: 0;
+   }
+}
+
+@keyframes panel-drop {
+   from {
+      opacity: 1;
+      transform: translateY(0) scale(1);
+   }
+
+   to {
+      opacity: 0;
+      transform: translateY(24px) scale(0.99);
    }
 }
 

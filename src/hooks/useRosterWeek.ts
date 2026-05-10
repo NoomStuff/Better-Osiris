@@ -12,6 +12,11 @@ interface WeekEntry {
    updatedAt: number;
 }
 
+interface CachedCurrentWeek {
+   data: RosterResponse;
+   weekNumber: number;
+}
+
 type WeekEntries = Partial<Record<number, WeekEntry>>;
 
 const CURRENT_WEEK_CACHE_KEY = "roster-current-week-cache-v2";
@@ -32,6 +37,19 @@ function createEntry(data: RosterResponse | null, overrides?: Partial<WeekEntry>
    };
 }
 
+function getCurrentWeekNumber() {
+   const date = new Date();
+   const day = date.getDay();
+
+   if (day === 6) {
+      date.setDate(date.getDate() + 2);
+   } else if (day === 0) {
+      date.setDate(date.getDate() + 1);
+   }
+
+   return getIsoWeekNumber(date.toISOString());
+}
+
 function readCachedCurrentWeek() {
    if (typeof window === "undefined") {
       return null;
@@ -43,7 +61,16 @@ function readCachedCurrentWeek() {
          return null;
       }
 
-      return JSON.parse(cached) as RosterResponse;
+      const parsed = JSON.parse(cached) as CachedCurrentWeek | RosterResponse;
+      const data = "data" in parsed ? parsed.data : parsed;
+      const weekNumber = "weekNumber" in parsed ? parsed.weekNumber : data.week.number;
+
+      if (weekNumber !== getCurrentWeekNumber()) {
+         window.localStorage.removeItem(CURRENT_WEEK_CACHE_KEY);
+         return null;
+      }
+
+      return data;
    } catch (error) {
       logError(error, "Failed to parse cached current week.");
       return null;
@@ -55,7 +82,13 @@ function storeCachedCurrentWeek(data: RosterResponse) {
       return;
    }
 
-   window.localStorage.setItem(CURRENT_WEEK_CACHE_KEY, JSON.stringify(data));
+   window.localStorage.setItem(
+      CURRENT_WEEK_CACHE_KEY,
+      JSON.stringify({
+         data,
+         weekNumber: data.week.number,
+      } satisfies CachedCurrentWeek),
+   );
 }
 
 function getInitialEntries(): WeekEntries {
@@ -220,6 +253,7 @@ export function useRosterWeek(offset: number) {
    const activeEntry = entries[offset];
    const data = activeEntry?.data ?? null;
    const loading = !data && (activeEntry?.isFetching ?? true);
+   const refreshing = Boolean(data && activeEntry?.isFetching);
    const error = activeEntry?.error ?? "";
    const title = useMemo(() => getDerivedTitle(offset, entries), [entries, offset]);
 
@@ -227,6 +261,7 @@ export function useRosterWeek(offset: number) {
       data,
       error,
       loading,
+      refreshing,
       title,
    };
 }

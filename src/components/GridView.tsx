@@ -50,8 +50,6 @@ export function GridView({ groups, zoom: zoomId, onSelectLesson }: GridViewProps
    const todayIndex = groups.findIndex((group) => group.key === todayKey);
    const showNowLine = todayIndex >= 0 && nowMinutes >= WORKDAY_START && nowMinutes <= WORKDAY_END;
    const nowLineTop = getOffsetPercent(clamp(nowMinutes, WORKDAY_START, WORKDAY_END));
-   const nowLineLeft = groups.length > 0 ? `${(todayIndex / groups.length) * 100}%` : "0%";
-   const nowLineWidth = groups.length > 0 ? `${100 / groups.length}%` : "0%";
 
    useEffect(() => {
       hoverGuideRef.current = hoverGuide;
@@ -161,8 +159,6 @@ export function GridView({ groups, zoom: zoomId, onSelectLesson }: GridViewProps
                         className="grid-now-line"
                         style={{
                            top: `${nowLineTop}%`,
-                           left: nowLineLeft,
-                           width: nowLineWidth,
                         }}
                      >
                         <span>{formatMinutes(nowMinutes)}</span>
