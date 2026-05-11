@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, type MouseEvent } from "react";
+import { getBrowserWindow } from "../lib/browser";
 import { dayShortLabel, getMinutesFromMidnight, timeLabel, toDayKey } from "../lib/date";
 import { DETAILS_SEPARATOR, getLessonLocationLabel } from "../lib/lessonFormat";
 import { WORKDAY_END, WORKDAY_START } from "../lib/rosterLayout";
@@ -82,11 +83,16 @@ export function GridView({ groups, zoom: zoomId, onSelectLesson }: GridViewProps
    }, []);
 
    useEffect(() => {
+      const appWindow = getBrowserWindow();
+      if (!appWindow) {
+         return;
+      }
+
       const updateNow = () => setNow(new Date());
       updateNow();
 
-      const interval = window.setInterval(updateNow, 30_000);
-      return () => window.clearInterval(interval);
+      const interval = appWindow.setInterval(updateNow, 30_000);
+      return () => appWindow.clearInterval(interval);
    }, []);
 
    const updateHoverGuide = (event: MouseEvent<HTMLDivElement>) => {

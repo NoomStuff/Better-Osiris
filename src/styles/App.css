@@ -1,8 +1,5 @@
 #app {
    --app-padding: 20px;
-   --stable-vh: 100vh;
-   --stable-vh-double: 200vh;
-   --stable-vh-quad: 400vh;
    min-height: 100vh;
    padding: var(--app-padding);
 }

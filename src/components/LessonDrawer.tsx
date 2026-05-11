@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, type TouchEvent } from "react";
+import { getBrowserDocument, getBrowserWindow } from "../lib/browser";
 import { fullDayLabel, parseLocalDateTime, timeLabel } from "../lib/date";
 import { DETAILS_SEPARATOR } from "../lib/lessonFormat";
 import type { Lesson } from "../types/roster";
@@ -21,7 +22,7 @@ export function LessonDrawer({ lesson, onClose }: LessonDrawerProps) {
       }
 
       if (closeTimerRef.current) {
-         window.clearTimeout(closeTimerRef.current);
+         getBrowserWindow()?.clearTimeout(closeTimerRef.current);
          closeTimerRef.current = null;
       }
 
@@ -36,21 +37,26 @@ export function LessonDrawer({ lesson, onClose }: LessonDrawerProps) {
          return;
       }
 
-      const previousOverflow = document.body.style.overflow;
-      const previousOverscrollBehavior = document.body.style.overscrollBehavior;
-      document.body.style.overflow = "hidden";
-      document.body.style.overscrollBehavior = "contain";
+      const appDocument = getBrowserDocument();
+      if (!appDocument) {
+         return;
+      }
+
+      const previousOverflow = appDocument.body.style.overflow;
+      const previousOverscrollBehavior = appDocument.body.style.overscrollBehavior;
+      appDocument.body.style.overflow = "hidden";
+      appDocument.body.style.overscrollBehavior = "contain";
 
       return () => {
-         document.body.style.overflow = previousOverflow;
-         document.body.style.overscrollBehavior = previousOverscrollBehavior;
+         appDocument.body.style.overflow = previousOverflow;
+         appDocument.body.style.overscrollBehavior = previousOverscrollBehavior;
       };
    }, [displayLesson]);
 
    useEffect(() => {
       return () => {
          if (closeTimerRef.current) {
-            window.clearTimeout(closeTimerRef.current);
+            getBrowserWindow()?.clearTimeout(closeTimerRef.current);
          }
       };
    }, []);
@@ -65,7 +71,7 @@ export function LessonDrawer({ lesson, onClose }: LessonDrawerProps) {
       }
 
       setIsClosing(true);
-      closeTimerRef.current = window.setTimeout(() => {
+      closeTimerRef.current = (getBrowserWindow()?.setTimeout ?? setTimeout)(() => {
          setDisplayLesson(null);
          setIsClosing(false);
          onClose();

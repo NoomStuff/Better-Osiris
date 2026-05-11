@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { fetchRosterWeeks } from "../api/roster";
+import { getBrowserStorage } from "../lib/browser";
 import { formatWeekTitle, getIsoWeekNumber, shiftIsoDateByDays } from "../lib/date";
 import { logError } from "../lib/notify";
 import type { RosterResponse } from "../types/roster";
@@ -51,12 +52,13 @@ function getCurrentWeekNumber() {
 }
 
 function readCachedCurrentWeek() {
-   if (typeof window === "undefined") {
+   const storage = getBrowserStorage();
+   if (!storage) {
       return null;
    }
 
    try {
-      const cached = window.localStorage.getItem(CURRENT_WEEK_CACHE_KEY);
+      const cached = storage.getItem(CURRENT_WEEK_CACHE_KEY);
       if (!cached) {
          return null;
       }
@@ -66,7 +68,7 @@ function readCachedCurrentWeek() {
       const weekNumber = "weekNumber" in parsed ? parsed.weekNumber : data.week.number;
 
       if (weekNumber !== getCurrentWeekNumber()) {
-         window.localStorage.removeItem(CURRENT_WEEK_CACHE_KEY);
+         storage.removeItem(CURRENT_WEEK_CACHE_KEY);
          return null;
       }
 
@@ -78,11 +80,12 @@ function readCachedCurrentWeek() {
 }
 
 function storeCachedCurrentWeek(data: RosterResponse) {
-   if (typeof window === "undefined" || data.week.offset !== 0) {
+   const storage = getBrowserStorage();
+   if (!storage || data.week.offset !== 0) {
       return;
    }
 
-   window.localStorage.setItem(
+   storage.setItem(
       CURRENT_WEEK_CACHE_KEY,
       JSON.stringify({
          data,

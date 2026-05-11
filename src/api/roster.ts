@@ -1,25 +1,27 @@
+import { getBrowserWindow } from "../lib/browser";
 import type { RosterBatchResponse } from "../types/roster";
 
 function redirectToLogin() {
-   if (typeof window === "undefined") {
+   const appWindow = getBrowserWindow();
+   if (!appWindow) {
       return;
    }
 
-   const isOnLogin = window.location.pathname.startsWith("/login");
+   const isOnLogin = appWindow.location.pathname.startsWith("/login");
    if (isOnLogin) {
       return;
    }
 
-   const nextPath = `${window.location.pathname}${window.location.search}`;
+   const nextPath = `${appWindow.location.pathname}${appWindow.location.search}`;
    const target = nextPath && nextPath !== "/" ? `/login.html?next=${encodeURIComponent(nextPath)}` : "/login.html";
-   window.location.href = target;
+   appWindow.location.href = target;
 }
 
 export async function fetchRosterWeeks(offset: number, limit: number, signal?: AbortSignal): Promise<RosterBatchResponse> {
    const response = await fetch(`/api/roster/weeks?offset=${offset}&limit=${limit}`, signal ? { signal } : undefined);
 
    if (!response.ok) {
-      if (response.status === 401 && typeof window !== "undefined") {
+      if (response.status === 401) {
          redirectToLogin();
       }
 

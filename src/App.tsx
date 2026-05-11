@@ -6,6 +6,7 @@ import { LessonDrawer } from "./components/LessonDrawer";
 import { LoadingState } from "./components/LoadingState";
 import { WeekNavigator } from "./components/WeekNavigator";
 import { useRosterWeek } from "./hooks/useRosterWeek";
+import { getBrowserDocument, getBrowserStorage, getBrowserWindow } from "./lib/browser";
 import { toDayKey } from "./lib/date";
 import { getDayGroups, getPositionedLessons } from "./lib/rosterLayout";
 import type { GridZoom, Lesson, ViewMode } from "./types/roster";
@@ -16,35 +17,34 @@ const MIN_WEEK_OFFSET = 0; // we cant fetch past weeks, so min is 0 (current wee
 const MAX_WEEK_OFFSET = 50; // the max we can fetch from the API
 
 function getInitialViewMode(): ViewMode {
-   if (typeof window === "undefined") {
-      return "agenda";
-   }
-
-   const stored = window.localStorage.getItem(STORAGE_KEY);
+   const stored = getBrowserStorage()?.getItem(STORAGE_KEY);
    return stored === "grid" ? "grid" : "agenda";
 }
 
 function ensureFontAwesomeKit() {
-   if (document.querySelector("script[data-font-awesome-kit]")) {
+   const appDocument = getBrowserDocument();
+   if (!appDocument || appDocument.querySelector("script[data-font-awesome-kit]")) {
       return;
    }
 
-   const script = document.createElement("script");
+   const script = appDocument.createElement("script");
    script.src = "https://kit.fontawesome.com/a7bbea504e.js";
    script.crossOrigin = "anonymous";
    script.dataset["fontAwesomeKit"] = "true";
-   document.head.appendChild(script);
+   appDocument.head.appendChild(script);
 }
 
 function setStableViewportHeight() {
-   if (typeof window === "undefined" || typeof document === "undefined") {
+   const appWindow = getBrowserWindow();
+   const appDocument = getBrowserDocument();
+   if (!appWindow || !appDocument) {
       return;
    }
 
-   const height = window.innerHeight;
-   document.documentElement.style.setProperty("--stable-vh", `${height}px`);
-   document.documentElement.style.setProperty("--stable-vh-double", `${height * 2}px`);
-   document.documentElement.style.setProperty("--stable-vh-quad", `${height * 4}px`);
+   const height = appWindow.innerHeight;
+   appDocument.documentElement.style.setProperty("--stable-vh", `${height}px`);
+   appDocument.documentElement.style.setProperty("--stable-vh-double", `${height * 2}px`);
+   appDocument.documentElement.style.setProperty("--stable-vh-quad", `${height * 4}px`);
 }
 
 export default function App() {
@@ -61,16 +61,17 @@ export default function App() {
    }, []);
 
    useEffect(() => {
-      if (typeof window === "undefined") {
+      const appWindow = getBrowserWindow();
+      if (!appWindow) {
          return;
       }
 
-      let viewportWidth = window.innerWidth;
+      let viewportWidth = appWindow.innerWidth;
 
       setStableViewportHeight();
 
       const updateForStableViewportChange = () => {
-         const nextWidth = window.innerWidth;
+         const nextWidth = appWindow.innerWidth;
          const widthChanged = Math.abs(nextWidth - viewportWidth) > 24;
 
          if (widthChanged) {
@@ -80,23 +81,23 @@ export default function App() {
       };
 
       const updateAfterOrientationChange = () => {
-         window.setTimeout(() => {
-            viewportWidth = window.innerWidth;
+         appWindow.setTimeout(() => {
+            viewportWidth = appWindow.innerWidth;
             setStableViewportHeight();
          }, 250);
       };
 
-      window.addEventListener("resize", updateForStableViewportChange);
-      window.addEventListener("orientationchange", updateAfterOrientationChange);
+      appWindow.addEventListener("resize", updateForStableViewportChange);
+      appWindow.addEventListener("orientationchange", updateAfterOrientationChange);
 
       return () => {
-         window.removeEventListener("resize", updateForStableViewportChange);
-         window.removeEventListener("orientationchange", updateAfterOrientationChange);
+         appWindow.removeEventListener("resize", updateForStableViewportChange);
+         appWindow.removeEventListener("orientationchange", updateAfterOrientationChange);
       };
    }, []);
 
    useEffect(() => {
-      window.localStorage.setItem(STORAGE_KEY, viewMode);
+      getBrowserStorage()?.setItem(STORAGE_KEY, viewMode);
    }, [viewMode]);
 
    const positionedLessons = useMemo(() => (data ? getPositionedLessons(data.lessons) : []), [data]);
