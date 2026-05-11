@@ -37,6 +37,10 @@ function ensureFontAwesomeKit() {
 }
 
 function setStableViewportHeight() {
+   if (typeof window === "undefined" || typeof document === "undefined") {
+      return;
+   }
+
    const height = window.innerHeight;
    document.documentElement.style.setProperty("--stable-vh", `${height}px`);
    document.documentElement.style.setProperty("--stable-vh-double", `${height * 2}px`);
@@ -57,6 +61,10 @@ export default function App() {
    }, []);
 
    useEffect(() => {
+      if (typeof window === "undefined") {
+         return;
+      }
+
       let viewportWidth = window.innerWidth;
 
       setStableViewportHeight();

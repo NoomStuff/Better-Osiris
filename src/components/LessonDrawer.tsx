@@ -25,7 +25,7 @@ export function LessonDrawer({ lesson, onClose }: LessonDrawerProps) {
          closeTimerRef.current = null;
       }
 
-      window.queueMicrotask(() => {
+      void Promise.resolve().then(() => {
          setDisplayLesson(lesson);
          setIsClosing(false);
       });
