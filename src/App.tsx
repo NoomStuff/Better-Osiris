@@ -36,6 +36,13 @@ function ensureFontAwesomeKit() {
    document.head.appendChild(script);
 }
 
+function setStableViewportHeight() {
+   const height = window.innerHeight;
+   document.documentElement.style.setProperty("--stable-vh", `${height}px`);
+   document.documentElement.style.setProperty("--stable-vh-double", `${height * 2}px`);
+   document.documentElement.style.setProperty("--stable-vh-quad", `${height * 4}px`);
+}
+
 export default function App() {
    const [weekOffset, setWeekOffset] = useState(0);
    const [viewMode, setViewMode] = useState<ViewMode>(getInitialViewMode);
@@ -47,6 +54,37 @@ export default function App() {
 
    useEffect(() => {
       ensureFontAwesomeKit();
+   }, []);
+
+   useEffect(() => {
+      let viewportWidth = window.innerWidth;
+
+      setStableViewportHeight();
+
+      const updateForStableViewportChange = () => {
+         const nextWidth = window.innerWidth;
+         const widthChanged = Math.abs(nextWidth - viewportWidth) > 24;
+
+         if (widthChanged) {
+            viewportWidth = nextWidth;
+            setStableViewportHeight();
+         }
+      };
+
+      const updateAfterOrientationChange = () => {
+         window.setTimeout(() => {
+            viewportWidth = window.innerWidth;
+            setStableViewportHeight();
+         }, 250);
+      };
+
+      window.addEventListener("resize", updateForStableViewportChange);
+      window.addEventListener("orientationchange", updateAfterOrientationChange);
+
+      return () => {
+         window.removeEventListener("resize", updateForStableViewportChange);
+         window.removeEventListener("orientationchange", updateAfterOrientationChange);
+      };
    }, []);
 
    useEffect(() => {

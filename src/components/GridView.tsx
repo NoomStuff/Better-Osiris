@@ -160,9 +160,7 @@ export function GridView({ groups, zoom: zoomId, onSelectLesson }: GridViewProps
                         style={{
                            top: `${nowLineTop}%`,
                         }}
-                     >
-                        <span>{formatMinutes(nowMinutes)}</span>
-                     </div>
+                     />
                   ) : null}
 
                   {groups.map((group) => (

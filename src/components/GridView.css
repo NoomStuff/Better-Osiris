@@ -93,9 +93,13 @@
    font-size: 0.72rem;
    font-variant-numeric: tabular-nums;
    white-space: nowrap;
-   --line-opacity: 1;
+   --line-opacity: 0.7;
    opacity: var(--line-opacity);
    transition: opacity 240ms ease;
+}
+
+.grid-time-slot[data-major="true"] {
+   --line-opacity: 1;
 }
 
 .grid-days {
@@ -162,11 +166,8 @@
    left: 0;
    right: 0;
    height: 2px;
-   background: #ff435f;
-   box-shadow:
-      0 0 0 1px rgba(255, 67, 95, 0.28),
-      0 0 18px rgba(255, 67, 95, 0.26);
-   z-index: 11;
+   background: rgba(255, 128, 128, 0.42);
+   z-index: 2;
    pointer-events: none;
 }
 
@@ -175,29 +176,17 @@
    position: absolute;
    left: -4px;
    top: 50%;
-   width: 8px;
-   height: 8px;
-   transform: translateY(-50%);
+   width: 7px;
+   height: 7px;
+   transform: translateY(-50%) translateX(-50%);
    border-radius: 50%;
-   background: #ff435f;
-   box-shadow: 0 0 0 3px rgba(255, 67, 95, 0.18);
-}
-
-.grid-now-line span {
-   position: absolute;
-   right: 6px;
-   top: 50%;
-   transform: translateY(-50%);
-   padding: 1px 5px;
-   border-radius: 999px;
-   background: rgba(16, 18, 28, 0.94);
-   color: #ffdce2;
-   font-size: 0.62rem;
-   font-variant-numeric: tabular-nums;
+   background: rgba(255, 128, 128, 0.82);
+   box-shadow: 0 0 0 3px rgba(255, 128, 128, 0.08);
 }
 
 .grid-lesson {
    position: absolute;
+   z-index: 4;
    padding: 7px 7px;
    border-radius: 8px;
    border: 2px solid rgba(178, 196, 255, 0.16);
@@ -231,6 +220,7 @@
 }
 
 .grid-lesson:hover {
+   z-index: 6;
    border-color: rgba(178, 196, 255, 0.28);
    border-left-color: var(--accent);
    background: rgba(23, 30, 45, 0.98);
@@ -383,10 +373,6 @@
       font-size: 0.58rem;
    }
 
-   .grid-now-line span {
-      right: 4px;
-      font-size: 0.56rem;
-   }
 }
 
 @media (prefers-reduced-motion: reduce) {
