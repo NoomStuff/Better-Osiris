@@ -1,5 +1,5 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
-import { AUTH_COOKIE_NAME, isValidAuthCookieValue, parseCookie } from "../_lib/auth.js";
+import { AUTH_COOKIE_NAME, buildAuthCookieHeader, isValidAuthCookieValue, parseCookie } from "../_lib/auth.js";
 import { getEnvValue } from "../_lib/env.js";
 import { fetchOsirisRosterWeeks } from "../_lib/osirisClient.js";
 import { normalizeRosterWeekResponse } from "../_lib/osirisRosterNormalizer.js";
@@ -30,6 +30,8 @@ export default async function handler(req: IncomingMessage, res: ServerResponse)
       res.end(JSON.stringify({ error: "Unauthorized" }));
       return;
    }
+
+   res.setHeader("Set-Cookie", buildAuthCookieHeader(authCookie, process.env["NODE_ENV"] === "production"));
 
    const url = new URL(req.url ?? "/", `http://${req.headers.host ?? "localhost"}`);
    const offsetString = url.searchParams.get("offset") ?? "0";

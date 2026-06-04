@@ -13,6 +13,7 @@ const port = Number(process.env.PORT) || 8787;
 const MIN_WEEK_OFFSET = 0;
 const MAX_WEEK_OFFSET = 50;
 const MAX_WEEK_LIMIT = 5;
+const shouldBypassAuth = process.argv.includes("--dev-auth-bypass");
 
 app.use(express.json());
 
@@ -50,6 +51,11 @@ app.use("/api", (req, res, next) => {
       return;
    }
 
+   if (shouldBypassAuth) {
+      next();
+      return;
+   }
+
    const cookieSecret = getEnvValue("COOKIE_SECRET");
    if (!cookieSecret) {
       res.status(500).json({ error: "Server auth is not configured." });
@@ -62,6 +68,7 @@ app.use("/api", (req, res, next) => {
       return;
    }
 
+   res.setHeader("Set-Cookie", buildAuthCookieHeader(authCookie, process.env.NODE_ENV === "production"));
    next();
 });
 
@@ -122,6 +129,11 @@ app.use((req, res, next) => {
       return;
    }
 
+   if (shouldBypassAuth) {
+      next();
+      return;
+   }
+
    const cookieSecret = getEnvValue("COOKIE_SECRET");
    const authCookie = parseCookie(req.headers.cookie, AUTH_COOKIE_NAME);
 
@@ -131,6 +143,7 @@ app.use((req, res, next) => {
       return;
    }
 
+   res.setHeader("Set-Cookie", buildAuthCookieHeader(authCookie, process.env.NODE_ENV === "production"));
    next();
 });
 
