@@ -150,6 +150,37 @@
    scale: 0.99;
 }
 
+.agenda-breaktime {
+   display: grid;
+   grid-template-columns: minmax(16px, 1fr) auto minmax(16px, 1fr);
+   align-items: center;
+   gap: 10px;
+   min-height: 28px;
+   padding: 2px 12px;
+   color: var(--text-muted);
+   font-size: 0.78rem;
+   font-weight: 650;
+   font-variant-numeric: tabular-nums;
+}
+
+.agenda-breaktime__line {
+   height: 1px;
+   background: linear-gradient(90deg, transparent, var(--line-strong), transparent);
+}
+
+.agenda-breaktime__label {
+   display: inline-flex;
+   align-items: center;
+   gap: 7px;
+   white-space: nowrap;
+}
+
+.agenda-breaktime__label i {
+   color: var(--accent);
+   font-size: 0.82rem;
+   opacity: 0.85;
+}
+
 .agenda-lesson__time {
    display: grid;
    gap: 0;
@@ -245,6 +276,12 @@
    .agenda-lesson {
       grid-template-columns: 64px minmax(0, 1fr) 12px;
       padding: 9px 10px;
+   }
+
+   .agenda-breaktime {
+      gap: 8px;
+      padding: 1px 10px;
+      font-size: 0.72rem;
    }
 
    .agenda-lesson__body strong {

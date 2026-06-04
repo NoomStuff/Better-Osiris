@@ -1,6 +1,7 @@
+import { Fragment } from "react";
 import { dayLabel, monthDayLabel, timeLabel, toDayKey } from "../lib/date";
 import { DETAILS_SEPARATOR, getLessonLocationLabel } from "../lib/lessonFormat";
-import type { DayGroup, Lesson } from "../types/roster";
+import type { DayGroup, Lesson, PositionedLesson } from "../types/roster";
 import "./AgendaView.css";
 
 interface AgendaViewProps {
@@ -9,6 +10,26 @@ interface AgendaViewProps {
    animate: boolean;
    onToggleDay: (dayKey: string) => void;
    onSelectLesson: (lesson: Lesson) => void;
+}
+
+const MINUTE_MS = 60 * 1000;
+
+function getBreaktimeLabel(previousLesson: PositionedLesson, nextLesson: PositionedLesson): string | null {
+   const breakMinutes = Math.round((nextLesson.startDate.getTime() - previousLesson.endDate.getTime()) / MINUTE_MS);
+
+   if (breakMinutes <= 0) {
+      return null;
+   }
+
+   if (breakMinutes < 60) {
+      return `${breakMinutes} min break`;
+   }
+
+   const hours = Math.floor(breakMinutes / 60);
+   const minutes = breakMinutes % 60;
+   const hourLabel = `${hours} hr${hours === 1 ? "" : "s"}`;
+
+   return minutes === 0 ? `${hourLabel} break` : `${hourLabel} ${minutes} min break`;
 }
 
 export function AgendaView({ groups, expandedDays, animate, onToggleDay, onSelectLesson }: AgendaViewProps) {
@@ -48,30 +69,40 @@ export function AgendaView({ groups, expandedDays, animate, onToggleDay, onSelec
                         {group.lessons.length === 0 ? (
                            <p className="empty-state">No classes scheduled.</p>
                         ) : (
-                           group.lessons.map((lesson) => {
+                           group.lessons.map((lesson, lessonIndex) => {
                               const locationLabel = getLessonLocationLabel(lesson);
                               const teacherLocationLabel = locationLabel ? `${lesson.teacher}${DETAILS_SEPARATOR}${locationLabel}` : lesson.teacher;
+                              const previousLesson = group.lessons[lessonIndex - 1];
+                              const breaktimeLabel = previousLesson ? getBreaktimeLabel(previousLesson, lesson) : null;
 
                               return (
-                                 <button
-                                    className={`agenda-lesson status-${lesson.status}`}
-                                    type="button"
-                                    key={lesson.id}
-                                    onClick={() => onSelectLesson(lesson)}
-                                 >
-                                    <div className="agenda-lesson__time">
-                                       <span>{timeLabel.format(lesson.startDate)}</span>
-                                       <span>{timeLabel.format(lesson.endDate)}</span>
-                                    </div>
+                                 <Fragment key={lesson.id}>
+                                    {breaktimeLabel ? (
+                                       <div className="agenda-breaktime" aria-label={breaktimeLabel}>
+                                          <span className="agenda-breaktime__line" aria-hidden="true" />
+                                          <span className="agenda-breaktime__label">
+                                             <i className="fa-solid fa-mug-hot" aria-hidden="true" />
+                                             {breaktimeLabel}
+                                          </span>
+                                          <span className="agenda-breaktime__line" aria-hidden="true" />
+                                       </div>
+                                    ) : null}
 
-                                    <div className="agenda-lesson__body">
-                                       <strong title={lesson.title}>{lesson.title}</strong>
-                                       <p title={lesson.subject}>{lesson.subject}</p>
-                                       <small title={teacherLocationLabel}>{teacherLocationLabel}</small>
-                                    </div>
+                                    <button className={`agenda-lesson status-${lesson.status}`} type="button" onClick={() => onSelectLesson(lesson)}>
+                                       <div className="agenda-lesson__time">
+                                          <span>{timeLabel.format(lesson.startDate)}</span>
+                                          <span>{timeLabel.format(lesson.endDate)}</span>
+                                       </div>
 
-                                    <i className="fa-solid fa-angle-right agenda-lesson__icon" />
-                                 </button>
+                                       <div className="agenda-lesson__body">
+                                          <strong title={lesson.title}>{lesson.title}</strong>
+                                          <p title={lesson.subject}>{lesson.subject}</p>
+                                          <small title={teacherLocationLabel}>{teacherLocationLabel}</small>
+                                       </div>
+
+                                       <i className="fa-solid fa-angle-right agenda-lesson__icon" />
+                                    </button>
+                                 </Fragment>
                               );
                            })
                         )}
