@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import type { SyntheticEvent } from "react";
 import { clearOsirisToken, fetchOsirisTokenSettings, saveOsirisToken } from "../api/settings";
-import { logError } from "../lib/notify";
+import { notifyError, notifyWarning, notifySuccess } from "../lib/notyf";
 import "./SettingsDialog.css";
 
 interface SettingsDialogProps {
@@ -15,7 +15,6 @@ export function SettingsDialog({ isOpen, onClose }: SettingsDialogProps) {
    const [token, setToken] = useState("");
    const [hasCustomToken, setHasCustomToken] = useState(false);
    const [isLoading, setIsLoading] = useState(false);
-   const [error, setError] = useState("");
 
    useEffect(() => {
       if (!isOpen) {
@@ -31,10 +30,7 @@ export function SettingsDialog({ isOpen, onClose }: SettingsDialogProps) {
             }
          })
          .catch((requestError: unknown) => {
-            logError(requestError, "Failed to load settings.");
-            if (isActive) {
-               setError("Settings could not be loaded.");
-            }
+            notifyError(requestError, "Failed to load settings.");
          });
 
       return () => {
@@ -47,7 +43,6 @@ export function SettingsDialog({ isOpen, onClose }: SettingsDialogProps) {
    }
 
    const closeSettings = () => {
-      setError("");
       setToken("");
       onClose();
    };
@@ -56,33 +51,31 @@ export function SettingsDialog({ isOpen, onClose }: SettingsDialogProps) {
       event.preventDefault();
       const nextToken = token.trim();
       if (!nextToken) {
-         setError("Enter a bearer token first.");
+         notifyWarning("Enter a bearer token first.");
          return;
       }
 
       setIsLoading(true);
-      setError("");
 
       try {
          await saveOsirisToken(nextToken);
+         notifySuccess("Osiris token saved successfully.");
          reloadRosterData();
       } catch (requestError) {
-         logError(requestError, "Failed to save Osiris token.");
-         setError("Token could not be saved.");
+         notifyError(requestError, "Failed to save Osiris token.");
          setIsLoading(false);
       }
    };
 
    const handleClear = async () => {
       setIsLoading(true);
-      setError("");
 
       try {
          await clearOsirisToken();
+         notifySuccess("Osiris token removed successfully.");
          reloadRosterData();
       } catch (requestError) {
-         logError(requestError, "Failed to remove Osiris token.");
-         setError("Token could not be removed.");
+         notifyError(requestError, "Failed to remove Osiris token.");
          setIsLoading(false);
       }
    };
@@ -115,15 +108,16 @@ export function SettingsDialog({ isOpen, onClose }: SettingsDialogProps) {
                   />
                </label>
 
-               <p className="settings-dialog__status">{hasCustomToken ? "Roster requests are using your saved token." : "Roster requests are using the server default."}</p>
-               {error ? <p className="settings-dialog__error">{error}</p> : null}
+               <p className="settings-dialog__status">
+                  {hasCustomToken ? "Roster requests are using your saved token." : "Roster requests are using the server default."}
+               </p>
 
                <div className="settings-dialog__actions">
                   <button className="settings-dialog__button settings-dialog__button--primary" type="submit" disabled={isLoading}>
                      Save
                   </button>
                   <button className="settings-dialog__button" type="button" disabled={isLoading || !hasCustomToken} onClick={() => void handleClear()}>
-                     Use default
+                     Reset to default
                   </button>
                </div>
             </form>

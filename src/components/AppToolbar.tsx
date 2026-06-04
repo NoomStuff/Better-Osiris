@@ -57,6 +57,8 @@ export function AppToolbar({
                </div>
             )}
 
+            <span className="app-toolbar__divider" aria-hidden="true" />
+
             <div className="view-toggle" role="tablist" aria-label="View mode">
                <button
                   className={`icon-button view-toggle__button ${viewMode === "agenda" ? "is-selected" : ""}`}

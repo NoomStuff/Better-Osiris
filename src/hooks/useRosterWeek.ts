@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { fetchRosterWeeks } from "../api/roster";
 import { formatWeekTitle, getIsoWeekNumber, shiftIsoDateByDays } from "../lib/date";
-import { logError } from "../lib/notify";
+import { notifyError } from "../lib/notyf";
 import type { RosterResponse } from "../types/roster";
 
 interface WeekEntry {
@@ -72,7 +72,7 @@ function readCachedCurrentWeek() {
 
       return data;
    } catch (error) {
-      logError(error, "Failed to parse cached current week.");
+      notifyError(error, "Failed to parse cached current week.");
       return null;
    }
 }
@@ -197,7 +197,7 @@ export function useRosterWeek(offset: number) {
                });
             })
             .catch((error: unknown) => {
-               logError(error, LOAD_ERROR_MESSAGE);
+               notifyError(error, LOAD_ERROR_MESSAGE);
                setEntries((current) => {
                   const next = { ...current };
                   offsets.forEach((targetOffset) => {

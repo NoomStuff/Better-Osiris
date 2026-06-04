@@ -1,15 +1,15 @@
 import React from "react";
 import ReactDOM from "react-dom/client";
 import App from "./App";
-import { logError } from "./lib/notify";
+import { notifyError } from "./lib/notyf";
 import "./styles/global.css";
 
 window.addEventListener("error", (event) => {
-   logError(event.error ?? event.message, "Unexpected app error.");
+   notifyError(event.error ?? event.message, "Unexpected app error.");
 });
 
 window.addEventListener("unhandledrejection", (event) => {
-   logError(event.reason, "Unexpected async error.");
+   notifyError(event.reason, "Unexpected async error.");
 });
 
 const rootElement = document.getElementById("app");
