@@ -2,6 +2,7 @@ import type { IncomingMessage, ServerResponse } from "node:http";
 import { AUTH_COOKIE_NAME, buildAuthCookieHeader, isValidAuthCookieValue, parseCookie } from "../_lib/auth.js";
 import { getEnvValue } from "../_lib/env.js";
 import { fetchOsirisRosterWeeks } from "../_lib/osirisClient.js";
+import { readOsirisTokenFromCookie } from "../_lib/osirisTokenCookie.js";
 import { normalizeRosterWeeksResponse } from "../_lib/osirisRosterNormalizer.js";
 
 const MIN_WEEK_OFFSET = 0;
@@ -42,9 +43,10 @@ export default async function handler(req: IncomingMessage, res: ServerResponse)
    const offset = Number.isNaN(rawOffset) ? MIN_WEEK_OFFSET : Math.min(Math.max(rawOffset, MIN_WEEK_OFFSET), MAX_WEEK_OFFSET);
    const limit = Number.isNaN(rawLimit) ? MAX_WEEK_LIMIT : Math.min(Math.max(rawLimit, 1), MAX_WEEK_LIMIT);
    const safeLimit = Math.min(limit, MAX_WEEK_OFFSET - offset + 1);
+   const tokenOverride = readOsirisTokenFromCookie(req.headers.cookie, cookieSecret);
 
    try {
-      const rawResponse = await fetchOsirisRosterWeeks(offset, safeLimit);
+      const rawResponse = await fetchOsirisRosterWeeks(offset, safeLimit, tokenOverride);
       const weeks = normalizeRosterWeeksResponse(rawResponse, offset);
       res.statusCode = 200;
       res.setHeader("Content-Type", "application/json");

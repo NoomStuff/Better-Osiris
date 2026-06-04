@@ -1,4 +1,5 @@
 import { getEnvValue } from "./env.js";
+import crypto from "node:crypto";
 
 const OSIRIS_ROSTER_URL = "https://mborijnland.osiris-student.nl/student/osiris/student/rooster/per_week";
 
@@ -44,19 +45,20 @@ const WEEK_CACHE_TTL_MS = 60_000;
 const weekCache = new Map<string, { data: OsirisRosterResponse; expiresAt: number }>();
 const inFlightRequests = new Map<string, Promise<OsirisRosterResponse>>();
 
-function getCacheKey(offset: number, limit: number) {
-   return `${offset}:${limit}`;
+function getCacheKey(offset: number, limit: number, bearerToken: string) {
+   return `${hashToken(bearerToken)}:${offset}:${limit}`;
 }
 
-export async function fetchOsirisRosterWeeks(offset: number, limit = 1): Promise<OsirisRosterResponse> {
-   const bearerToken = getEnvValue("BEARER_TOKEN");
+export async function fetchOsirisRosterWeeks(offset: number, limit = 1, tokenOverride?: string | null): Promise<OsirisRosterResponse> {
+   const customToken = normalizeToken(tokenOverride);
+   const bearerToken = customToken ?? getEnvValue("BEARER_TOKEN");
 
    if (!bearerToken) {
       throw new Error("BEARER_TOKEN is missing. Add it to .env before using live OSIRIS data.");
    }
 
    const safeLimit = Math.max(1, limit);
-   const cacheKey = getCacheKey(offset, safeLimit);
+   const cacheKey = getCacheKey(offset, safeLimit, bearerToken);
 
    const cachedWeek = weekCache.get(cacheKey);
    if (cachedWeek && cachedWeek.expiresAt > Date.now()) {
@@ -97,4 +99,17 @@ export async function fetchOsirisRosterWeeks(offset: number, limit = 1): Promise
 
    inFlightRequests.set(cacheKey, request);
    return request;
+}
+
+function hashToken(token: string): string {
+   return crypto.createHash("sha256").update(token).digest("base64url").slice(0, 24);
+}
+
+function normalizeToken(token: string | null | undefined): string | undefined {
+   const trimmed = token?.trim();
+   if (trimmed) {
+      return trimmed;
+   }
+
+   return undefined;
 }

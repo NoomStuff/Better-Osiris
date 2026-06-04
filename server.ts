@@ -1,9 +1,18 @@
 import express from "express";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { AUTH_COOKIE_NAME, buildAuthCookieHeader, createSignedAuthCookieValue, isValidAuthCookieValue, parseCookie } from "./api/_lib/auth.js";
+import {
+   AUTH_COOKIE_NAME,
+   buildAuthCookieHeader,
+   buildClearOsirisTokenCookieHeader,
+   buildOsirisTokenCookieHeader,
+   createSignedAuthCookieValue,
+   isValidAuthCookieValue,
+   parseCookie,
+} from "./api/_lib/auth.js";
 import { getEnvValue } from "./api/_lib/env.js";
 import { fetchOsirisRosterWeeks } from "./api/_lib/osirisClient.js";
+import { createEncryptedOsirisTokenCookieValue, hasOsirisTokenCookie, readOsirisTokenFromCookie } from "./api/_lib/osirisTokenCookie.js";
 import { normalizeRosterWeekResponse, normalizeRosterWeeksResponse } from "./api/_lib/osirisRosterNormalizer.js";
 
 const __filename = fileURLToPath(import.meta.url);
@@ -78,9 +87,10 @@ app.get("/api/roster/week", async (req, res) => {
    const offsetString = typeof offsetValue === "string" ? offsetValue : "0";
    const rawOffset = Number.parseInt(offsetString, 10);
    const offset = Number.isNaN(rawOffset) ? MIN_WEEK_OFFSET : Math.min(Math.max(rawOffset, MIN_WEEK_OFFSET), MAX_WEEK_OFFSET);
+   const tokenOverride = getOsirisTokenOverride(req.headers.cookie);
 
    try {
-      const rawResponse = await fetchOsirisRosterWeeks(offset, 1);
+      const rawResponse = await fetchOsirisRosterWeeks(offset, 1, tokenOverride);
       res.json(normalizeRosterWeekResponse(rawResponse, offset));
    } catch (error) {
       console.error("OSIRIS roster fetch failed:", error);
@@ -101,9 +111,10 @@ app.get("/api/roster/weeks", async (req, res) => {
    const offset = Number.isNaN(rawOffset) ? MIN_WEEK_OFFSET : Math.min(Math.max(rawOffset, MIN_WEEK_OFFSET), MAX_WEEK_OFFSET);
    const limit = Number.isNaN(rawLimit) ? MAX_WEEK_LIMIT : Math.min(Math.max(rawLimit, 1), MAX_WEEK_LIMIT);
    const safeLimit = Math.min(limit, MAX_WEEK_OFFSET - offset + 1);
+   const tokenOverride = getOsirisTokenOverride(req.headers.cookie);
 
    try {
-      const rawResponse = await fetchOsirisRosterWeeks(offset, safeLimit);
+      const rawResponse = await fetchOsirisRosterWeeks(offset, safeLimit, tokenOverride);
       res.json({
          weeks: normalizeRosterWeeksResponse(rawResponse, offset),
          offset,
@@ -115,6 +126,33 @@ app.get("/api/roster/weeks", async (req, res) => {
       const message = error instanceof Error ? error.message : "Unknown roster fetch error.";
       res.status(502).json({ error: message });
    }
+});
+
+app.get("/api/settings/osiris-token", (req, res) => {
+   res.json({ hasCustomToken: hasValidOsirisTokenOverride(req.headers.cookie) });
+});
+
+app.put("/api/settings/osiris-token", (req, res) => {
+   const cookieSecret = getEnvValue("COOKIE_SECRET");
+   if (!cookieSecret) {
+      res.status(500).json({ error: "Server auth is not configured." });
+      return;
+   }
+
+   const token = getTokenFromBody(req.body as unknown);
+   if (!token) {
+      res.status(400).json({ error: "Token is required." });
+      return;
+   }
+
+   const encryptedToken = createEncryptedOsirisTokenCookieValue(token, cookieSecret);
+   res.setHeader("Set-Cookie", buildOsirisTokenCookieHeader(encryptedToken, process.env.NODE_ENV === "production"));
+   res.json({ hasCustomToken: true });
+});
+
+app.delete("/api/settings/osiris-token", (_req, res) => {
+   res.setHeader("Set-Cookie", buildClearOsirisTokenCookieHeader(process.env.NODE_ENV === "production"));
+   res.json({ hasCustomToken: false });
 });
 
 const distPath = path.join(__dirname, "dist");
@@ -173,4 +211,26 @@ function getPasswordFromBody(body: unknown): string {
 
    const password = (body as { password?: unknown }).password;
    return typeof password === "string" ? password : "";
+}
+
+function getTokenFromBody(body: unknown): string {
+   if (!body || typeof body !== "object") {
+      return "";
+   }
+
+   const token = (body as { token?: unknown }).token;
+   return typeof token === "string" ? token.trim() : "";
+}
+
+function getOsirisTokenOverride(cookieHeader: string | undefined): string | null {
+   const cookieSecret = getEnvValue("COOKIE_SECRET");
+   return cookieSecret ? readOsirisTokenFromCookie(cookieHeader, cookieSecret) : null;
+}
+
+function hasValidOsirisTokenOverride(cookieHeader: string | undefined): boolean {
+   if (!hasOsirisTokenCookie(cookieHeader)) {
+      return false;
+   }
+
+   return Boolean(getOsirisTokenOverride(cookieHeader));
 }

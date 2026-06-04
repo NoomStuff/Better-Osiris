@@ -9,6 +9,7 @@ interface AppToolbarProps {
    onChangeGridZoom: (zoom: GridZoom) => void;
    onExpandAllAgenda: () => void;
    onCloseAllAgenda: () => void;
+   onOpenSettings: () => void;
 }
 
 const zoomOptions: { id: GridZoom; label: string }[] = [
@@ -17,7 +18,16 @@ const zoomOptions: { id: GridZoom; label: string }[] = [
    { id: "quarter", label: "15m" },
 ];
 
-export function AppToolbar({ viewMode, gridZoom, isRefreshing = false, onChangeView, onChangeGridZoom, onExpandAllAgenda, onCloseAllAgenda }: AppToolbarProps) {
+export function AppToolbar({
+   viewMode,
+   gridZoom,
+   isRefreshing = false,
+   onChangeView,
+   onChangeGridZoom,
+   onExpandAllAgenda,
+   onCloseAllAgenda,
+   onOpenSettings,
+}: AppToolbarProps) {
    return (
       <header className="app-toolbar">
          <div className="app-toolbar__identity">
@@ -47,8 +57,6 @@ export function AppToolbar({ viewMode, gridZoom, isRefreshing = false, onChangeV
                </div>
             )}
 
-            <span className="app-toolbar__divider" aria-hidden="true" />
-
             <div className="view-toggle" role="tablist" aria-label="View mode">
                <button
                   className={`icon-button view-toggle__button ${viewMode === "agenda" ? "is-selected" : ""}`}
@@ -71,6 +79,12 @@ export function AppToolbar({ viewMode, gridZoom, isRefreshing = false, onChangeV
                   <i className="fa-solid fa-table-cells-large" />
                </button>
             </div>
+
+            <span className="app-toolbar__divider" aria-hidden="true" />
+
+            <button className="icon-button app-toolbar__settings-button" type="button" aria-label="Open settings" onClick={onOpenSettings}>
+               <i className="fa-solid fa-gear" />
+            </button>
          </div>
       </header>
    );

@@ -121,6 +121,23 @@ button {
    background: rgba(255, 255, 255, 0.03);
 }
 
+.app-toolbar__settings-button:hover {
+   color: var(--text-strong);
+}
+
+.app-toolbar__settings-button:hover:not(:disabled) i {
+   animation-name: settings-gear-spin;
+}
+
+@keyframes settings-gear-spin {
+   from {
+      transform: rotate(0deg);
+   }
+   to {
+      transform: rotate(60deg);
+   }
+}
+
 .grid-lesson.status-changed {
    border-color: rgba(255, 191, 105, 0.32);
    border-left-color: var(--warning);

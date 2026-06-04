@@ -4,6 +4,7 @@ import { AppToolbar } from "./components/AppToolbar";
 import { GridView } from "./components/GridView";
 import { LessonDrawer } from "./components/LessonDrawer";
 import { LoadingState } from "./components/LoadingState";
+import { SettingsDialog } from "./components/SettingsDialog";
 import { WeekNavigator } from "./components/WeekNavigator";
 import { useRosterWeek } from "./hooks/useRosterWeek";
 import { toDayKey } from "./lib/date";
@@ -54,6 +55,7 @@ export default function App() {
    const [selectedLessonId, setSelectedLessonId] = useState<string | null>(null);
    const [expandedOverrides, setExpandedOverrides] = useState<Set<string>>(new Set());
    const [animateAgenda, setAnimateAgenda] = useState(false);
+   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
    const { data, error, loading, refreshing, title } = useRosterWeek(weekOffset);
 
    useEffect(() => {
@@ -225,6 +227,7 @@ export default function App() {
                onChangeGridZoom={setGridZoom}
                onExpandAllAgenda={expandAllDays}
                onCloseAllAgenda={closeAllDays}
+               onOpenSettings={() => setIsSettingsOpen(true)}
             />
 
             <WeekNavigator
@@ -268,6 +271,7 @@ export default function App() {
          </main>
 
          <LessonDrawer lesson={selectedLesson} onClose={() => setSelectedLessonId(null)} />
+         <SettingsDialog isOpen={isSettingsOpen} onClose={() => setIsSettingsOpen(false)} />
       </div>
    );
 }

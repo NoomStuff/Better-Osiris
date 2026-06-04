@@ -12,6 +12,8 @@ interface CookieOptions {
 
 export const AUTH_COOKIE_NAME = "auth";
 export const COOKIE_MAX_AGE_SECONDS = 60 * 60 * 24 * 7;
+export const OSIRIS_TOKEN_COOKIE_NAME = "osiris_bearer";
+export const OSIRIS_TOKEN_COOKIE_MAX_AGE_SECONDS = 60 * 60 * 24 * 365;
 
 export function createSignedAuthCookieValue(secret: string): string {
    const value = base64UrlEncode(crypto.randomBytes(18));
@@ -87,6 +89,26 @@ export function serializeCookie(name: string, value: string, options: CookieOpti
    }
 
    return segments.join("; ");
+}
+
+export function buildOsirisTokenCookieHeader(value: string, isProduction: boolean): string {
+   return serializeCookie(OSIRIS_TOKEN_COOKIE_NAME, value, {
+      httpOnly: true,
+      secure: isProduction,
+      sameSite: "lax",
+      path: "/",
+      maxAge: OSIRIS_TOKEN_COOKIE_MAX_AGE_SECONDS,
+   });
+}
+
+export function buildClearOsirisTokenCookieHeader(isProduction: boolean): string {
+   return serializeCookie(OSIRIS_TOKEN_COOKIE_NAME, "", {
+      httpOnly: true,
+      secure: isProduction,
+      sameSite: "lax",
+      path: "/",
+      maxAge: 1,
+   });
 }
 
 export function buildAuthCookieHeader(value: string, isProduction: boolean): string {
