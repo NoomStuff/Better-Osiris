@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, type TouchEvent } from "react";
 import { fullDayLabel, parseLocalDateTime, timeLabel } from "../lib/date";
 import { DETAILS_SEPARATOR } from "../lib/lessonFormat";
 import type { Lesson } from "../types/roster";
+import { IconButton } from "./IconButton";
 import "./LessonDrawer.css";
 
 interface LessonDrawerProps {
@@ -130,9 +131,7 @@ export function LessonDrawer({ lesson, onClose }: LessonDrawerProps) {
                   <h3>{displayLesson.title}</h3>
                   <p>{displayLesson.subject}</p>
                </div>
-               <button className="icon-button lesson-panel__close" type="button" onClick={closePanel} aria-label="Close">
-                  <i className="fa-solid fa-xmark" />
-               </button>
+               <IconButton className="lesson-panel__close" icon="fa-solid fa-xmark" label="Close" onClick={closePanel} />
             </div>
 
             <dl className="lesson-panel__details">

@@ -1,0 +1,88 @@
+.toolbar-action-group {
+   position: relative;
+   z-index: 30;
+   display: inline-grid;
+   flex: 1 1 auto;
+   min-width: 140px;
+   max-width: 180px;
+   gap: 3px;
+   padding: 3px;
+   border: 2px solid var(--line);
+   border-radius: 11px;
+   background: rgba(255, 255, 255, 0.026);
+   animation: toolbar-action-group-enter 240ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.toolbar-action-group--selector {
+   grid-template-columns: repeat(var(--toolbar-action-count), minmax(0, 1fr));
+}
+
+.toolbar-action-group--buttons {
+   grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.toolbar-action-group--selector::before {
+   content: "";
+   position: absolute;
+   top: 3px;
+   bottom: 3px;
+   left: 3px;
+   width: calc((100% - 6px) / var(--toolbar-action-count));
+   border-radius: 8px;
+   background: rgba(124, 199, 255, 0.13);
+   transform: translateX(calc(var(--toolbar-action-index) * 100%));
+   transition: transform 260ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.toolbar-action-group__item {
+   position: relative;
+   z-index: 1;
+   height: 28px;
+   padding: 0 6px;
+   border-radius: 8px;
+   color: var(--text-dim);
+   cursor: pointer;
+   font-size: 0.7rem;
+   font-variant-numeric: tabular-nums;
+   letter-spacing: 0.01em;
+   transition:
+      background-color 220ms ease-out,
+      color 220ms ease-out,
+      scale 220ms var(--bounce-overshoot);
+   scale: 1;
+}
+
+.toolbar-action-group__item:is(:hover, :focus-visible, [data-tooltip-open="true"], [data-shortcut-active="true"]) {
+   background: rgba(124, 199, 255, 0.06);
+   color: var(--text-strong);
+   transition:
+      background-color 0s,
+      color 0s,
+      scale 220ms var(--bounce-overshoot);
+}
+
+.toolbar-action-group__item[data-selected="true"] {
+   background: transparent;
+   color: var(--text-strong);
+}
+
+.toolbar-action-group__item:is(:active, [data-shortcut-active="true"]):not(:disabled) {
+   scale: 0.92;
+}
+
+.toolbar-action-group__item:disabled {
+   cursor: not-allowed;
+   opacity: 0.45;
+}
+
+@keyframes toolbar-action-group-enter {
+   from {
+      opacity: 0;
+      transform: translateX(10px) scale(0.98);
+   }
+
+   to {
+      opacity: 1;
+      transform: translateX(0) scale(1);
+   }
+}

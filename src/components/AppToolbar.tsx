@@ -1,4 +1,7 @@
+import { APP_SHORTCUT_LABELS } from "../lib/appShortcuts";
 import type { GridZoom, ViewMode } from "../types/roster";
+import { IconButton } from "./IconButton";
+import { ToolbarActionButtons, ToolbarActionSelector, type ToolbarActionOption } from "./ToolbarActionGroup";
 import "./AppToolbar.css";
 
 interface AppToolbarProps {
@@ -12,10 +15,10 @@ interface AppToolbarProps {
    onOpenSettings: () => void;
 }
 
-const zoomOptions: { id: GridZoom; label: string }[] = [
-   { id: "hour", label: "1h" },
-   { id: "half", label: "30m" },
-   { id: "quarter", label: "15m" },
+const zoomOptions: ToolbarActionOption<GridZoom>[] = [
+   { id: "hour", label: "1h", tooltip: "Use 1 hour grid rows", shortcut: "Ctrl + 1", activationId: "zoom-hour" },
+   { id: "half", label: "30m", tooltip: "Use 30 minute grid rows", shortcut: "Ctrl + 2", activationId: "zoom-half" },
+   { id: "quarter", label: "15m", tooltip: "Use 15 minute grid rows", shortcut: "Ctrl + 3", activationId: "zoom-quarter" },
 ];
 
 export function AppToolbar({
@@ -39,54 +42,74 @@ export function AppToolbar({
 
          <div className="app-toolbar__actions">
             {viewMode === "grid" ? (
-               <div className="zoom-toggle view-actions" data-zoom={gridZoom} role="group" aria-label="Timeline zoom" key="view-grid">
-                  {zoomOptions.map((option) => (
-                     <button className={option.id === gridZoom ? "is-selected" : ""} type="button" key={option.id} onClick={() => onChangeGridZoom(option.id)}>
-                        {option.label}
-                     </button>
-                  ))}
-               </div>
+               <ToolbarActionSelector label="Timeline zoom" options={zoomOptions} value={gridZoom} onChange={onChangeGridZoom} key="view-grid" />
             ) : (
-               <div className="agenda-toggle view-actions" role="group" aria-label="Agenda sections" key="view-agenda">
-                  <button type="button" onClick={onExpandAllAgenda}>
-                     Expand
-                  </button>
-                  <button type="button" onClick={onCloseAllAgenda}>
-                     Close
-                  </button>
-               </div>
+               <ToolbarActionButtons
+                  label="Agenda sections"
+                  actions={[
+                     {
+                        id: "expand",
+                        label: "Expand",
+                        tooltip: "Expand all agenda days",
+                        shortcut: "Ctrl + Left / Ctrl + 1",
+                        activationId: "agenda-expand",
+                        onPress: onExpandAllAgenda,
+                     },
+                     {
+                        id: "close",
+                        label: "Close",
+                        tooltip: "Close all agenda days",
+                        shortcut: "Ctrl + Right / Ctrl + 2",
+                        activationId: "agenda-close",
+                        onPress: onCloseAllAgenda,
+                     },
+                  ]}
+                  key="view-agenda"
+               />
             )}
 
             <span className="app-toolbar__divider" aria-hidden="true" />
 
             <div className="view-toggle" role="tablist" aria-label="View mode">
-               <button
-                  className={`icon-button view-toggle__button ${viewMode === "agenda" ? "is-selected" : ""}`}
-                  type="button"
+               <IconButton
+                  className="view-toggle__button"
+                  icon="fa-solid fa-list"
+                  label="Agenda view"
+                  shortcut={APP_SHORTCUT_LABELS.agendaView}
+                  tooltipPlacement="bottom"
+                  activationId="agenda-view"
+                  selected={viewMode === "agenda"}
                   onClick={() => onChangeView("agenda")}
                   role="tab"
                   aria-selected={viewMode === "agenda"}
-                  aria-label="Agenda view"
-               >
-                  <i className="fa-solid fa-list" />
-               </button>
-               <button
-                  className={`icon-button view-toggle__button ${viewMode === "grid" ? "is-selected" : ""}`}
-                  type="button"
+               />
+               <IconButton
+                  className="view-toggle__button"
+                  icon="fa-solid fa-table-cells-large"
+                  label="Grid view"
+                  shortcut={APP_SHORTCUT_LABELS.gridView}
+                  tooltipPlacement="bottom"
+                  activationId="grid-view"
+                  selected={viewMode === "grid"}
                   onClick={() => onChangeView("grid")}
                   role="tab"
                   aria-selected={viewMode === "grid"}
-                  aria-label="Grid view"
-               >
-                  <i className="fa-solid fa-table-cells-large" />
-               </button>
+               />
             </div>
 
             <span className="app-toolbar__divider" aria-hidden="true" />
 
-            <button className="icon-button app-toolbar__settings-button" type="button" aria-label="Open settings" onClick={onOpenSettings}>
-               <i className="fa-solid fa-gear" />
-            </button>
+            <IconButton
+               className="app-toolbar__settings-button"
+               icon="fa-solid fa-gear"
+               label="Open settings"
+               shortcut={APP_SHORTCUT_LABELS.settings}
+               activationId="settings"
+               tooltipAlign="end"
+               tooltipPlacement="bottom"
+               hoverEffect="rotate"
+               onClick={onOpenSettings}
+            />
          </div>
       </header>
    );

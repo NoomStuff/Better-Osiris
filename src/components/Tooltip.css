@@ -1,0 +1,168 @@
+[data-tooltip-host="true"] {
+   position: relative;
+}
+
+[data-tooltip-open="true"] {
+   z-index: 1000;
+}
+
+.control-tooltip {
+   position: absolute;
+   z-index: 10000;
+   left: 50%;
+   min-width: max-content;
+   max-width: min(220px, calc(100dvw - 24px));
+   padding: 7px 9px;
+   border: 1px solid var(--line-strong);
+   border-radius: 8px;
+   background: rgba(8, 11, 18, 0.96);
+   box-shadow: 0 14px 40px rgba(0, 0, 0, 0.32);
+   color: var(--text-strong);
+   font-size: 0.72rem;
+   line-height: 1.2;
+   text-align: center;
+   white-space: normal;
+   opacity: 0;
+   visibility: hidden;
+   transition:
+      opacity 120ms ease,
+      transform 120ms ease,
+      visibility 120ms ease;
+   pointer-events: none;
+}
+
+.control-tooltip::after {
+   content: "";
+   position: absolute;
+   left: 50%;
+   width: 8px;
+   height: 8px;
+   border-color: var(--line-strong);
+   background: rgba(8, 11, 18, 0.96);
+   transform: translateX(-50%) rotate(45deg);
+}
+
+[data-tooltip-placement="top"] .control-tooltip {
+   bottom: calc(100% + 10px);
+   transform: translate(-50%, 4px) scale(0.98);
+}
+
+[data-tooltip-placement="bottom"] .control-tooltip {
+   top: calc(100% + 10px);
+   transform: translate(-50%, -4px) scale(0.98);
+}
+
+[data-tooltip-align="start"] .control-tooltip {
+   left: 0;
+}
+
+[data-tooltip-align="start"][data-tooltip-placement] .control-tooltip {
+   transform: translate(0, var(--tooltip-hidden-y)) scale(0.98);
+}
+
+[data-tooltip-align="end"] .control-tooltip {
+   right: 0;
+   left: auto;
+}
+
+[data-tooltip-align="end"][data-tooltip-placement] .control-tooltip {
+   transform: translate(0, var(--tooltip-hidden-y)) scale(0.98);
+}
+
+[data-tooltip-placement="top"] {
+   --tooltip-hidden-y: 4px;
+}
+
+[data-tooltip-placement="bottom"] {
+   --tooltip-hidden-y: -4px;
+}
+
+[data-tooltip-placement="top"] .control-tooltip::after {
+   top: 100%;
+   border-right: 1px solid var(--line-strong);
+   border-bottom: 1px solid var(--line-strong);
+   transform: translate(-50%, -4px) rotate(45deg);
+}
+
+[data-tooltip-placement="bottom"] .control-tooltip::after {
+   bottom: 100%;
+   border-left: 1px solid var(--line-strong);
+   border-top: 1px solid var(--line-strong);
+   transform: translate(-50%, 4px) rotate(45deg);
+}
+
+[data-tooltip-align="start"] .control-tooltip::after {
+   left: 18px;
+}
+
+[data-tooltip-align="end"] .control-tooltip::after {
+   right: 18px;
+   left: auto;
+   transform: translate(0, -4px) rotate(45deg);
+}
+
+[data-tooltip-align="end"][data-tooltip-placement="bottom"] .control-tooltip::after {
+   transform: translate(0, 4px) rotate(45deg);
+}
+
+[data-tooltip-open="true"] .control-tooltip {
+   opacity: 1;
+   visibility: visible;
+}
+
+[data-tooltip-open="true"][data-tooltip-align="center"][data-tooltip-placement="top"] .control-tooltip {
+   transform: translate(-50%, 0) scale(1);
+}
+
+[data-tooltip-open="true"][data-tooltip-align="center"][data-tooltip-placement="bottom"] .control-tooltip {
+   transform: translate(-50%, 0) scale(1);
+}
+
+[data-tooltip-open="true"]:is([data-tooltip-align="start"], [data-tooltip-align="end"]) .control-tooltip {
+   transform: translate(0, 0) scale(1);
+}
+
+.control-tooltip__label,
+.control-tooltip__shortcut {
+   display: block;
+}
+
+.control-tooltip__shortcut {
+   margin-top: 3px;
+   color: var(--text-muted);
+   font-size: 0.64rem;
+   font-variant-numeric: tabular-nums;
+}
+
+@media (max-width: 640px) {
+   .mobile-bottom-bar [data-tooltip-host="true"] .control-tooltip {
+      top: auto;
+      bottom: calc(100% + 10px);
+      transform: translate(-50%, 4px) scale(0.98);
+   }
+
+   .mobile-bottom-bar [data-tooltip-host="true"] .control-tooltip::after {
+      top: 100%;
+      bottom: auto;
+      border: 0;
+      border-right: 1px solid var(--line-strong);
+      border-bottom: 1px solid var(--line-strong);
+      transform: translate(-50%, -4px) rotate(45deg);
+   }
+
+   .mobile-bottom-bar [data-tooltip-align="start"] .control-tooltip {
+      transform: translate(0, 4px) scale(0.98);
+   }
+
+   .mobile-bottom-bar [data-tooltip-align="end"] .control-tooltip {
+      transform: translate(0, 4px) scale(0.98);
+   }
+
+   .mobile-bottom-bar [data-tooltip-open="true"][data-tooltip-align="center"] .control-tooltip {
+      transform: translate(-50%, 0) scale(1);
+   }
+
+   .mobile-bottom-bar [data-tooltip-open="true"]:is([data-tooltip-align="start"], [data-tooltip-align="end"]) .control-tooltip {
+      transform: translate(0, 0) scale(1);
+   }
+}

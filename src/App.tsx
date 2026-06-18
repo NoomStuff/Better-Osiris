@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { AgendaView } from "./components/AgendaView";
 import { AppToolbar } from "./components/AppToolbar";
 import { GridView } from "./components/GridView";
@@ -6,6 +6,8 @@ import { LessonDrawer } from "./components/LessonDrawer";
 import { LoadingState } from "./components/LoadingState";
 import { SettingsDialog } from "./components/SettingsDialog";
 import { WeekNavigator } from "./components/WeekNavigator";
+import { useKeyboardShortcuts, type KeyboardShortcut } from "./hooks/useKeyboardShortcuts";
+import { APP_SHORTCUTS } from "./lib/appShortcuts";
 import { useRosterWeek } from "./hooks/useRosterWeek";
 import { toDayKey } from "./lib/date";
 import { getDayGroups, getPositionedLessons } from "./lib/rosterLayout";
@@ -15,6 +17,8 @@ import "./styles/App.css";
 const STORAGE_KEY = "roster-view-mode";
 const MIN_WEEK_OFFSET = 0; // we cant fetch past weeks, so min is 0 (current week)
 const MAX_WEEK_OFFSET = 50; // the max we can fetch from the API
+const GRID_ZOOM_ORDER = ["hour", "half", "quarter"] as const satisfies readonly GridZoom[];
+const FUTURE_WEEK_KEYS = ["1", "2", "3", "4", "5", "6", "7", "8", "9"] as const;
 
 function getInitialViewMode(): ViewMode {
    if (typeof window === "undefined") {
@@ -46,6 +50,29 @@ function setStableViewportHeight() {
    document.documentElement.style.setProperty("--stable-vh", `${height}px`);
    document.documentElement.style.setProperty("--stable-vh-double", `${height * 2}px`);
    document.documentElement.style.setProperty("--stable-vh-quad", `${height * 4}px`);
+}
+
+function getAdjacentZoom(currentZoom: GridZoom, direction: -1 | 1) {
+   const currentIndex = GRID_ZOOM_ORDER.indexOf(currentZoom);
+   const nextIndex = Math.min(Math.max(currentIndex + direction, 0), GRID_ZOOM_ORDER.length - 1);
+   return GRID_ZOOM_ORDER[nextIndex] ?? currentZoom;
+}
+
+function getToolbarActionActivationId(viewMode: ViewMode, actionNumber: number) {
+   if (viewMode === "agenda") {
+      if (actionNumber === 1) {
+         return "agenda-expand";
+      }
+
+      if (actionNumber === 2) {
+         return "agenda-close";
+      }
+
+      return undefined;
+   }
+
+   const zoom = GRID_ZOOM_ORDER[actionNumber - 1];
+   return zoom ? `zoom-${zoom}` : undefined;
 }
 
 export default function App() {
@@ -151,12 +178,12 @@ export default function App() {
 
    const allDayKeys = useMemo(() => dayGroups.map((group) => group.key), [dayGroups]);
 
-   const updateWeekOffset = (updater: number | ((current: number) => number)) => {
+   const updateWeekOffset = useCallback((updater: number | ((current: number) => number)) => {
       setWeekOffset((current) => (typeof updater === "function" ? updater(current) : updater));
       setSelectedLessonId(null);
       setAnimateAgenda(false);
       setExpandedOverrides(new Set());
-   };
+   }, []);
 
    const selectedLesson: Lesson | null = useMemo(() => {
       if (!data || !selectedLessonId) {
@@ -179,7 +206,7 @@ export default function App() {
       });
    };
 
-   const expandAllDays = () => {
+   const expandAllDays = useCallback(() => {
       if (!data) {
          return;
       }
@@ -194,18 +221,26 @@ export default function App() {
          });
          return next;
       });
-   };
+   }, [allDayKeys, autoExpandedDays, data]);
 
-   const closeAllDays = () => {
+   const closeAllDays = useCallback(() => {
       if (!data) {
          return;
       }
 
       setAnimateAgenda(true);
       setExpandedOverrides(() => new Set(autoExpandedDays));
-   };
+   }, [autoExpandedDays, data]);
 
-   const handleCurrentWeek = () => {
+   const goPreviousWeek = useCallback(() => {
+      updateWeekOffset((current) => Math.max(current - 1, MIN_WEEK_OFFSET));
+   }, [updateWeekOffset]);
+
+   const goNextWeek = useCallback(() => {
+      updateWeekOffset((current) => Math.min(current + 1, MAX_WEEK_OFFSET));
+   }, [updateWeekOffset]);
+
+   const handleCurrentWeek = useCallback(() => {
       if (weekOffset === 0) {
          setSelectedLessonId(null);
          setAnimateAgenda(true);
@@ -214,7 +249,124 @@ export default function App() {
       }
 
       updateWeekOffset(0);
-   };
+   }, [updateWeekOffset, weekOffset]);
+
+   const openSettings = useCallback(() => {
+      setIsSettingsOpen(true);
+   }, []);
+
+   const moveToolbarAction = useCallback(
+      (direction: -1 | 1) => {
+         if (viewMode === "agenda") {
+            if (direction < 0) {
+               expandAllDays();
+            } else {
+               closeAllDays();
+            }
+            return;
+         }
+
+         setGridZoom((current) => {
+            return getAdjacentZoom(current, direction);
+         });
+      },
+      [closeAllDays, expandAllDays, viewMode]
+   );
+
+   const selectToolbarAction = useCallback(
+      (actionNumber: number) => {
+         if (viewMode === "agenda") {
+            if (actionNumber === 1) {
+               expandAllDays();
+            } else if (actionNumber === 2) {
+               closeAllDays();
+            }
+            return;
+         }
+
+         const nextZoom = GRID_ZOOM_ORDER[actionNumber - 1];
+         if (nextZoom) {
+            setGridZoom(nextZoom);
+         }
+      },
+      [closeAllDays, expandAllDays, viewMode]
+   );
+
+   const keyboardShortcuts = useMemo<KeyboardShortcut[]>(
+      () => [
+         {
+            id: "previous-week",
+            ...APP_SHORTCUTS.previousWeek,
+            activationTargetId: "previous-week",
+            disabled: weekOffset <= MIN_WEEK_OFFSET,
+            onPress: goPreviousWeek,
+         },
+         {
+            id: "next-week",
+            ...APP_SHORTCUTS.nextWeek,
+            activationTargetId: "next-week",
+            disabled: weekOffset >= MAX_WEEK_OFFSET,
+            onPress: goNextWeek,
+         },
+         {
+            id: "current-week-r",
+            ...APP_SHORTCUTS.currentWeek,
+            activationTargetId: "current-week",
+            onPress: handleCurrentWeek,
+         },
+         {
+            id: "current-week-0",
+            key: "0",
+            activationTargetId: "current-week",
+            onPress: handleCurrentWeek,
+         },
+         {
+            id: "agenda-view",
+            ...APP_SHORTCUTS.agendaView,
+            activationTargetId: "agenda-view",
+            onPress: () => setViewMode("agenda"),
+         },
+         {
+            id: "grid-view",
+            ...APP_SHORTCUTS.gridView,
+            activationTargetId: "grid-view",
+            onPress: () => setViewMode("grid"),
+         },
+         {
+            id: "open-settings",
+            ...APP_SHORTCUTS.settings,
+            activationTargetId: "settings",
+            onPress: openSettings,
+         },
+         {
+            id: "previous-toolbar-action",
+            ...APP_SHORTCUTS.previousToolbarAction,
+            activationTargetId: viewMode === "agenda" ? "agenda-expand" : `zoom-${getAdjacentZoom(gridZoom, -1)}`,
+            onPress: () => moveToolbarAction(-1),
+         },
+         {
+            id: "next-toolbar-action",
+            ...APP_SHORTCUTS.nextToolbarAction,
+            activationTargetId: viewMode === "agenda" ? "agenda-close" : `zoom-${getAdjacentZoom(gridZoom, 1)}`,
+            onPress: () => moveToolbarAction(1),
+         },
+         ...FUTURE_WEEK_KEYS.map<KeyboardShortcut>((key) => ({
+            id: `future-week-${key}`,
+            key,
+            onPress: () => updateWeekOffset(Number(key)),
+         })),
+         ...FUTURE_WEEK_KEYS.map<KeyboardShortcut>((key) => ({
+            id: `toolbar-action-${key}`,
+            ctrlKey: true,
+            key,
+            activationTargetId: getToolbarActionActivationId(viewMode, Number(key)),
+            onPress: () => selectToolbarAction(Number(key)),
+         })),
+      ],
+      [goNextWeek, goPreviousWeek, gridZoom, handleCurrentWeek, moveToolbarAction, openSettings, selectToolbarAction, updateWeekOffset, viewMode, weekOffset]
+   );
+
+   useKeyboardShortcuts(keyboardShortcuts, !isSettingsOpen && selectedLesson === null);
 
    return (
       <div className="shell">
@@ -227,15 +379,14 @@ export default function App() {
                onChangeGridZoom={setGridZoom}
                onExpandAllAgenda={expandAllDays}
                onCloseAllAgenda={closeAllDays}
-               onOpenSettings={() => setIsSettingsOpen(true)}
+               onOpenSettings={openSettings}
             />
 
             <WeekNavigator
                title={title}
-               isRefreshing={refreshing}
                weekOffset={weekOffset}
-               onPreviousWeek={() => updateWeekOffset((current) => Math.max(current - 1, MIN_WEEK_OFFSET))}
-               onNextWeek={() => updateWeekOffset((current) => Math.min(current + 1, MAX_WEEK_OFFSET))}
+               onPreviousWeek={goPreviousWeek}
+               onNextWeek={goNextWeek}
                onCurrentWeek={handleCurrentWeek}
                canGoPrevious={weekOffset > MIN_WEEK_OFFSET}
                canGoNext={weekOffset < MAX_WEEK_OFFSET}

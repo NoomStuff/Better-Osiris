@@ -1,0 +1,121 @@
+.icon-button {
+   width: 36px;
+   height: 36px;
+   padding: 0;
+   display: inline-flex;
+   align-items: center;
+   justify-content: center;
+   color: inherit;
+   cursor: pointer;
+}
+
+.icon-button__surface {
+   width: 100%;
+   height: 100%;
+   border: 2px solid var(--line);
+   border-radius: 10px;
+   display: inline-flex;
+   align-items: center;
+   justify-content: center;
+   background: rgba(255, 255, 255, 0.03);
+   color: inherit;
+   pointer-events: none;
+   transition:
+      transform 260ms var(--bounce-overshoot),
+      border-color 220ms ease-out,
+      background-color 220ms ease-out,
+      color 220ms ease-out;
+}
+
+.icon-button--ghost .icon-button__surface {
+   background: transparent;
+}
+
+.icon-button:disabled {
+   cursor: not-allowed;
+   opacity: 0.4;
+}
+
+.icon-button:is(:hover, :focus-visible, [data-tooltip-open="true"], [data-shortcut-active="true"]):not(:disabled):not(.is-selected) .icon-button__surface {
+   border-color: var(--line-strong);
+   background: rgba(124, 199, 255, 0.14);
+   color: var(--text-strong);
+   transition:
+      transform 260ms var(--bounce-overshoot),
+      border-color 0s,
+      background-color 0s,
+      color 0s;
+}
+
+.icon-button.is-selected .icon-button__surface {
+   border-color: rgba(124, 199, 255, 0.28);
+   background: rgba(124, 199, 255, 0.12);
+   color: var(--text-strong);
+}
+
+.icon-button.is-selected:is(:hover, :focus-visible, [data-tooltip-open="true"], [data-shortcut-active="true"]):not(:disabled) .icon-button__surface {
+   border-color: rgba(124, 199, 255, 0.42);
+   background: rgba(124, 199, 255, 0.12);
+   transition:
+      transform 260ms var(--bounce-overshoot),
+      border-color 0s,
+      background-color 0s,
+      color 0s;
+}
+
+.icon-button:is(:active, [data-shortcut-active="true"]):not(:disabled) .icon-button__surface {
+   transform: scale(0.9);
+}
+
+.icon-button__icon {
+   display: inline-flex;
+   align-items: center;
+   justify-content: center;
+   width: 1em;
+   height: 1em;
+   pointer-events: none;
+}
+
+.icon-button:is(:hover, :focus-visible, [data-tooltip-open="true"], [data-shortcut-active="true"]):not(:disabled) .icon-button__icon {
+   animation: icon-button-pop 400ms cubic-bezier(0.34, 2.56, 0.64, 1);
+}
+
+.icon-button:is(:hover, :focus-visible, [data-tooltip-open="true"], [data-shortcut-active="true"]):not(:disabled)[data-hover-effect="nudge-left"] i {
+   animation: icon-button-nudge-left 400ms cubic-bezier(0.34, 2.56, 0.64, 1);
+}
+
+.icon-button:is(:hover, :focus-visible, [data-tooltip-open="true"], [data-shortcut-active="true"]):not(:disabled)[data-hover-effect="nudge-right"] i {
+   animation: icon-button-nudge-right 400ms cubic-bezier(0.34, 2.56, 0.64, 1);
+}
+
+.icon-button:is(:hover, :focus-visible, [data-tooltip-open="true"], [data-shortcut-active="true"]):not(:disabled)[data-hover-effect="rotate"] i {
+   animation: icon-button-rotate 400ms cubic-bezier(0.34, 2.56, 0.64, 1);
+}
+
+@keyframes icon-button-pop {
+   50% {
+      transform: scale(1.14);
+   }
+}
+
+@keyframes icon-button-nudge-left {
+   50% {
+      transform: translateX(-2px);
+   }
+}
+
+@keyframes icon-button-nudge-right {
+   50% {
+      transform: translateX(2px);
+   }
+}
+
+@keyframes icon-button-rotate {
+   from {
+      transform: rotate(-60deg);
+   }
+
+   to {
+      transform: rotate(0deg);
+   }
+}

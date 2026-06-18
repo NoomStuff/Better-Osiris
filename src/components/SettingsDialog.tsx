@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import type { SyntheticEvent } from "react";
 import { clearOsirisToken, fetchOsirisTokenSettings, saveOsirisToken } from "../api/settings";
 import { notifyError, notifyWarning, notifySuccess } from "../lib/notyf";
+import { IconButton } from "./IconButton";
 import "./SettingsDialog.css";
 
 interface SettingsDialogProps {
@@ -89,9 +90,7 @@ export function SettingsDialog({ isOpen, onClose }: SettingsDialogProps) {
                   <p className="eyebrow">Settings</p>
                   <h2 id="settings-title">Osiris token</h2>
                </div>
-               <button className="icon-button icon-button--ghost" type="button" aria-label="Close settings" onClick={closeSettings}>
-                  <i className="fa-solid fa-xmark" />
-               </button>
+               <IconButton icon="fa-solid fa-xmark" label="Close settings" variant="ghost" onClick={closeSettings} />
             </header>
 
             <form className="settings-dialog__form" onSubmit={(event) => void handleSubmit(event)}>

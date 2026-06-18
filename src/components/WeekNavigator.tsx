@@ -1,8 +1,13 @@
+import { useId, type FocusEvent, type MouseEvent } from "react";
+import { useDelayedTooltip } from "../hooks/useDelayedTooltip";
+import { useShortcutActivation } from "../hooks/useShortcutActivation";
+import { APP_SHORTCUT_LABELS } from "../lib/appShortcuts";
+import { IconButton } from "./IconButton";
+import { TooltipContent } from "./Tooltip";
 import "./WeekNavigator.css";
 
 interface WeekNavigatorProps {
    title: string;
-   isRefreshing: boolean;
    weekOffset: number;
    onPreviousWeek: () => void;
    onNextWeek: () => void;
@@ -34,27 +39,80 @@ function formatWeekLabel(weekOffset: number) {
    return `${absoluteWeeks} ${suffix} ago`;
 }
 
-export function WeekNavigator({ title, isRefreshing, weekOffset, onPreviousWeek, onNextWeek, onCurrentWeek, canGoPrevious, canGoNext }: WeekNavigatorProps) {
+export function WeekNavigator({ title, weekOffset, onPreviousWeek, onNextWeek, onCurrentWeek, canGoPrevious, canGoNext }: WeekNavigatorProps) {
    const label = formatWeekLabel(weekOffset);
    const isCurrentWeek = weekOffset === 0;
+   const tooltipId = useId();
+   const { hideTooltip, isTooltipOpen, showTooltip } = useDelayedTooltip();
+   const isShortcutActive = useShortcutActivation("current-week");
+   const weekTooltip = isCurrentWeek ? "Reset the current week view" : "Jump back to the current week";
+
+   const handleMouseEnter = (_event: MouseEvent<HTMLButtonElement>) => {
+      showTooltip();
+   };
+
+   const handleMouseLeave = (_event: MouseEvent<HTMLButtonElement>) => {
+      hideTooltip();
+   };
+
+   const handleFocus = (_event: FocusEvent<HTMLButtonElement>) => {
+      showTooltip();
+   };
+
+   const handleBlur = (_event: FocusEvent<HTMLButtonElement>) => {
+      hideTooltip();
+   };
 
    return (
       <section className="weekbar">
-         <button className="icon-button icon-button--ghost" type="button" onClick={onPreviousWeek} aria-label="Previous week" disabled={!canGoPrevious}>
-            <i className="fa-solid fa-arrow-left" />
-         </button>
+         <IconButton
+            icon="fa-solid fa-arrow-left"
+            label="Previous week"
+            shortcut={APP_SHORTCUT_LABELS.previousWeek}
+            activationId="previous-week"
+            tooltipAlign="start"
+            tooltipPlacement="bottom"
+            variant="ghost"
+            hoverEffect="nudge-left"
+            onClick={onPreviousWeek}
+            disabled={!canGoPrevious}
+         />
 
-         <button className="weekbar__content" type="button" onClick={onCurrentWeek} data-current={isCurrentWeek}>
+         <button
+            className="weekbar__content"
+            type="button"
+            aria-describedby={tooltipId}
+            data-current={isCurrentWeek}
+            data-shortcut-active={isShortcutActive ? "true" : undefined}
+            data-tooltip-align="center"
+            data-tooltip-host="true"
+            data-tooltip-open={isTooltipOpen ? "true" : undefined}
+            data-tooltip-placement="bottom"
+            onBlur={handleBlur}
+            onClick={onCurrentWeek}
+            onFocus={handleFocus}
+            onMouseEnter={handleMouseEnter}
+            onMouseLeave={handleMouseLeave}
+         >
             <p className="weekbar__label">{label}</p>
             <h2>
                <span>{title}</span>
-               {isRefreshing ? <span className="weekbar__spinner" aria-label="Refreshing roster data" role="status" /> : null}
             </h2>
+            <TooltipContent id={tooltipId} label={weekTooltip} shortcut={APP_SHORTCUT_LABELS.currentWeek} />
          </button>
 
-         <button className="icon-button icon-button--ghost" type="button" onClick={onNextWeek} aria-label="Next week" disabled={!canGoNext}>
-            <i className="fa-solid fa-arrow-right" />
-         </button>
+         <IconButton
+            icon="fa-solid fa-arrow-right"
+            label="Next week"
+            shortcut={APP_SHORTCUT_LABELS.nextWeek}
+            activationId="next-week"
+            tooltipAlign="end"
+            tooltipPlacement="bottom"
+            variant="ghost"
+            hoverEffect="nudge-right"
+            onClick={onNextWeek}
+            disabled={!canGoNext}
+         />
       </section>
    );
 }
