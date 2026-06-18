@@ -15,24 +15,12 @@
    gap: 16px;
    cursor: pointer;
    text-align: left;
+   transition: background 220ms ease-out;
 }
 
-.day-group__header:hover,
-.agenda-lesson:hover {
-   border-color: var(--line-strong);
+.day-group__header:hover {
    background: rgba(255, 255, 255, 0.055);
-}
-
-.day-group__chevron {
    transition: none;
-}
-
-.day-group[data-animate="true"] .day-group__chevron {
-   transition: transform 0.4s cubic-bezier(0.22, 1.75, 0.1, 1);
-}
-
-.day-group[data-expanded="true"] .day-group__chevron {
-   transform: rotate(180deg);
 }
 
 .day-group__meta {
@@ -79,11 +67,16 @@
    color: var(--accent);
 }
 
-.day-group__header .day-group__meta i {
+.day-group[data-animate="true"] .day-group__chevron {
    scale: 1;
+   transition: transform 0.4s cubic-bezier(0.22, 1.75, 0.1, 1);
 }
 
-.day-group__header:hover .day-group__meta i {
+.day-group[data-expanded="true"] .day-group__chevron {
+   transform: rotate(180deg);
+}
+
+.day-group__header:hover .day-group__meta .day-group__chevron {
    scale: 1.2;
 }
 
@@ -123,11 +116,11 @@
 }
 
 .day-group[data-animate="true"] .day-group__body-inner {
-   transition: padding-bottom 320ms cubic-bezier(0.22, 1, 0.36, 1);
+   transition: padding 320ms cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 .day-group[data-expanded="true"] .day-group__body-inner {
-   padding-bottom: 10px;
+   padding: 5px 10px;
 }
 
 .agenda-lesson {
@@ -142,8 +135,18 @@
    cursor: pointer;
    color: inherit;
    text-align: left;
-   transition: scale 220ms var(--bounce-overshoot);
+   transition:
+      scale 220ms var(--bounce-overshoot),
+      background 220ms ease-out;
    scale: 1;
+}
+
+.agenda-lesson:hover {
+   border-color: var(--line-strong);
+   background: rgba(255, 255, 255, 0.055);
+   transition:
+      scale 220ms var(--bounce-overshoot),
+      background 0s;
 }
 
 .agenda-lesson:active {

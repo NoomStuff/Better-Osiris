@@ -39,7 +39,7 @@ export function AgendaView({ groups, expandedDays, animate, onToggleDay, onSelec
       <section className="agenda-view">
          {groups.map((group) => {
             const expanded = expandedDays.has(group.key);
-            const countLabel = group.lessons.length === 0 ? "free" : `${group.lessons.length} class${group.lessons.length === 1 ? "" : "es"}`;
+            const countLabel = group.lessons.length === 0 ? "empty" : `${group.lessons.length} class${group.lessons.length === 1 ? "" : "es"}`;
             const isToday = group.key === todayKey;
 
             return (
