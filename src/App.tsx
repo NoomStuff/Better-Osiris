@@ -3,9 +3,10 @@ import { AgendaView } from "./components/AgendaView";
 import { AppToolbar } from "./components/AppToolbar";
 import { GridView } from "./components/GridView";
 import { LessonDrawer } from "./components/LessonDrawer";
-import { LoadingState } from "./components/LoadingState";
+import { ErrorState, LoadingState } from "./components/LoadingState";
 import { SettingsDialog } from "./components/SettingsDialog";
 import { WeekNavigator } from "./components/WeekNavigator";
+import { fetchOsirisTokenSettings } from "./api/settings";
 import { useKeyboardShortcuts, type KeyboardShortcut } from "./hooks/useKeyboardShortcuts";
 import { APP_SHORTCUTS } from "./lib/appShortcuts";
 import { useRosterWeek } from "./hooks/useRosterWeek";
@@ -83,11 +84,46 @@ export default function App() {
    const [expandedOverrides, setExpandedOverrides] = useState<Set<string>>(new Set());
    const [animateAgenda, setAnimateAgenda] = useState(false);
    const [isSettingsOpen, setIsSettingsOpen] = useState(false);
-   const { data, error, loading, refreshing, title } = useRosterWeek(weekOffset);
+   const [hasCustomToken, setHasCustomToken] = useState(false);
+   const { data, error, loading, retryCountdownMs, retrying, refreshing, title } = useRosterWeek(weekOffset);
+   const errorDetail = useMemo(() => {
+      if (!error) {
+         return "";
+      }
+
+      if (error.isAuthRelated && hasCustomToken) {
+         return `${error.detail} Your custom bearer token might be expired or pasted wrong. Settings is the place to poke it.`;
+      }
+
+      return error.detail;
+   }, [error, hasCustomToken]);
 
    useEffect(() => {
       ensureFontAwesomeKit();
    }, []);
+
+   useEffect(() => {
+      if (!error?.isAuthRelated) {
+         return;
+      }
+
+      let isStale = false;
+      fetchOsirisTokenSettings()
+         .then((settings) => {
+            if (!isStale) {
+               setHasCustomToken(settings.hasCustomToken);
+            }
+         })
+         .catch(() => {
+            if (!isStale) {
+               setHasCustomToken(false);
+            }
+         });
+
+      return () => {
+         isStale = true;
+      };
+   }, [error?.isAuthRelated]);
 
    useEffect(() => {
       if (typeof window === "undefined") {
@@ -374,7 +410,7 @@ export default function App() {
             <AppToolbar
                viewMode={viewMode}
                gridZoom={gridZoom}
-               isRefreshing={refreshing}
+               isRefreshing={refreshing || retrying}
                onChangeView={setViewMode}
                onChangeGridZoom={setGridZoom}
                onExpandAllAgenda={expandAllDays}
@@ -400,7 +436,13 @@ export default function App() {
                </section>
             ) : error && !data ? (
                <section className="app-content-frame view-enter">
-                  <LoadingState message={error} />
+                  <ErrorState
+                     title={error.title}
+                     detail={errorDetail}
+                     log={error.log}
+                     retryCountdownMs={retryCountdownMs}
+                     isRetrying={retrying}
+                  />
                </section>
             ) : data ? (
                <section

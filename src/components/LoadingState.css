@@ -5,7 +5,9 @@
    justify-content: center;
    gap: 16px;
    padding: 32px;
+   padding-bottom: 16px;
    color: var(--text-dim);
+   text-align: center;
 }
 
 .loading-state p {
@@ -20,6 +22,53 @@
    border: 3px solid rgba(255, 255, 255, 0.12);
    border-top-color: var(--accent);
    animation: spin 0.8s linear infinite;
+}
+
+.loading-state--error {
+   max-width: 640px;
+   margin: 0 auto;
+   color: var(--text-strong);
+}
+
+.loading-state__error-icon {
+   color: #ffcf6a;
+   font-size: 3.6rem;
+   line-height: 1;
+   filter: drop-shadow(0 10px 22px rgba(255, 207, 106, 0.16));
+}
+
+.loading-state__copy {
+   display: grid;
+   gap: 10px;
+}
+
+.loading-state__copy h2 {
+   margin: 0;
+   color: var(--text-strong);
+   font-size: 1.35rem;
+   line-height: 1.2;
+}
+
+.loading-state__copy p {
+   font-size: 0.96rem;
+   line-height: 1.45;
+}
+
+.loading-state__detail {
+   color: var(--text-dim);
+}
+
+.loading-state__retry {
+   display: block;
+   color: var(--accent);
+   font-weight: 650;
+}
+
+.loading-state__copy .loading-state__log {
+   color: var(--text-muted);
+   font-size: 0.78rem;
+   line-height: 1.35;
+   margin-top: 16px;
 }
 
 @keyframes spin {
