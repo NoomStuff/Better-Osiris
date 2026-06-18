@@ -25,6 +25,7 @@ const BATCH_SIZE = 5;
 const PREFETCH_BATCHES = [-1, 1];
 const MIN_WEEK_OFFSET = 0;
 const MAX_WEEK_OFFSET = 50;
+const PASSIVE_REFETCH_INTERVAL_MS = 5 * 60 * 1000;
 
 function createEntry(data: RosterResponse | null, overrides?: Partial<WeekEntry>): WeekEntry {
    return {
@@ -132,29 +133,44 @@ function getDerivedTitle(offset: number, entries: WeekEntries) {
    return formatWeekTitle(derivedStart, derivedEnd, getIsoWeekNumber(derivedStart));
 }
 
+function getBatchStart(targetOffset: number) {
+   return Math.floor(targetOffset / BATCH_SIZE) * BATCH_SIZE;
+}
+
+function getBatchOffsets(startOffset: number) {
+   const endOffset = Math.min(startOffset + BATCH_SIZE - 1, MAX_WEEK_OFFSET);
+   return Array.from({ length: endOffset - startOffset + 1 }, (_, index) => startOffset + index);
+}
+
+function getBatchRequestKey(startOffset: number) {
+   return `${startOffset}:${getBatchOffsets(startOffset).length}`;
+}
+
+function isSameRosterData(left: RosterResponse | null | undefined, right: RosterResponse) {
+   return Boolean(left) && JSON.stringify(left) === JSON.stringify(right);
+}
+
 export function useRosterWeek(offset: number) {
    const [entries, setEntries] = useState<WeekEntries>(getInitialEntries);
    const entriesRef = useRef(entries);
    const requestsRef = useRef(new Map<string, Promise<void>>());
+   const queuedRefetchesRef = useRef(new Set<number>());
 
    useEffect(() => {
       entriesRef.current = entries;
    }, [entries]);
 
    useEffect(() => {
-      const getBatchStart = (targetOffset: number) => Math.floor(targetOffset / BATCH_SIZE) * BATCH_SIZE;
-
       const loadBatch = (startOffset: number, force = false) => {
          if (startOffset < MIN_WEEK_OFFSET || startOffset > MAX_WEEK_OFFSET) {
             return;
          }
 
-         const endOffset = Math.min(startOffset + BATCH_SIZE - 1, MAX_WEEK_OFFSET);
-         const limit = endOffset - startOffset + 1;
+         const offsets = getBatchOffsets(startOffset);
+         const limit = offsets.length;
          const requestKey = `${startOffset}:${limit}`;
-         const offsets = Array.from({ length: limit }, (_, index) => startOffset + index);
 
-         if (!force && requestsRef.current.has(requestKey)) {
+         if (requestsRef.current.has(requestKey)) {
             return;
          }
 
@@ -166,6 +182,8 @@ export function useRosterWeek(offset: number) {
          if (!shouldFetch) {
             return;
          }
+
+         queuedRefetchesRef.current.delete(startOffset);
 
          setEntries((current) => {
             const next = { ...current };
@@ -188,6 +206,17 @@ export function useRosterWeek(offset: number) {
                setEntries((current) => {
                   const next = { ...current };
                   payload.weeks.forEach((weekData) => {
+                     const currentEntry = current[weekData.week.offset];
+                     if (isSameRosterData(currentEntry?.data, weekData)) {
+                        next[weekData.week.offset] = createEntry(currentEntry?.data ?? weekData, {
+                           error: "",
+                           isFetching: false,
+                           isHydrated: false,
+                           updatedAt: currentEntry?.updatedAt ?? Date.now(),
+                        });
+                        return;
+                     }
+
                      if (weekData.week.offset === 0) {
                         storeCachedCurrentWeek(weekData);
                      }
@@ -243,11 +272,112 @@ export function useRosterWeek(offset: number) {
 
       const activeEntry = entriesRef.current[offset];
       const activeBatchStart = getBatchStart(offset);
-      loadBatch(activeBatchStart, activeBatchStart === 0 && Boolean(activeEntry?.isHydrated));
+      const activeBatchQueued = queuedRefetchesRef.current.has(activeBatchStart);
+      loadBatch(activeBatchStart, activeBatchQueued || (activeBatchStart === 0 && Boolean(activeEntry?.isHydrated)));
 
       PREFETCH_BATCHES.forEach((delta) => {
-         loadBatch(activeBatchStart + delta * BATCH_SIZE);
+         const prefetchBatchStart = activeBatchStart + delta * BATCH_SIZE;
+         loadBatch(prefetchBatchStart, queuedRefetchesRef.current.has(prefetchBatchStart));
       });
+   }, [offset]);
+
+   useEffect(() => {
+      const refetchPassiveBatches = () => {
+         const activeBatchStart = getBatchStart(offset);
+         const passiveBatchStarts = new Set([getBatchStart(0), activeBatchStart]);
+
+         Object.keys(entriesRef.current).forEach((entryOffset) => {
+            const parsedOffset = Number(entryOffset);
+            const entry = entriesRef.current[parsedOffset];
+            if (entry?.data) {
+               queuedRefetchesRef.current.add(getBatchStart(parsedOffset));
+            }
+         });
+
+         passiveBatchStarts.forEach((batchStart) => {
+            if (batchStart < MIN_WEEK_OFFSET || batchStart > MAX_WEEK_OFFSET) {
+               return;
+            }
+
+            queuedRefetchesRef.current.delete(batchStart);
+            const offsets = getBatchOffsets(batchStart);
+            const requestKey = getBatchRequestKey(batchStart);
+            if (requestsRef.current.has(requestKey)) {
+               return;
+            }
+
+            setEntries((current) => {
+               const next = { ...current };
+               offsets.forEach((targetOffset) => {
+                  const currentEntry = current[targetOffset];
+                  if (!currentEntry?.data) {
+                     return;
+                  }
+
+                  next[targetOffset] = createEntry(currentEntry.data, {
+                     error: "",
+                     isFetching: true,
+                     isHydrated: false,
+                     updatedAt: currentEntry.updatedAt,
+                  });
+               });
+               return next;
+            });
+
+            const request = fetchRosterWeeks(batchStart, offsets.length)
+               .then((payload) => {
+                  setEntries((current) => {
+                     const next = { ...current };
+                     payload.weeks.forEach((weekData) => {
+                        const currentEntry = current[weekData.week.offset];
+                        if (isSameRosterData(currentEntry?.data, weekData)) {
+                           next[weekData.week.offset] = createEntry(currentEntry?.data ?? weekData, {
+                              error: "",
+                              isFetching: false,
+                              isHydrated: false,
+                              updatedAt: currentEntry?.updatedAt ?? Date.now(),
+                           });
+                           return;
+                        }
+
+                        if (weekData.week.offset === 0) {
+                           storeCachedCurrentWeek(weekData);
+                        }
+                        next[weekData.week.offset] = createEntry(weekData);
+                     });
+                     return next;
+                  });
+               })
+               .catch((error: unknown) => {
+                  notifyError(error, LOAD_ERROR_MESSAGE);
+                  setEntries((current) => {
+                     const next = { ...current };
+                     offsets.forEach((targetOffset) => {
+                        const currentEntry = current[targetOffset];
+                        if (!currentEntry?.data) {
+                           return;
+                        }
+
+                        next[targetOffset] = createEntry(currentEntry.data, {
+                           error: LOAD_ERROR_MESSAGE,
+                           isFetching: false,
+                           isHydrated: false,
+                           updatedAt: currentEntry.updatedAt,
+                        });
+                     });
+                     return next;
+                  });
+               })
+               .finally(() => {
+                  requestsRef.current.delete(requestKey);
+               });
+
+            requestsRef.current.set(requestKey, request);
+         });
+      };
+
+      const intervalId = window.setInterval(refetchPassiveBatches, PASSIVE_REFETCH_INTERVAL_MS);
+      return () => window.clearInterval(intervalId);
    }, [offset]);
 
    const activeEntry = entries[offset];

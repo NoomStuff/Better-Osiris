@@ -232,6 +232,7 @@ export default function App() {
 
             <WeekNavigator
                title={title}
+               isRefreshing={refreshing}
                weekOffset={weekOffset}
                onPreviousWeek={() => updateWeekOffset((current) => Math.max(current - 1, MIN_WEEK_OFFSET))}
                onNextWeek={() => updateWeekOffset((current) => Math.min(current + 1, MAX_WEEK_OFFSET))}

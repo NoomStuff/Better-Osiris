@@ -2,6 +2,7 @@ import "./WeekNavigator.css";
 
 interface WeekNavigatorProps {
    title: string;
+   isRefreshing: boolean;
    weekOffset: number;
    onPreviousWeek: () => void;
    onNextWeek: () => void;
@@ -33,7 +34,7 @@ function formatWeekLabel(weekOffset: number) {
    return `${absoluteWeeks} ${suffix} ago`;
 }
 
-export function WeekNavigator({ title, weekOffset, onPreviousWeek, onNextWeek, onCurrentWeek, canGoPrevious, canGoNext }: WeekNavigatorProps) {
+export function WeekNavigator({ title, isRefreshing, weekOffset, onPreviousWeek, onNextWeek, onCurrentWeek, canGoPrevious, canGoNext }: WeekNavigatorProps) {
    const label = formatWeekLabel(weekOffset);
    const isCurrentWeek = weekOffset === 0;
 
@@ -45,7 +46,10 @@ export function WeekNavigator({ title, weekOffset, onPreviousWeek, onNextWeek, o
 
          <button className="weekbar__content" type="button" onClick={onCurrentWeek} data-current={isCurrentWeek}>
             <p className="weekbar__label">{label}</p>
-            <h2>{title}</h2>
+            <h2>
+               <span>{title}</span>
+               {isRefreshing ? <span className="weekbar__spinner" aria-label="Refreshing roster data" role="status" /> : null}
+            </h2>
          </button>
 
          <button className="icon-button icon-button--ghost" type="button" onClick={onNextWeek} aria-label="Next week" disabled={!canGoNext}>

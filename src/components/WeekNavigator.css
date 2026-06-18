@@ -39,9 +39,29 @@
 }
 
 .weekbar__content h2 {
+   display: inline-flex;
+   align-items: center;
+   justify-content: center;
+   gap: 8px;
    margin: 0;
    font-size: clamp(0.96rem, 1.55vw, 1.22rem);
    letter-spacing: 0;
+}
+
+.weekbar__spinner {
+   width: 0.8em;
+   height: 0.8em;
+   flex: 0 0 auto;
+   border: 2px solid rgba(255, 255, 255, 0.24);
+   border-top-color: var(--accent);
+   border-radius: 50%;
+   animation: weekbar-spinner 720ms linear infinite;
+}
+
+@keyframes weekbar-spinner {
+   to {
+      transform: rotate(360deg);
+   }
 }
 
 @media (max-width: 640px) {
@@ -61,5 +81,10 @@
       text-overflow: ellipsis;
       white-space: nowrap;
       font-size: 0.88rem;
+   }
+
+   .weekbar__content h2 span:first-child {
+      overflow: hidden;
+      text-overflow: ellipsis;
    }
 }
