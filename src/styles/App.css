@@ -16,10 +16,16 @@
 }
 
 .app-content-frame {
+   position: relative;
    border-radius: 24px;
    border: 2px solid var(--line);
    background: linear-gradient(180deg, rgba(255, 255, 255, 0.02), rgba(255, 255, 255, 0.012)), rgba(10, 13, 20, 0.82);
    overflow: hidden;
+}
+
+.app-content-frame[data-empty-week="true"] :is(.agenda-view, .grid-shell) {
+   filter: saturate(0.75);
+   pointer-events: none;
 }
 
 .app-content-frame--agenda {
@@ -37,6 +43,42 @@
 
 .app-content-frame--grid.app-content-frame--zoom-quarter {
    height: max(2080px, calc(400svh - 508px - (var(--app-padding) * 2)));
+}
+
+.empty-week-state {
+   position: absolute;
+   inset: 0;
+   z-index: 10;
+   display: grid;
+   align-content: center;
+   justify-items: center;
+   gap: 16px;
+   padding: 32px 24px;
+   text-align: center;
+   background: rgba(6, 9, 19, 0.4);
+   backdrop-filter: blur(1px);
+}
+
+.empty-week-state i {
+   color: var(--accent);
+   font-size: 4rem;
+   opacity: 0.86;
+}
+
+.empty-week-state h3 {
+   max-width: 560px;
+   margin: 4px 0 0;
+   color: var(--text-strong);
+   font-size: clamp(1.35rem, 3vw, 2.2rem);
+   line-height: 1.05;
+   font-weight: 720;
+}
+
+.empty-week-state p {
+   max-width: 520px;
+   margin: 0;
+   color: var(--text-dim);
+   font-size: 0.98rem;
 }
 
 .view-enter {

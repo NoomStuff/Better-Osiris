@@ -1,6 +1,7 @@
 import { Fragment, useLayoutEffect, useRef, useState } from "react";
 import { dayLabel, monthDayLabel, timeLabel, toDayKey } from "../lib/date";
 import { DETAILS_SEPARATOR, getLessonLocationLabel } from "../lib/lessonFormat";
+import { getBreakIcon, getEmptyDayMessage, getEmptyTodayMessage } from "../lib/rosterFlavor";
 import type { DayGroup, Lesson, PositionedLesson } from "../types/roster";
 import "./AgendaView.css";
 
@@ -15,7 +16,7 @@ interface AgendaViewProps {
 
 const MINUTE_MS = 60 * 1000;
 const CURRENT_INDICATOR_MIN_HEIGHT = 8;
-const CURRENT_INDICATOR_MAX_HEIGHT = 24;
+const CURRENT_INDICATOR_MAX_HEIGHT = 32;
 const CURRENT_INDICATOR_LESSON_INSET = 28;
 const CURRENT_INDICATOR_BREAK_INSET = 12;
 
@@ -217,6 +218,7 @@ export function AgendaView({ groups, expandedDays, animate, now, onToggleDay, on
             const expanded = expandedDays.has(group.key);
             const countLabel = group.lessons.length === 0 ? "empty" : `${group.lessons.length} class${group.lessons.length === 1 ? "" : "es"}`;
             const isToday = group.key === todayKey;
+            const emptyTodayMessage = isToday ? getEmptyTodayMessage(group.key) : null;
 
             return (
                <section
@@ -257,7 +259,18 @@ export function AgendaView({ groups, expandedDays, animate, now, onToggleDay, on
                         ) : null}
 
                         {group.lessons.length === 0 ? (
-                           <p className="empty-state">No classes scheduled.</p>
+                           <div className="empty-state" data-today={isToday}>
+                              {emptyTodayMessage ? (
+                                 <>
+                                    <i className={emptyTodayMessage.icon} aria-hidden="true" />
+                                    <span className="empty-state__divider" aria-hidden="true" />
+                                 </>
+                              ) : null}
+                              <span className="empty-state__copy">
+                                 {emptyTodayMessage ? <strong>{emptyTodayMessage.title}</strong> : <span>{getEmptyDayMessage()}</span>}
+                                 {emptyTodayMessage ? <span>{emptyTodayMessage.detail}</span> : null}
+                              </span>
+                           </div>
                         ) : (
                            group.lessons.map((lesson, lessonIndex) => {
                               const locationLabel = getLessonLocationLabel(lesson);
@@ -265,6 +278,7 @@ export function AgendaView({ groups, expandedDays, animate, now, onToggleDay, on
                               const previousLesson = group.lessons[lessonIndex - 1];
                               const breaktimeLabel = previousLesson ? getBreaktimeLabel(previousLesson, lesson) : null;
                               const breaktimeKey = previousLesson ? getBreaktimeKey(previousLesson, lesson) : null;
+                              const breakIcon = previousLesson ? getBreakIcon(previousLesson.endDate, lesson.startDate, lessonIndex) : "";
 
                               return (
                                  <Fragment key={lesson.id}>
@@ -272,7 +286,7 @@ export function AgendaView({ groups, expandedDays, animate, now, onToggleDay, on
                                        <div className="agenda-breaktime" aria-label={breaktimeLabel} data-current-segment={breaktimeKey}>
                                           <span className="agenda-breaktime__line" aria-hidden="true" />
                                           <span className="agenda-breaktime__label">
-                                             <i className="fa-solid fa-mug-hot" aria-hidden="true" />
+                                             <i className={breakIcon} aria-hidden="true" />
                                              {breaktimeLabel}
                                           </span>
                                           <span className="agenda-breaktime__line" aria-hidden="true" />

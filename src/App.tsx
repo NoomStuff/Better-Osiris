@@ -11,8 +11,9 @@ import { useKeyboardShortcuts, type KeyboardShortcut } from "./hooks/useKeyboard
 import { APP_SHORTCUTS } from "./lib/appShortcuts";
 import { useRosterWeek } from "./hooks/useRosterWeek";
 import { toDayKey } from "./lib/date";
+import { getEmptyWeekMessage } from "./lib/rosterFlavor";
 import { getDayGroups, getPositionedLessons } from "./lib/rosterLayout";
-import type { GridZoom, Lesson, ViewMode } from "./types/roster";
+import type { GridZoom, Lesson, RosterWeek, ViewMode } from "./types/roster";
 import "./styles/App.css";
 
 const STORAGE_KEY = "roster-view-mode";
@@ -108,6 +109,18 @@ function getToolbarActionActivationId(viewMode: ViewMode, actionNumber: number) 
 
    const zoom = GRID_ZOOM_ORDER[actionNumber - 1];
    return zoom ? `zoom-${zoom}` : undefined;
+}
+
+function EmptyWeekState({ week }: { week: RosterWeek }) {
+   const message = getEmptyWeekMessage(week.number, week.offset);
+
+   return (
+      <div className="empty-week-state">
+         <i className={message.icon} aria-hidden="true" />
+         <h3>{message.title}</h3>
+         <p>{message.detail}</p>
+      </div>
+   );
 }
 
 export default function App() {
@@ -636,6 +649,7 @@ export default function App() {
             ) : data ? (
                <section
                   className={`app-content-frame app-content-frame--${viewMode} app-content-frame--zoom-${gridZoom} view-enter`}
+                  data-empty-week={data.lessons.length === 0}
                   data-week-transition={weekTransitionDirection}
                   onAnimationEnd={handleWeekTransitionEnd}
                   key={`${viewMode}-${weekOffset}`}
@@ -652,6 +666,7 @@ export default function App() {
                   ) : (
                      <GridView groups={dayGroups} zoom={gridZoom} now={perceivedNow} onSelectLesson={(lesson) => setSelectedLessonId(lesson.id)} />
                   )}
+                  {data.lessons.length === 0 ? <EmptyWeekState week={data.week} /> : null}
                </section>
             ) : null}
          </main>
