@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type AnimationEvent } from "react";
 import { AgendaView } from "./components/AgendaView";
 import { AppToolbar } from "./components/AppToolbar";
 import { GridView } from "./components/GridView";
@@ -23,6 +23,15 @@ const MAX_WEEK_OFFSET = 50; // the max we can fetch from the API
 const GRID_ZOOM_ORDER = ["hour", "half", "quarter"] as const satisfies readonly GridZoom[];
 const FUTURE_WEEK_KEYS = ["1", "2", "3", "4", "5", "6", "7", "8", "9"] as const;
 const IS_DEV_SERVER = import.meta.env.DEV;
+const WEEK_SWIPE_MIN_DISTANCE_PX = 56;
+const WEEK_SWIPE_MAX_VERTICAL_DRIFT_PX = 72;
+
+type WeekTransitionDirection = "default" | "previous" | "next" | "settled";
+
+interface WeekSwipeStart {
+   x: number;
+   y: number;
+}
 
 function getInitialViewMode(): ViewMode {
    if (typeof window === "undefined") {
@@ -103,6 +112,7 @@ function getToolbarActionActivationId(viewMode: ViewMode, actionNumber: number) 
 
 export default function App() {
    const [weekOffset, setWeekOffset] = useState(0);
+   const [weekTransitionDirection, setWeekTransitionDirection] = useState<WeekTransitionDirection>("default");
    const [viewMode, setViewMode] = useState<ViewMode>(getInitialViewMode);
    const [gridZoom, setGridZoom] = useState<GridZoom>("hour");
    const [selectedLessonId, setSelectedLessonId] = useState<string | null>(null);
@@ -113,6 +123,7 @@ export default function App() {
    const [clockNow, setClockNow] = useState(() => new Date());
    const [isDevToolsEnabled, setIsDevToolsEnabled] = useState(getInitialDevToolsEnabled);
    const [timeOverride, setTimeOverride] = useState<Date | null>(getInitialTimeOverride);
+   const weekSwipeStartRef = useRef<WeekSwipeStart | null>(null);
    const { data, error, loading, retryCountdownMs, retrying, refreshing, title } = useRosterWeek(weekOffset);
    const perceivedNow = isDevToolsEnabled && timeOverride ? timeOverride : clockNow;
    const errorDetail = useMemo(() => {
@@ -271,12 +282,22 @@ export default function App() {
 
    const allDayKeys = useMemo(() => dayGroups.map((group) => group.key), [dayGroups]);
 
-   const updateWeekOffset = useCallback((updater: number | ((current: number) => number)) => {
-      setWeekOffset((current) => (typeof updater === "function" ? updater(current) : updater));
-      setSelectedLessonId(null);
-      setAnimateAgenda(false);
-      setExpandedOverrides(new Set());
-   }, []);
+   const updateWeekOffset = useCallback(
+      (updater: number | ((current: number) => number), transitionDirection: WeekTransitionDirection = "default") => {
+         const next = typeof updater === "function" ? updater(weekOffset) : updater;
+
+         if (next === weekOffset) {
+            return;
+         }
+
+         setWeekTransitionDirection(transitionDirection);
+         setWeekOffset(next);
+         setSelectedLessonId(null);
+         setAnimateAgenda(false);
+         setExpandedOverrides(new Set());
+      },
+      [weekOffset]
+   );
 
    const selectedLesson: Lesson | null = useMemo(() => {
       if (!data || !selectedLessonId) {
@@ -326,11 +347,11 @@ export default function App() {
    }, [autoExpandedDays, data]);
 
    const goPreviousWeek = useCallback(() => {
-      updateWeekOffset((current) => Math.max(current - 1, MIN_WEEK_OFFSET));
+      updateWeekOffset((current) => Math.max(current - 1, MIN_WEEK_OFFSET), "previous");
    }, [updateWeekOffset]);
 
    const goNextWeek = useCallback(() => {
-      updateWeekOffset((current) => Math.min(current + 1, MAX_WEEK_OFFSET));
+      updateWeekOffset((current) => Math.min(current + 1, MAX_WEEK_OFFSET), "next");
    }, [updateWeekOffset]);
 
    const handleCurrentWeek = useCallback(() => {
@@ -343,6 +364,85 @@ export default function App() {
 
       updateWeekOffset(0);
    }, [updateWeekOffset, weekOffset]);
+
+   const handleWeekSwipeStart = useCallback((event: TouchEvent) => {
+      if (event.touches.length !== 1) {
+         weekSwipeStartRef.current = null;
+         return;
+      }
+
+      const touch = event.touches[0];
+      if (!touch) {
+         return;
+      }
+
+      weekSwipeStartRef.current = {
+         x: touch.clientX,
+         y: touch.clientY,
+      };
+   }, []);
+
+   const handleWeekSwipeEnd = useCallback(
+      (event: TouchEvent) => {
+         const swipeStart = weekSwipeStartRef.current;
+         weekSwipeStartRef.current = null;
+
+         if (!swipeStart || event.changedTouches.length !== 1) {
+            return;
+         }
+
+         const touch = event.changedTouches[0];
+         if (!touch) {
+            return;
+         }
+
+         const deltaX = touch.clientX - swipeStart.x;
+         const deltaY = touch.clientY - swipeStart.y;
+         const absX = Math.abs(deltaX);
+         const absY = Math.abs(deltaY);
+
+         if (absX < WEEK_SWIPE_MIN_DISTANCE_PX || absY > WEEK_SWIPE_MAX_VERTICAL_DRIFT_PX || absX < absY * 1.2) {
+            return;
+         }
+
+         if (deltaX < 0) {
+            goNextWeek();
+            return;
+         }
+
+         goPreviousWeek();
+      },
+      [goNextWeek, goPreviousWeek]
+   );
+
+   const handleWeekSwipeCancel = useCallback(() => {
+      weekSwipeStartRef.current = null;
+   }, []);
+
+   useEffect(() => {
+      window.addEventListener("touchstart", handleWeekSwipeStart, { passive: true });
+      window.addEventListener("touchend", handleWeekSwipeEnd, { passive: true });
+      window.addEventListener("touchcancel", handleWeekSwipeCancel, { passive: true });
+
+      return () => {
+         window.removeEventListener("touchstart", handleWeekSwipeStart);
+         window.removeEventListener("touchend", handleWeekSwipeEnd);
+         window.removeEventListener("touchcancel", handleWeekSwipeCancel);
+      };
+   }, [handleWeekSwipeCancel, handleWeekSwipeEnd, handleWeekSwipeStart]);
+
+   const handleWeekTransitionEnd = useCallback((event: AnimationEvent<HTMLElement>) => {
+      if (event.currentTarget !== event.target) {
+         return;
+      }
+
+      setWeekTransitionDirection("settled");
+   }, []);
+
+   const changeViewMode = useCallback((nextViewMode: ViewMode) => {
+      setWeekTransitionDirection("default");
+      setViewMode(nextViewMode);
+   }, []);
 
    const openSettings = useCallback(() => {
       setIsSettingsOpen(true);
@@ -437,13 +537,13 @@ export default function App() {
             id: "agenda-view",
             ...APP_SHORTCUTS.agendaView,
             activationTargetId: "agenda-view",
-            onPress: () => setViewMode("agenda"),
+            onPress: () => changeViewMode("agenda"),
          },
          {
             id: "grid-view",
             ...APP_SHORTCUTS.gridView,
             activationTargetId: "grid-view",
-            onPress: () => setViewMode("grid"),
+            onPress: () => changeViewMode("grid"),
          },
          {
             id: "open-settings",
@@ -476,7 +576,19 @@ export default function App() {
             onPress: () => selectToolbarAction(Number(key)),
          })),
       ],
-      [goNextWeek, goPreviousWeek, gridZoom, handleCurrentWeek, moveToolbarAction, openSettings, selectToolbarAction, updateWeekOffset, viewMode, weekOffset]
+      [
+         changeViewMode,
+         goNextWeek,
+         goPreviousWeek,
+         gridZoom,
+         handleCurrentWeek,
+         moveToolbarAction,
+         openSettings,
+         selectToolbarAction,
+         updateWeekOffset,
+         viewMode,
+         weekOffset,
+      ]
    );
 
    useKeyboardShortcuts(keyboardShortcuts, !isSettingsOpen && selectedLesson === null);
@@ -488,7 +600,7 @@ export default function App() {
                viewMode={viewMode}
                gridZoom={gridZoom}
                isRefreshing={refreshing || retrying}
-               onChangeView={setViewMode}
+               onChangeView={changeViewMode}
                onChangeGridZoom={setGridZoom}
                onExpandAllAgenda={expandAllDays}
                onCloseAllAgenda={closeAllDays}
@@ -508,11 +620,11 @@ export default function App() {
 
          <main className="app-content">
             {loading ? (
-               <section className="app-content-frame view-enter">
+               <section className="app-content-frame view-enter" data-week-transition={weekTransitionDirection} onAnimationEnd={handleWeekTransitionEnd}>
                   <LoadingState message="Fetching week data." />
                </section>
             ) : error && !data ? (
-               <section className="app-content-frame view-enter">
+               <section className="app-content-frame view-enter" data-week-transition={weekTransitionDirection} onAnimationEnd={handleWeekTransitionEnd}>
                   <ErrorState
                      title={error.title}
                      detail={errorDetail}
@@ -524,6 +636,8 @@ export default function App() {
             ) : data ? (
                <section
                   className={`app-content-frame app-content-frame--${viewMode} app-content-frame--zoom-${gridZoom} view-enter`}
+                  data-week-transition={weekTransitionDirection}
+                  onAnimationEnd={handleWeekTransitionEnd}
                   key={`${viewMode}-${weekOffset}`}
                >
                   {viewMode === "agenda" ? (
