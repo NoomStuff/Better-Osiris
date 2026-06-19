@@ -17,7 +17,7 @@
    display: inline-flex;
    align-items: center;
    justify-content: center;
-   background: rgba(255, 255, 255, 0.03);
+   background: rgba(255, 255, 255, 0.035);
    color: inherit;
    pointer-events: none;
    transition:
@@ -54,7 +54,7 @@
 }
 
 .icon-button.is-selected:is(:hover, :focus-visible, [data-tooltip-open="true"], [data-shortcut-active="true"]):not(:disabled) .icon-button__surface {
-   border-color: rgba(124, 199, 255, 0.42);
+   border-color: rgba(124, 199, 255, 0.45);
    background: rgba(124, 199, 255, 0.12);
    transition:
       transform 260ms var(--bounce-overshoot),

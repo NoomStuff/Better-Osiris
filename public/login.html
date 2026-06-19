@@ -5,17 +5,17 @@
       <meta name="viewport" content="width=device-width, initial-scale=1" />
       <title>Sign In</title>
       <style>
-         @import url("https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600&display=swap");
+         @import url("https://fonts.googleapis.com/css2?family=Quicksand:wght@300..700&display=swap");
 
          :root {
             color-scheme: dark;
             --line: rgba(169, 184, 255, 0.14);
             --line-strong: rgba(169, 184, 255, 0.28);
-            --text-dim: #9aa8c8;
-            --text-muted: #7684a8;
+            --text-dim: #97a5c6;
+            --text-muted: #7482a6;
             --text-strong: #f3f7ff;
             --accent: #7cc7ff;
-            --accent-strong: #4fb0ff;
+            --danger: #ff6b81;
             --shadow: 0 24px 80px rgba(0, 0, 0, 0.35);
          }
 
@@ -26,10 +26,12 @@
          body {
             margin: 0;
             min-height: 100vh;
-            font-family: "Sora", "Segoe UI", sans-serif;
+            font-family: "Quicksand", "Segoe UI", sans-serif;
             color: var(--text-strong);
+            background-color: #06080e;
             background:
-               radial-gradient(circle at top, rgba(67, 97, 238, 0.16), transparent 30%), linear-gradient(180deg, #090b12 0%, #0d1018 52%, #111522 100%);
+               radial-gradient(circle at top, rgba(44, 68, 173, 0.16), transparent 30%),
+               linear-gradient(180deg, #0e111f 0%, #000000 52%, #0e121d 100%);
             display: grid;
             place-items: center;
             padding: 24px;
@@ -47,13 +49,7 @@
          }
 
          .card::before {
-            content: "";
-            position: absolute;
-            inset: -140px auto auto -140px;
-            width: 240px;
-            height: 240px;
-            border-radius: 50%;
-            background: rgba(124, 199, 255, 0.08);
+            content: none;
          }
 
          h1 {
@@ -81,13 +77,16 @@
             border-radius: 12px;
             border: 2px solid var(--line);
             font-size: 16px;
-            background: rgba(11, 15, 24, 0.75);
+            background: rgba(255, 255, 255, 0.035);
             color: var(--text-strong);
+            outline: none;
          }
 
          input:focus {
+            border-color: var(--line-strong);
             outline: 2px solid rgba(124, 199, 255, 0.35);
             outline-offset: 2px;
+            background: rgba(255, 255, 255, 0.055);
          }
 
          button {
@@ -107,7 +106,7 @@
          }
 
          button:hover {
-            background: var(--accent-strong);
+            background: #4fb0ff;
             transform: translateY(-1px);
          }
 
@@ -119,7 +118,7 @@
          .error {
             min-height: 20px;
             margin-top: 12px;
-            color: #ff6b81;
+            color: var(--danger);
             font-size: 14px;
          }
 

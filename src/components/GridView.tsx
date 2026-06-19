@@ -8,6 +8,7 @@ import "./GridView.css";
 interface GridViewProps {
    groups: DayGroup[];
    zoom: GridZoom;
+   now: Date;
    onSelectLesson: (lesson: Lesson) => void;
 }
 
@@ -36,11 +37,10 @@ function clamp(value: number, min: number, max: number) {
    return Math.min(Math.max(value, min), max);
 }
 
-export function GridView({ groups, zoom: zoomId, onSelectLesson }: GridViewProps) {
+export function GridView({ groups, zoom: zoomId, now, onSelectLesson }: GridViewProps) {
    const [hoverGuide, setHoverGuide] = useState<{ top: number; label: string } | null>(null);
    const [animateZoom, setAnimateZoom] = useState(false);
    const [contentHeight, setContentHeight] = useState(0);
-   const [now, setNow] = useState(() => new Date());
    const previousZoomRef = useRef<GridZoom | null>(null);
    const contentRef = useRef<HTMLDivElement | null>(null);
    const hoverGuideRef = useRef(hoverGuide);
@@ -79,14 +79,6 @@ export function GridView({ groups, zoom: zoomId, onSelectLesson }: GridViewProps
       setContentHeight(element.getBoundingClientRect().height);
 
       return () => observer.disconnect();
-   }, []);
-
-   useEffect(() => {
-      const updateNow = () => setNow(new Date());
-      updateNow();
-
-      const interval = window.setInterval(updateNow, 30_000);
-      return () => window.clearInterval(interval);
    }, []);
 
    const updateHoverGuide = (event: MouseEvent<HTMLDivElement>) => {

@@ -26,7 +26,7 @@
    width: 18px;
    height: 18px;
    flex: 0 0 auto;
-   border: 2.5px solid rgba(124, 199, 255, 0.2);
+   border: 2.5px solid rgba(124, 199, 255, 0.18);
    border-top-color: var(--accent);
    border-radius: 50%;
    animation: app-toolbar-spinner 720ms linear infinite;

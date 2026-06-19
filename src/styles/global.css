@@ -20,6 +20,7 @@
    text-rendering: optimizeLegibility;
    -webkit-font-smoothing: antialiased;
    -moz-osx-font-smoothing: grayscale;
+
    --line: rgba(169, 184, 255, 0.14);
    --line-strong: rgba(169, 184, 255, 0.28);
    --text-dim: #97a5c6;
@@ -49,7 +50,8 @@ html {
    overflow-x: clip;
    background-color: #06080e;
    background:
-      radial-gradient(circle at top, rgba(44, 68, 173, 0.16), transparent 30%), linear-gradient(180deg, #0e111f 0%, #000000 52%, #0e121d 100%) !important;
+      radial-gradient(circle at top, rgba(44, 68, 173, 0.16), transparent 30%),
+      linear-gradient(180deg, #0e111f 0%, #000000 52%, #0e121d 100%) !important;
 }
 
 body,

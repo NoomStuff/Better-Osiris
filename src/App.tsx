@@ -16,10 +16,13 @@ import type { GridZoom, Lesson, ViewMode } from "./types/roster";
 import "./styles/App.css";
 
 const STORAGE_KEY = "roster-view-mode";
+const DEVTOOLS_STORAGE_KEY = "roster-devtools-enabled";
+const DEVTOOLS_TIME_STORAGE_KEY = "roster-devtools-time-override";
 const MIN_WEEK_OFFSET = 0; // we cant fetch past weeks, so min is 0 (current week)
 const MAX_WEEK_OFFSET = 50; // the max we can fetch from the API
 const GRID_ZOOM_ORDER = ["hour", "half", "quarter"] as const satisfies readonly GridZoom[];
 const FUTURE_WEEK_KEYS = ["1", "2", "3", "4", "5", "6", "7", "8", "9"] as const;
+const IS_DEV_SERVER = import.meta.env.DEV;
 
 function getInitialViewMode(): ViewMode {
    if (typeof window === "undefined") {
@@ -28,6 +31,28 @@ function getInitialViewMode(): ViewMode {
 
    const stored = window.localStorage.getItem(STORAGE_KEY);
    return stored === "grid" ? "grid" : "agenda";
+}
+
+function getInitialDevToolsEnabled() {
+   if (!IS_DEV_SERVER || typeof window === "undefined") {
+      return false;
+   }
+
+   return window.localStorage.getItem(DEVTOOLS_STORAGE_KEY) === "true";
+}
+
+function getInitialTimeOverride(): Date | null {
+   if (!IS_DEV_SERVER || typeof window === "undefined") {
+      return null;
+   }
+
+   const stored = window.localStorage.getItem(DEVTOOLS_TIME_STORAGE_KEY);
+   if (!stored) {
+      return null;
+   }
+
+   const date = new Date(stored);
+   return Number.isNaN(date.getTime()) ? null : date;
 }
 
 function ensureFontAwesomeKit() {
@@ -85,7 +110,11 @@ export default function App() {
    const [animateAgenda, setAnimateAgenda] = useState(false);
    const [isSettingsOpen, setIsSettingsOpen] = useState(false);
    const [hasCustomToken, setHasCustomToken] = useState(false);
+   const [clockNow, setClockNow] = useState(() => new Date());
+   const [isDevToolsEnabled, setIsDevToolsEnabled] = useState(getInitialDevToolsEnabled);
+   const [timeOverride, setTimeOverride] = useState<Date | null>(getInitialTimeOverride);
    const { data, error, loading, retryCountdownMs, retrying, refreshing, title } = useRosterWeek(weekOffset);
+   const perceivedNow = isDevToolsEnabled && timeOverride ? timeOverride : clockNow;
    const errorDetail = useMemo(() => {
       if (!error) {
          return "";
@@ -101,6 +130,34 @@ export default function App() {
    useEffect(() => {
       ensureFontAwesomeKit();
    }, []);
+
+   useEffect(() => {
+      const updateNow = () => setClockNow(new Date());
+      updateNow();
+
+      const interval = window.setInterval(updateNow, 1_000);
+      return () => window.clearInterval(interval);
+   }, []);
+
+   useEffect(() => {
+      if (!IS_DEV_SERVER) {
+         return;
+      }
+
+      window.localStorage.setItem(DEVTOOLS_STORAGE_KEY, String(isDevToolsEnabled));
+   }, [isDevToolsEnabled]);
+
+   useEffect(() => {
+      if (!IS_DEV_SERVER) {
+         return;
+      }
+
+      if (timeOverride) {
+         window.localStorage.setItem(DEVTOOLS_TIME_STORAGE_KEY, timeOverride.toISOString());
+      } else {
+         window.localStorage.removeItem(DEVTOOLS_TIME_STORAGE_KEY);
+      }
+   }, [timeOverride]);
 
    useEffect(() => {
       if (!error?.isAuthRelated) {
@@ -173,8 +230,8 @@ export default function App() {
          return new Set<string>();
       }
 
-      const todayKey = toDayKey(new Date());
-      const todayStart = new Date();
+      const todayKey = toDayKey(perceivedNow);
+      const todayStart = new Date(perceivedNow);
       todayStart.setHours(0, 0, 0, 0);
       const nextExpanded = new Set<string>();
 
@@ -189,7 +246,7 @@ export default function App() {
       });
 
       return nextExpanded;
-   }, [data, dayGroups]);
+   }, [data, dayGroups, perceivedNow]);
 
    const expandedDays = useMemo(() => {
       if (!data) {
@@ -289,6 +346,26 @@ export default function App() {
 
    const openSettings = useCallback(() => {
       setIsSettingsOpen(true);
+   }, []);
+
+   const toggleDevTools = useCallback((enabled: boolean) => {
+      if (!IS_DEV_SERVER) {
+         return;
+      }
+
+      setIsDevToolsEnabled(enabled);
+      if (!enabled) {
+         setTimeOverride(null);
+      }
+   }, []);
+
+   const changeTimeOverride = useCallback((date: Date | null) => {
+      if (!IS_DEV_SERVER) {
+         return;
+      }
+
+      setTimeOverride(date);
+      setIsDevToolsEnabled(true);
    }, []);
 
    const moveToolbarAction = useCallback(
@@ -454,18 +531,27 @@ export default function App() {
                         groups={dayGroups}
                         expandedDays={expandedDays}
                         animate={animateAgenda}
+                        now={perceivedNow}
                         onToggleDay={toggleDay}
                         onSelectLesson={(lesson) => setSelectedLessonId(lesson.id)}
                      />
                   ) : (
-                     <GridView groups={dayGroups} zoom={gridZoom} onSelectLesson={(lesson) => setSelectedLessonId(lesson.id)} />
+                     <GridView groups={dayGroups} zoom={gridZoom} now={perceivedNow} onSelectLesson={(lesson) => setSelectedLessonId(lesson.id)} />
                   )}
                </section>
             ) : null}
          </main>
 
          <LessonDrawer lesson={selectedLesson} onClose={() => setSelectedLessonId(null)} />
-         <SettingsDialog isOpen={isSettingsOpen} onClose={() => setIsSettingsOpen(false)} />
+         <SettingsDialog
+            isOpen={isSettingsOpen}
+            isDevToolsEnabled={isDevToolsEnabled}
+            perceivedNow={perceivedNow}
+            timeOverride={timeOverride}
+            onClose={() => setIsSettingsOpen(false)}
+            onToggleDevTools={toggleDevTools}
+            onChangeTimeOverride={changeTimeOverride}
+         />
       </div>
    );
 }

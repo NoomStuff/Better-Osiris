@@ -5,6 +5,7 @@
    display: grid;
    place-items: center;
    padding: 20px;
+   overflow: hidden;
 }
 
 .settings-dialog__backdrop {
@@ -19,7 +20,10 @@
 .settings-dialog__panel {
    position: relative;
    z-index: 1;
-   width: min(100%, 460px);
+   width: min(calc(100vw - 40px), 560px);
+   max-height: min(86vh, 760px);
+   overflow-x: hidden;
+   overflow-y: auto;
    border: 2px solid var(--line);
    border-radius: 20px 20px 16px 16px;
    background: radial-gradient(circle at top right, rgba(22, 106, 170, 0.1), transparent 30%), rgba(12, 15, 24, 0.92);
@@ -27,6 +31,10 @@
    backdrop-filter: blur(18px);
    padding: 18px;
    animation: settings-panel-rise 380ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.settings-dialog__panel * {
+   min-width: 0;
 }
 
 .settings-dialog__header {
@@ -43,7 +51,44 @@
    line-height: 1.15;
 }
 
-.settings-dialog__form {
+.settings-dialog__content {
+   display: grid;
+   gap: 16px;
+}
+
+.settings-section {
+   display: grid;
+   gap: 12px;
+   padding-top: 16px;
+   border-top: 1px solid var(--line);
+}
+
+.settings-section:first-child {
+   padding-top: 0;
+   border-top: 0;
+}
+
+.settings-section__header {
+   display: grid;
+   gap: 2px;
+}
+
+.settings-section__header h3 {
+   margin: 0;
+   color: var(--text-strong);
+   font-size: 0.95rem;
+   line-height: 1.2;
+}
+
+.settings-section__header p {
+   margin: 0;
+   color: var(--text-muted);
+   font-size: 0.8rem;
+   line-height: 1.35;
+}
+
+.settings-dialog__form,
+.devtools-panel {
    display: grid;
    gap: 14px;
 }
@@ -73,22 +118,13 @@
    background: rgba(255, 255, 255, 0.055);
 }
 
-.settings-dialog__status,
-.settings-dialog__error {
-   margin: 0;
-   font-size: 0.82rem;
-}
-
-.settings-dialog__status {
-   color: var(--text-muted);
-}
-
-.settings-dialog__error {
-   color: var(--danger);
+.settings-dialog__field--compact {
+   max-width: 220px;
 }
 
 .settings-dialog__actions {
    display: flex;
+   flex-wrap: wrap;
    justify-content: end;
    gap: 10px;
    margin-top: 2px;
@@ -110,13 +146,112 @@
 }
 
 .settings-dialog__button--primary {
-   border-color: rgba(124, 199, 255, 0.38);
+   border-color: rgba(124, 199, 255, 0.45);
    background: rgba(124, 199, 255, 0.14);
 }
 
 .settings-dialog__button:disabled {
    cursor: not-allowed;
    opacity: 0.45;
+}
+
+.settings-toggle {
+   display: grid;
+   grid-template-columns: auto minmax(0, 1fr);
+   align-items: center;
+   gap: 12px;
+   min-height: 52px;
+   padding: 10px 12px;
+   border: 2px solid var(--line);
+   border-radius: 12px;
+   background: rgba(255, 255, 255, 0.035);
+   cursor: pointer;
+}
+
+.settings-toggle input {
+   width: 18px;
+   height: 18px;
+   accent-color: var(--accent);
+}
+
+.settings-toggle span {
+   min-width: 0;
+   display: grid;
+   gap: 1px;
+}
+
+.settings-toggle strong,
+.settings-toggle small {
+   overflow: hidden;
+   text-overflow: ellipsis;
+   white-space: nowrap;
+}
+
+.settings-toggle strong {
+   color: var(--text-strong);
+   font-size: 0.88rem;
+}
+
+.settings-toggle small {
+   color: var(--text-muted);
+   font-size: 0.75rem;
+}
+
+.devtools-panel {
+   padding: 12px;
+   border: 1px solid var(--line);
+   border-radius: 12px;
+   background: rgba(255, 255, 255, 0.026);
+}
+
+.time-slider {
+   display: grid;
+   gap: 10px;
+}
+
+.time-slider__header {
+   display: flex;
+   align-items: baseline;
+   justify-content: space-between;
+   gap: 12px;
+   color: var(--text-dim);
+   font-size: 0.78rem;
+   font-weight: 700;
+}
+
+.time-slider__header strong {
+   color: var(--text-strong);
+   font-size: 1.18rem;
+   font-variant-numeric: tabular-nums;
+   letter-spacing: 0;
+}
+
+.time-slider input[type="range"] {
+   width: 100%;
+   height: 26px;
+   margin: 0;
+   accent-color: var(--accent);
+   cursor: pointer;
+}
+
+.time-slider__ticks {
+   display: grid;
+   grid-template-columns: repeat(5, minmax(0, 1fr));
+   color: var(--text-muted);
+   font-size: 0.68rem;
+   font-variant-numeric: tabular-nums;
+}
+
+.time-slider__ticks span {
+   text-align: center;
+}
+
+.time-slider__ticks span:first-child {
+   text-align: left;
+}
+
+.time-slider__ticks span:last-child {
+   text-align: right;
 }
 
 @keyframes settings-panel-rise {
@@ -148,8 +283,10 @@
    }
 
    .settings-dialog__panel {
+      width: calc(100vw - 20px);
       border-radius: 16px;
    }
+
 }
 
 @media (prefers-reduced-motion: reduce) {
