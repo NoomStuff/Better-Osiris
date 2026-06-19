@@ -187,7 +187,39 @@ function getBatchRequestKey(startOffset: number) {
 }
 
 function isSameRosterData(left: RosterResponse | null | undefined, right: RosterResponse) {
-   return Boolean(left) && JSON.stringify(left) === JSON.stringify(right);
+   if (!left) {
+      return false;
+   }
+
+   if (
+      left.week.offset !== right.week.offset ||
+      left.week.number !== right.week.number ||
+      left.week.start !== right.week.start ||
+      left.week.end !== right.week.end ||
+      left.lessons.length !== right.lessons.length
+   ) {
+      return false;
+   }
+
+   return left.lessons.every((lesson, index) => {
+      const nextLesson = right.lessons[index];
+      if (!nextLesson) {
+         return false;
+      }
+
+      return (
+         lesson.id === nextLesson.id &&
+         lesson.title === nextLesson.title &&
+         lesson.subject === nextLesson.subject &&
+         lesson.start === nextLesson.start &&
+         lesson.end === nextLesson.end &&
+         lesson.teacher === nextLesson.teacher &&
+         lesson.room === nextLesson.room &&
+         lesson.location === nextLesson.location &&
+         lesson.description === nextLesson.description &&
+         lesson.status === nextLesson.status
+      );
+   });
 }
 
 export function useRosterWeek(offset: number) {
@@ -198,10 +230,15 @@ export function useRosterWeek(offset: number) {
    const queuedRefetchesRef = useRef(new Set<number>());
    const retryTimersRef = useRef(new Map<string, number>());
    const hasShownLoadErrorToastRef = useRef(false);
+   const activeOffsetRef = useRef(offset);
 
    useEffect(() => {
       entriesRef.current = entries;
    }, [entries]);
+
+   useEffect(() => {
+      activeOffsetRef.current = offset;
+   }, [offset]);
 
    useEffect(() => {
       const intervalId = window.setInterval(() => setNow(Date.now()), 1_000);
@@ -293,14 +330,13 @@ export function useRosterWeek(offset: number) {
             })
             .catch((error: unknown) => {
                const loadError = toRosterLoadError(error);
-               const shouldNotify = startOffset === activeBatchStart && !hasShownLoadErrorToastRef.current;
+               const activeBatchAtFailure = getBatchStart(activeOffsetRef.current);
+               const shouldNotify = startOffset === activeBatchAtFailure && !hasShownLoadErrorToastRef.current;
                if (shouldNotify) {
                   hasShownLoadErrorToastRef.current = true;
                   notifyError(LOAD_ERROR_TOAST_MESSAGE, LOAD_ERROR_TOAST_MESSAGE, true, error);
                }
-               const retryDelayMs = getNextRetryDelay(
-                  Math.max(...offsets.map((targetOffset) => entriesRef.current[targetOffset]?.retryDelayMs ?? 0))
-               );
+               const retryDelayMs = getNextRetryDelay(Math.max(...offsets.map((targetOffset) => entriesRef.current[targetOffset]?.retryDelayMs ?? 0)));
                const retryAt = Date.now() + retryDelayMs;
                setEntries((current) => {
                   const next = { ...current };

@@ -135,15 +135,6 @@ function normalizeRosterWeekItem(week: OsirisWeek, requestedOffset: number): Ros
    };
 }
 
-export function normalizeRosterWeekResponse(rawData: OsirisRosterResponse, requestedOffset: number): RosterResponse {
-   const week = rawData.items[0];
-   if (!week) {
-      throw new Error("OSIRIS roster response did not include a week item.");
-   }
-
-   return normalizeRosterWeekItem(week, requestedOffset);
-}
-
 export function normalizeRosterWeeksResponse(rawData: OsirisRosterResponse, requestedOffset: number): RosterResponse[] {
    if (!rawData.items.length) {
       throw new Error("OSIRIS roster response did not include week items.");

@@ -13,7 +13,7 @@ import {
 import { getEnvValue } from "./api/_lib/env.js";
 import { fetchOsirisRosterWeeks } from "./api/_lib/osirisClient.js";
 import { createEncryptedOsirisTokenCookieValue, hasOsirisTokenCookie, readOsirisTokenFromCookie } from "./api/_lib/osirisTokenCookie.js";
-import { normalizeRosterWeekResponse, normalizeRosterWeeksResponse } from "./api/_lib/osirisRosterNormalizer.js";
+import { normalizeRosterWeeksResponse } from "./api/_lib/osirisRosterNormalizer.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -81,24 +81,6 @@ app.use("/api", (req, res, next) => {
    next();
 });
 
-app.get("/api/roster/week", async (req, res) => {
-   const offsetParam = req.query.offset;
-   const offsetValue = Array.isArray(offsetParam) ? offsetParam[0] : offsetParam;
-   const offsetString = typeof offsetValue === "string" ? offsetValue : "0";
-   const rawOffset = Number.parseInt(offsetString, 10);
-   const offset = Number.isNaN(rawOffset) ? MIN_WEEK_OFFSET : Math.min(Math.max(rawOffset, MIN_WEEK_OFFSET), MAX_WEEK_OFFSET);
-   const tokenOverride = getOsirisTokenOverride(req.headers.cookie);
-
-   try {
-      const rawResponse = await fetchOsirisRosterWeeks(offset, 1, tokenOverride);
-      res.json(normalizeRosterWeekResponse(rawResponse, offset));
-   } catch (error) {
-      console.error("OSIRIS roster fetch failed:", error);
-      const message = error instanceof Error ? error.message : "Unknown roster fetch error.";
-      res.status(502).json({ error: message });
-   }
-});
-
 app.get("/api/roster/weeks", async (req, res) => {
    const offsetParam = req.query.offset;
    const limitParam = req.query.limit;
@@ -150,8 +132,16 @@ app.put("/api/settings/osiris-token", (req, res) => {
    res.json({ hasCustomToken: true });
 });
 
-app.delete("/api/settings/osiris-token", (_req, res) => {
-   res.setHeader("Set-Cookie", buildClearOsirisTokenCookieHeader(process.env.NODE_ENV === "production"));
+app.delete("/api/settings/osiris-token", (req, res) => {
+   const authCookie = parseCookie(req.headers.cookie, AUTH_COOKIE_NAME);
+   const isProduction = process.env.NODE_ENV === "production";
+   const cookieHeaders = [buildClearOsirisTokenCookieHeader(isProduction)];
+
+   if (authCookie) {
+      cookieHeaders.unshift(buildAuthCookieHeader(authCookie, isProduction));
+   }
+
+   res.setHeader("Set-Cookie", cookieHeaders);
    res.json({ hasCustomToken: false });
 });
 

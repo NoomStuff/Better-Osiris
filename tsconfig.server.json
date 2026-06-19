@@ -14,5 +14,6 @@
       "noUnusedParameters": true,
       "noFallthroughCasesInSwitch": true
    },
-   "include": ["server.ts", "server/**/*.ts", "api/**/*.ts"]
+   "include": ["server.ts", "server/**/*.ts", "api/**/*.ts"],
+   "exclude": ["**/*.test.ts"]
 }

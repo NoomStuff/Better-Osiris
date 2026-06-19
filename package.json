@@ -8,6 +8,8 @@
       "server": "bun server.ts",
       "build": "bunx tsc -p tsconfig.json && bunx tsc -p tsconfig.server.json && bunx vite build",
       "lint": "eslint . --max-warnings 0",
+      "test": "bun test",
+      "test:e2e": "playwright test",
       "serve": "bunx vite preview",
       "start": "bun server.ts",
       "format": "prettier --write .",
@@ -15,6 +17,7 @@
    },
    "devDependencies": {
       "@eslint/js": "^10.0.1",
+      "@playwright/test": "^1.61.0",
       "@types/express": "^5.0.6",
       "@types/react": "^19.2.14",
       "@types/react-dom": "^19.2.3",

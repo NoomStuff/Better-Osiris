@@ -1,59 +1,54 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
-import {
-   AUTH_COOKIE_NAME,
-   buildAuthCookieHeader,
-   buildClearOsirisTokenCookieHeader,
-   buildOsirisTokenCookieHeader,
-   isValidAuthCookieValue,
-   parseCookie,
-} from "../_lib/auth.js";
-import { getEnvValue } from "../_lib/env.js";
+import { buildClearOsirisTokenCookieHeader, buildOsirisTokenCookieHeader } from "../_lib/auth.js";
+import { requireAuth } from "../_lib/apiAuth.js";
+import { readJsonBody, sendJson, sendMethodNotAllowed } from "../_lib/http.js";
 import { createEncryptedOsirisTokenCookieValue, hasOsirisTokenCookie, readOsirisTokenFromCookie } from "../_lib/osirisTokenCookie.js";
 
 export default async function handler(req: IncomingMessage, res: ServerResponse) {
    if (req.method !== "GET" && req.method !== "PUT" && req.method !== "DELETE") {
-      res.statusCode = 405;
-      res.setHeader("Allow", "GET, PUT, DELETE");
-      res.end("Method Not Allowed");
+      sendMethodNotAllowed(res, ["GET", "PUT", "DELETE"]);
       return;
    }
 
-   const cookieSecret = getEnvValue("COOKIE_SECRET");
-   if (!cookieSecret) {
-      sendJson(res, 500, { error: "Server auth is not configured." });
+   const auth = requireAuth(req, res);
+   if (!auth) {
       return;
    }
-
-   const authCookie = parseCookie(req.headers.cookie, AUTH_COOKIE_NAME);
-   if (!authCookie || !isValidAuthCookieValue(authCookie, cookieSecret)) {
-      sendJson(res, 401, { error: "Unauthorized" });
-      return;
-   }
-
-   const isProduction = process.env["NODE_ENV"] === "production";
-   const authCookieHeader = buildAuthCookieHeader(authCookie, isProduction);
 
    if (req.method === "GET") {
-      res.setHeader("Set-Cookie", authCookieHeader);
-      sendJson(res, 200, { hasCustomToken: hasValidOsirisTokenOverride(req.headers.cookie, cookieSecret) });
+      sendJson(
+         res,
+         200,
+         { hasCustomToken: hasValidOsirisTokenOverride(req.headers.cookie, auth.cookieSecret) },
+         { headers: { "Set-Cookie": auth.authCookieHeader } }
+      );
       return;
    }
 
    if (req.method === "DELETE") {
-      res.setHeader("Set-Cookie", [authCookieHeader, buildClearOsirisTokenCookieHeader(isProduction)]);
-      sendJson(res, 200, { hasCustomToken: false });
+      sendJson(
+         res,
+         200,
+         { hasCustomToken: false },
+         { headers: { "Set-Cookie": [auth.authCookieHeader, buildClearOsirisTokenCookieHeader(auth.isProduction)] } }
+      );
       return;
    }
 
-   const token = await readTokenFromRequest(req);
+   const payload = await readJsonBody<{ token?: unknown }>(req);
+   const token = typeof payload?.token === "string" ? payload.token.trim() : "";
    if (!token) {
       sendJson(res, 400, { error: "Token is required." });
       return;
    }
 
-   const encryptedToken = createEncryptedOsirisTokenCookieValue(token, cookieSecret);
-   res.setHeader("Set-Cookie", [authCookieHeader, buildOsirisTokenCookieHeader(encryptedToken, isProduction)]);
-   sendJson(res, 200, { hasCustomToken: true });
+   const encryptedToken = createEncryptedOsirisTokenCookieValue(token, auth.cookieSecret);
+   sendJson(
+      res,
+      200,
+      { hasCustomToken: true },
+      { headers: { "Set-Cookie": [auth.authCookieHeader, buildOsirisTokenCookieHeader(encryptedToken, auth.isProduction)] } }
+   );
 }
 
 function hasValidOsirisTokenOverride(cookieHeader: string | undefined, secret: string): boolean {
@@ -62,25 +57,4 @@ function hasValidOsirisTokenOverride(cookieHeader: string | undefined, secret: s
    }
 
    return Boolean(readOsirisTokenFromCookie(cookieHeader, secret));
-}
-
-async function readTokenFromRequest(req: IncomingMessage): Promise<string> {
-   const chunks: Uint8Array[] = [];
-
-   for await (const chunk of req) {
-      chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
-   }
-
-   try {
-      const payload = JSON.parse(Buffer.concat(chunks).toString("utf8")) as { token?: unknown };
-      return typeof payload.token === "string" ? payload.token.trim() : "";
-   } catch {
-      return "";
-   }
-}
-
-function sendJson(res: ServerResponse, statusCode: number, payload: unknown) {
-   res.statusCode = statusCode;
-   res.setHeader("Content-Type", "application/json");
-   res.end(JSON.stringify(payload));
 }

@@ -1,6 +1,6 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
-import { AUTH_COOKIE_NAME, buildAuthCookieHeader, isValidAuthCookieValue, parseCookie } from "../_lib/auth.js";
-import { getEnvValue } from "../_lib/env.js";
+import { requireAuth } from "../_lib/apiAuth.js";
+import { getRequestUrl, parseBoundedInt, sendJson, sendMethodNotAllowed } from "../_lib/http.js";
 import { fetchOsirisRosterWeeks } from "../_lib/osirisClient.js";
 import { readOsirisTokenFromCookie } from "../_lib/osirisTokenCookie.js";
 import { normalizeRosterWeeksResponse } from "../_lib/osirisRosterNormalizer.js";
@@ -11,57 +11,37 @@ const MAX_WEEK_LIMIT = 5;
 
 export default async function handler(req: IncomingMessage, res: ServerResponse) {
    if (req.method !== "GET") {
-      res.statusCode = 405;
-      res.setHeader("Allow", "GET");
-      res.end("Method Not Allowed");
+      sendMethodNotAllowed(res, ["GET"]);
       return;
    }
 
-   const cookieSecret = getEnvValue("COOKIE_SECRET");
-   if (!cookieSecret) {
-      res.statusCode = 500;
-      res.setHeader("Content-Type", "application/json");
-      res.end(JSON.stringify({ error: "Server auth is not configured." }));
+   const auth = requireAuth(req, res);
+   if (!auth) {
       return;
    }
 
-   const authCookie = parseCookie(req.headers.cookie, AUTH_COOKIE_NAME);
-   if (!authCookie || !isValidAuthCookieValue(authCookie, cookieSecret)) {
-      res.statusCode = 401;
-      res.setHeader("Content-Type", "application/json");
-      res.end(JSON.stringify({ error: "Unauthorized" }));
-      return;
-   }
-
-   res.setHeader("Set-Cookie", buildAuthCookieHeader(authCookie, process.env["NODE_ENV"] === "production"));
-
-   const url = new URL(req.url ?? "/", `http://${req.headers.host ?? "localhost"}`);
-   const offsetString = url.searchParams.get("offset") ?? "0";
-   const limitString = url.searchParams.get("limit") ?? String(MAX_WEEK_LIMIT);
-   const rawOffset = Number.parseInt(offsetString, 10);
-   const rawLimit = Number.parseInt(limitString, 10);
-   const offset = Number.isNaN(rawOffset) ? MIN_WEEK_OFFSET : Math.min(Math.max(rawOffset, MIN_WEEK_OFFSET), MAX_WEEK_OFFSET);
-   const limit = Number.isNaN(rawLimit) ? MAX_WEEK_LIMIT : Math.min(Math.max(rawLimit, 1), MAX_WEEK_LIMIT);
+   const url = getRequestUrl(req);
+   const offset = parseBoundedInt(url.searchParams.get("offset"), MIN_WEEK_OFFSET, MIN_WEEK_OFFSET, MAX_WEEK_OFFSET);
+   const limit = parseBoundedInt(url.searchParams.get("limit"), MAX_WEEK_LIMIT, 1, MAX_WEEK_LIMIT);
    const safeLimit = Math.min(limit, MAX_WEEK_OFFSET - offset + 1);
-   const tokenOverride = readOsirisTokenFromCookie(req.headers.cookie, cookieSecret);
+   const tokenOverride = readOsirisTokenFromCookie(req.headers.cookie, auth.cookieSecret);
 
    try {
       const rawResponse = await fetchOsirisRosterWeeks(offset, safeLimit, tokenOverride);
       const weeks = normalizeRosterWeeksResponse(rawResponse, offset);
-      res.statusCode = 200;
-      res.setHeader("Content-Type", "application/json");
-      res.end(
-         JSON.stringify({
+      sendJson(
+         res,
+         200,
+         {
             weeks,
             offset,
             limit: safeLimit,
             hasMore: rawResponse.hasMore && offset + safeLimit - 1 < MAX_WEEK_OFFSET,
-         })
+         },
+         { headers: { "Set-Cookie": auth.authCookieHeader } }
       );
    } catch (error) {
       const message = error instanceof Error ? error.message : "Unknown roster fetch error.";
-      res.statusCode = 502;
-      res.setHeader("Content-Type", "application/json");
-      res.end(JSON.stringify({ error: message }));
+      sendJson(res, 502, { error: message }, { headers: { "Set-Cookie": auth.authCookieHeader } });
    }
 }
