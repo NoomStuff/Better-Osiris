@@ -198,12 +198,13 @@
 }
 
 .agenda-lesson.status-cancelled {
-   border-color: rgba(255, 107, 129, 0.6);
-   background: linear-gradient(90deg, rgba(255, 107, 129, 0.28), rgba(255, 107, 129, 0.08));
+   opacity: 0.6;
+   color: var(--danger);
+   border-color: rgba(255, 107, 129, 0.25);
 }
 
 .agenda-lesson.status-cancelled .agenda-lesson__time {
-   color: #ffe9ee;
+   color: var(--danger);
 }
 
 .agenda-breaktime {
@@ -386,6 +387,7 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
+
    .day-group__body,
    .day-group__chevron,
    .agenda-current-indicator,

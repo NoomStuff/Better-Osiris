@@ -9,6 +9,7 @@ import { WeekNavigator } from "./components/WeekNavigator";
 import { fetchOsirisTokenSettings } from "./api/settings";
 import { useKeyboardShortcuts, type KeyboardShortcut } from "./hooks/useKeyboardShortcuts";
 import { APP_SHORTCUTS } from "./lib/appShortcuts";
+import { applyDevLessonStatusPreview, isDevLessonStatusPreviewMode, type DevLessonStatusPreviewMode } from "./lib/devRosterStatusPreview";
 import { useRosterWeek } from "./hooks/useRosterWeek";
 import { getIsoWeekNumber, toDayKey } from "./lib/date";
 import { getEmptyWeekMessage } from "./lib/rosterFlavor";
@@ -20,6 +21,7 @@ import "./styles/App.css";
 const STORAGE_KEY = "roster-view-mode";
 const DEVTOOLS_STORAGE_KEY = "roster-devtools-enabled";
 const DEVTOOLS_TIME_STORAGE_KEY = "roster-devtools-time-override";
+const DEVTOOLS_STATUS_PREVIEW_STORAGE_KEY = "roster-devtools-status-preview";
 const GRID_ZOOM_ORDER = ["hour", "half", "quarter"] as const satisfies readonly GridZoom[];
 const FUTURE_WEEK_KEYS = ["1", "2", "3", "4", "5", "6", "7", "8", "9"] as const;
 const IS_DEV_SERVER = import.meta.env.DEV;
@@ -62,6 +64,15 @@ function getInitialTimeOverride(): Date | null {
 
    const date = new Date(stored);
    return Number.isNaN(date.getTime()) ? null : date;
+}
+
+function getInitialStatusPreviewMode(): DevLessonStatusPreviewMode {
+   if (!IS_DEV_SERVER || typeof window === "undefined") {
+      return "none";
+   }
+
+   const stored = window.localStorage.getItem(DEVTOOLS_STATUS_PREVIEW_STORAGE_KEY);
+   return isDevLessonStatusPreviewMode(stored) ? stored : "none";
 }
 
 function ensureFontAwesomeKit() {
@@ -174,9 +185,14 @@ export default function App() {
    const [clockNow, setClockNow] = useState(() => new Date());
    const [isDevToolsEnabled, setIsDevToolsEnabled] = useState(getInitialDevToolsEnabled);
    const [timeOverride, setTimeOverride] = useState<Date | null>(getInitialTimeOverride);
+   const [devStatusPreviewMode, setDevStatusPreviewMode] = useState<DevLessonStatusPreviewMode>(getInitialStatusPreviewMode);
    const weekSwipeStartRef = useRef<WeekSwipeStart | null>(null);
    const { data, error, loading, retryCountdownMs, retrying, refreshing, title } = useRosterWeek(weekOffset);
    const perceivedNow = isDevToolsEnabled && timeOverride ? timeOverride : clockNow;
+   const displayedData = useMemo(
+      () => applyDevLessonStatusPreview(data, IS_DEV_SERVER && isDevToolsEnabled ? devStatusPreviewMode : "none"),
+      [data, devStatusPreviewMode, isDevToolsEnabled]
+   );
    const errorDetail = useMemo(() => {
       if (!error) {
          return "";
@@ -220,6 +236,14 @@ export default function App() {
          window.localStorage.removeItem(DEVTOOLS_TIME_STORAGE_KEY);
       }
    }, [timeOverride]);
+
+   useEffect(() => {
+      if (!IS_DEV_SERVER) {
+         return;
+      }
+
+      window.localStorage.setItem(DEVTOOLS_STATUS_PREVIEW_STORAGE_KEY, devStatusPreviewMode);
+   }, [devStatusPreviewMode]);
 
    useEffect(() => {
       if (!error?.isAuthRelated) {
@@ -283,9 +307,9 @@ export default function App() {
       window.localStorage.setItem(STORAGE_KEY, viewMode);
    }, [viewMode]);
 
-   const positionedLessons = useMemo(() => (data ? getPositionedLessons(data.lessons) : []), [data]);
+   const positionedLessons = useMemo(() => (displayedData ? getPositionedLessons(displayedData.lessons) : []), [displayedData]);
 
-   const dayGroups = useMemo(() => (data ? getDayGroups(data.week, positionedLessons) : []), [data, positionedLessons]);
+   const dayGroups = useMemo(() => (displayedData ? getDayGroups(displayedData.week, positionedLessons) : []), [displayedData, positionedLessons]);
    const blankWeek = useMemo(() => getBlankRosterWeek(weekOffset, perceivedNow), [perceivedNow, weekOffset]);
    const blankDayGroups = useMemo(() => getDayGroups(blankWeek, []), [blankWeek]);
    const blankExpandedDays = useMemo(
@@ -294,15 +318,15 @@ export default function App() {
    );
 
    const autoExpandedDays = useMemo(() => {
-      if (!data) {
+      if (!displayedData) {
          return new Set<string>();
       }
 
-      return getDefaultExpandedDays(dayGroups, data.week.offset, perceivedNow);
-   }, [data, dayGroups, perceivedNow]);
+      return getDefaultExpandedDays(dayGroups, displayedData.week.offset, perceivedNow);
+   }, [displayedData, dayGroups, perceivedNow]);
 
    const expandedDays = useMemo(() => {
-      if (!data) {
+      if (!displayedData) {
          return new Set<string>();
       }
 
@@ -320,7 +344,7 @@ export default function App() {
       });
 
       return merged;
-   }, [autoExpandedDays, expandedOverrides, data]);
+   }, [autoExpandedDays, expandedOverrides, displayedData]);
 
    const allDayKeys = useMemo(() => dayGroups.map((group) => group.key), [dayGroups]);
 
@@ -342,12 +366,12 @@ export default function App() {
    );
 
    const selectedLesson: Lesson | null = useMemo(() => {
-      if (!data || !selectedLessonId) {
+      if (!displayedData || !selectedLessonId) {
          return null;
       }
 
-      return data.lessons.find((lesson) => lesson.id === selectedLessonId) ?? null;
-   }, [data, selectedLessonId]);
+      return displayedData.lessons.find((lesson) => lesson.id === selectedLessonId) ?? null;
+   }, [displayedData, selectedLessonId]);
 
    const ignoreBlankDayToggle = useCallback((_dayKey: string) => undefined, []);
 
@@ -645,9 +669,9 @@ export default function App() {
 
    useKeyboardShortcuts(keyboardShortcuts, !isSettingsOpen && selectedLesson === null);
 
-   const visibleDayGroups = data ? dayGroups : blankDayGroups;
-   const visibleExpandedDays = data ? expandedDays : blankExpandedDays;
-   const isVisuallyEmptyWeek = data ? data.lessons.length === 0 : true;
+   const visibleDayGroups = displayedData ? dayGroups : blankDayGroups;
+   const visibleExpandedDays = displayedData ? expandedDays : blankExpandedDays;
+   const isVisuallyEmptyWeek = displayedData ? displayedData.lessons.length === 0 : true;
    const hasOverlayUnderlay = loading || (Boolean(error) && !data) || isVisuallyEmptyWeek;
    const visibleGridZoom = hasOverlayUnderlay ? "hour" : gridZoom;
    const frameGridZoom = viewMode === "grid" ? visibleGridZoom : gridZoom;
@@ -655,8 +679,8 @@ export default function App() {
       <LoadingState message="Fetching week data." />
    ) : error && !data ? (
       <ErrorState title={error.title} detail={errorDetail} log={error.log} retryCountdownMs={retryCountdownMs} isRetrying={retrying} />
-   ) : data?.lessons.length === 0 ? (
-      <EmptyWeekState week={data.week} />
+   ) : displayedData?.lessons.length === 0 ? (
+      <EmptyWeekState week={displayedData.week} />
    ) : null;
 
    return (
@@ -697,17 +721,17 @@ export default function App() {
                   <AgendaView
                      groups={visibleDayGroups}
                      expandedDays={visibleExpandedDays}
-                     animate={data ? animateAgenda : false}
+                     animate={displayedData ? animateAgenda : false}
                      now={perceivedNow}
-                     onToggleDay={data ? toggleDay : ignoreBlankDayToggle}
-                     onSelectLesson={data ? selectLesson : ignoreBlankLessonSelection}
+                     onToggleDay={displayedData ? toggleDay : ignoreBlankDayToggle}
+                     onSelectLesson={displayedData ? selectLesson : ignoreBlankLessonSelection}
                   />
                ) : (
                   <GridView
                      groups={visibleDayGroups}
                      zoom={visibleGridZoom}
                      now={perceivedNow}
-                     onSelectLesson={data ? selectLesson : ignoreBlankLessonSelection}
+                     onSelectLesson={displayedData ? selectLesson : ignoreBlankLessonSelection}
                   />
                )}
                {overlay}
@@ -720,9 +744,11 @@ export default function App() {
             isDevToolsEnabled={isDevToolsEnabled}
             perceivedNow={perceivedNow}
             timeOverride={timeOverride}
+            statusPreviewMode={devStatusPreviewMode}
             onClose={() => setIsSettingsOpen(false)}
             onToggleDevTools={toggleDevTools}
             onChangeTimeOverride={changeTimeOverride}
+            onChangeStatusPreviewMode={setDevStatusPreviewMode}
          />
       </div>
    );

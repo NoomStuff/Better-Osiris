@@ -2,8 +2,9 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { fetchRosterWeeks, RosterRequestError } from "../api/roster";
 import { formatWeekTitle, getIsoWeekNumber, shiftIsoDateByDays } from "../lib/date";
 import { notifyError } from "../lib/notyf";
+import { applySessionLessonDiffs, recordSessionLessonDiffs, type SessionLessonDiff, type SessionLessonDiffsByWeek } from "../lib/rosterSessionDiffs";
 import { MAX_WEEK_OFFSET, MIN_WEEK_OFFSET } from "../../shared/rosterTime";
-import type { RosterResponse } from "../types/roster";
+import type { RosterBatchResponse, RosterResponse } from "../types/roster";
 
 interface WeekEntry {
    data: RosterResponse | null;
@@ -30,6 +31,7 @@ interface CachedCurrentWeek {
 type WeekEntries = Partial<Record<number, WeekEntry>>;
 
 const CURRENT_WEEK_CACHE_KEY = "roster-current-week-cache-v2";
+const SESSION_LESSON_DIFFS_KEY = "roster-session-lesson-diffs-v1";
 const LOAD_ERROR_MESSAGE = "Something went wrong while loading the roster.";
 const LOAD_ERROR_TOAST_MESSAGE = "Something went wrong while loading the roster.";
 const FIRST_RETRY_DELAY_MS = 2_000;
@@ -131,6 +133,37 @@ function storeCachedCurrentWeek(data: RosterResponse) {
    );
 }
 
+function readSessionLessonDiffs(): SessionLessonDiffsByWeek {
+   if (typeof window === "undefined") {
+      return new Map();
+   }
+
+   try {
+      const stored = window.sessionStorage.getItem(SESSION_LESSON_DIFFS_KEY);
+      if (!stored) {
+         return new Map();
+      }
+
+      const parsed = JSON.parse(stored) as Record<string, SessionLessonDiff[]>;
+      return new Map(Object.entries(parsed).map(([weekOffset, diffs]) => [Number(weekOffset), new Map(diffs.map((diff) => [diff.lesson.id, diff]))]));
+   } catch (error) {
+      notifyError(error, "Failed to parse session roster changes.");
+      return new Map();
+   }
+}
+
+function storeSessionLessonDiffs(weekDiffs: SessionLessonDiffsByWeek) {
+   if (typeof window === "undefined") {
+      return;
+   }
+
+   const serialized = Object.fromEntries(
+      [...weekDiffs.entries()].filter(([, diffs]) => diffs.size > 0).map(([weekOffset, diffs]) => [String(weekOffset), [...diffs.values()]])
+   );
+
+   window.sessionStorage.setItem(SESSION_LESSON_DIFFS_KEY, JSON.stringify(serialized));
+}
+
 function getInitialEntries(): WeekEntries {
    const cachedCurrentWeek = readCachedCurrentWeek();
    if (!cachedCurrentWeek) {
@@ -221,13 +254,46 @@ function isSameRosterData(left: RosterResponse | null | undefined, right: Roster
    });
 }
 
+function getDisplayWeeksFromPayload(
+   payload: RosterBatchResponse,
+   entries: WeekEntries,
+   latestRawWeeks: Map<number, RosterResponse>,
+   sessionLessonDiffs: SessionLessonDiffsByWeek
+) {
+   let recordedNewDiff = false;
+   const weeks: RosterResponse[] = [];
+
+   for (const weekData of payload.weeks) {
+      const comparisonBase = latestRawWeeks.get(weekData.week.offset) ?? entries[weekData.week.offset]?.data ?? null;
+      if (comparisonBase && !isSameRosterData(comparisonBase, weekData)) {
+         recordSessionLessonDiffs(comparisonBase, weekData, sessionLessonDiffs);
+         recordedNewDiff = true;
+      }
+
+      latestRawWeeks.set(weekData.week.offset, weekData);
+      if (weekData.week.offset === 0) {
+         storeCachedCurrentWeek(weekData);
+      }
+
+      weeks.push(applySessionLessonDiffs(weekData, sessionLessonDiffs));
+   }
+
+   if (recordedNewDiff) {
+      storeSessionLessonDiffs(sessionLessonDiffs);
+   }
+
+   return weeks;
+}
+
 export function useRosterWeek(offset: number) {
    const [entries, setEntries] = useState<WeekEntries>(getInitialEntries);
    const [now, setNow] = useState<number | null>(null);
+   const [sessionLessonDiffs] = useState(readSessionLessonDiffs);
    const entriesRef = useRef(entries);
    const requestsRef = useRef(new Map<string, Promise<void>>());
    const queuedRefetchesRef = useRef(new Set<number>());
    const retryTimersRef = useRef(new Map<string, number>());
+   const latestRawWeeksRef = useRef(new Map<number, RosterResponse>());
    const hasShownLoadErrorToastRef = useRef(false);
    const activeOffsetRef = useRef(offset);
 
@@ -303,9 +369,10 @@ export function useRosterWeek(offset: number) {
          const request = fetchRosterWeeks(startOffset, limit)
             .then((payload) => {
                hasShownLoadErrorToastRef.current = false;
+               const displayWeeks = getDisplayWeeksFromPayload(payload, entriesRef.current, latestRawWeeksRef.current, sessionLessonDiffs);
                setEntries((current) => {
                   const next = { ...current };
-                  payload.weeks.forEach((weekData) => {
+                  displayWeeks.forEach((weekData) => {
                      const currentEntry = current[weekData.week.offset];
                      if (isSameRosterData(currentEntry?.data, weekData)) {
                         next[weekData.week.offset] = createEntry(currentEntry?.data ?? weekData, {
@@ -319,9 +386,6 @@ export function useRosterWeek(offset: number) {
                         return;
                      }
 
-                     if (weekData.week.offset === 0) {
-                        storeCachedCurrentWeek(weekData);
-                     }
                      next[weekData.week.offset] = createEntry(weekData);
                   });
                   return next;
@@ -397,7 +461,7 @@ export function useRosterWeek(offset: number) {
          const prefetchBatchStart = activeBatchStart + delta * BATCH_SIZE;
          loadBatch(prefetchBatchStart, queuedRefetchesRef.current.has(prefetchBatchStart));
       });
-   }, [offset]);
+   }, [offset, sessionLessonDiffs]);
 
    useEffect(() => {
       const refetchPassiveBatches = () => {
@@ -446,9 +510,10 @@ export function useRosterWeek(offset: number) {
 
             const request = fetchRosterWeeks(batchStart, offsets.length)
                .then((payload) => {
+                  const displayWeeks = getDisplayWeeksFromPayload(payload, entriesRef.current, latestRawWeeksRef.current, sessionLessonDiffs);
                   setEntries((current) => {
                      const next = { ...current };
-                     payload.weeks.forEach((weekData) => {
+                     displayWeeks.forEach((weekData) => {
                         const currentEntry = current[weekData.week.offset];
                         if (isSameRosterData(currentEntry?.data, weekData)) {
                            next[weekData.week.offset] = createEntry(currentEntry?.data ?? weekData, {
@@ -462,9 +527,6 @@ export function useRosterWeek(offset: number) {
                            return;
                         }
 
-                        if (weekData.week.offset === 0) {
-                           storeCachedCurrentWeek(weekData);
-                        }
                         next[weekData.week.offset] = createEntry(weekData);
                      });
                      return next;
@@ -503,7 +565,7 @@ export function useRosterWeek(offset: number) {
 
       const intervalId = window.setInterval(refetchPassiveBatches, PASSIVE_REFETCH_INTERVAL_MS);
       return () => window.clearInterval(intervalId);
-   }, [offset]);
+   }, [offset, sessionLessonDiffs]);
 
    const activeEntry = entries[offset];
    const data = activeEntry?.data ?? null;

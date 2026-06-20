@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { SyntheticEvent } from "react";
 import { clearOsirisToken, fetchOsirisTokenSettings, saveOsirisToken } from "../api/settings";
+import { DEV_LESSON_STATUS_PREVIEW_MODES, type DevLessonStatusPreviewMode } from "../lib/devRosterStatusPreview";
 import { notifyError, notifySuccess, notifyWarning } from "../lib/notyf";
 import { IconButton } from "./IconButton";
 import { OverlayPanel } from "./OverlayPanel";
@@ -11,9 +12,11 @@ interface SettingsDialogProps {
    isDevToolsEnabled: boolean;
    perceivedNow: Date;
    timeOverride: Date | null;
+   statusPreviewMode: DevLessonStatusPreviewMode;
    onClose: () => void;
    onToggleDevTools: (enabled: boolean) => void;
    onChangeTimeOverride: (date: Date | null) => void;
+   onChangeStatusPreviewMode: (mode: DevLessonStatusPreviewMode) => void;
 }
 
 const CURRENT_WEEK_CACHE_KEY = "roster-current-week-cache-v2";
@@ -26,9 +29,11 @@ export function SettingsDialog({
    isDevToolsEnabled,
    perceivedNow,
    timeOverride,
+   statusPreviewMode,
    onClose,
    onToggleDevTools,
    onChangeTimeOverride,
+   onChangeStatusPreviewMode,
 }: SettingsDialogProps) {
    const [token, setToken] = useState("");
    const [hasCustomToken, setHasCustomToken] = useState(false);
@@ -259,6 +264,23 @@ export function SettingsDialog({
                            <button className="settings-dialog__button" type="button" disabled={!timeOverride} onClick={() => onChangeTimeOverride(null)}>
                               Clear override
                            </button>
+                        </div>
+
+                        <div className="devtools-option">
+                           <span className="devtools-option__label">Lesson status preview</span>
+                           <div className="settings-segmented-control" role="group" aria-label="Lesson status preview">
+                              {DEV_LESSON_STATUS_PREVIEW_MODES.map((mode) => (
+                                 <button
+                                    type="button"
+                                    key={mode.id}
+                                    aria-pressed={statusPreviewMode === mode.id}
+                                    data-active={statusPreviewMode === mode.id}
+                                    onClick={() => onChangeStatusPreviewMode(mode.id)}
+                                 >
+                                    {mode.label}
+                                 </button>
+                              ))}
+                           </div>
                         </div>
                      </div>
                   ) : null}

@@ -63,6 +63,21 @@ test("settings dialog opens, resets token state, and closes", async ({ page }) =
    await expect(page.getByRole("dialog", { name: "Preferences" })).toBeHidden();
 });
 
+test("devtools can preview changed and cancelled lesson states", async ({ page }) => {
+   await page.goto("/");
+
+   await page.getByRole("button", { name: "Open settings" }).click();
+   await page.getByLabel("Enable devtools").check();
+   await page.getByRole("button", { name: "Mixed" }).click();
+   await page.locator(".settings-dialog__header").getByRole("button", { name: "Close settings" }).click();
+
+   await expect(page.locator(".agenda-lesson.status-changed")).toHaveCount(1);
+   await expect(page.locator(".agenda-lesson.status-cancelled")).toHaveCount(1);
+
+   await page.getByRole("button", { name: /SOURCE_TITLE_0_2/ }).click();
+   await expect(page.locator(".lesson-panel__details")).toContainText("cancelled");
+});
+
 test("time indicators are visible and positioned for the fixed current time", async ({ page }) => {
    await page.goto("/");
 
