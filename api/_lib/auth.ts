@@ -113,7 +113,6 @@ export function buildClearOsirisTokenCookieHeader(isProduction: boolean): string
 
 export function buildAuthCookieHeader(value: string, isProduction: boolean): string {
    return serializeCookie(AUTH_COOKIE_NAME, value, {
-      httpOnly: true,
       secure: isProduction,
       sameSite: "lax",
       path: "/",

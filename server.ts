@@ -54,6 +54,23 @@ app.post("/api/login", (req, res) => {
    res.json({ ok: true });
 });
 
+app.get("/api/auth/status", (req, res) => {
+   const cookieSecret = getEnvValue("COOKIE_SECRET");
+   if (!cookieSecret) {
+      res.status(500).json({ error: "Server auth is not configured." });
+      return;
+   }
+
+   const authCookie = parseCookie(req.headers.cookie, AUTH_COOKIE_NAME);
+   if (!authCookie || !isValidAuthCookieValue(authCookie, cookieSecret)) {
+      res.status(401).json({ error: "Unauthorized" });
+      return;
+   }
+
+   res.setHeader("Set-Cookie", buildAuthCookieHeader(authCookie, process.env.NODE_ENV === "production"));
+   res.json({ ok: true });
+});
+
 app.use("/api", (req, res, next) => {
    if (req.path === "/login") {
       next();

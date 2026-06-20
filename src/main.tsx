@@ -18,8 +18,29 @@ if (!rootElement) {
    throw new Error("Root element #app not found.");
 }
 
-ReactDOM.createRoot(rootElement).render(
-   <React.StrictMode>
-      <App />
-   </React.StrictMode>
-);
+function redirectToLogin() {
+   const nextPath = `${window.location.pathname}${window.location.search}`;
+   const target = nextPath && nextPath !== "/" ? `/login.html?next=${encodeURIComponent(nextPath)}` : "/login.html";
+   window.location.replace(target);
+}
+
+function hasAuthCookie() {
+   if (import.meta.env.DEV) {
+      return true;
+   }
+
+   return document.cookie
+      .split(";")
+      .map((cookie) => cookie.trim())
+      .some((cookie) => cookie.startsWith("auth="));
+}
+
+if (!hasAuthCookie()) {
+   redirectToLogin();
+} else {
+   ReactDOM.createRoot(rootElement).render(
+      <React.StrictMode>
+         <App />
+      </React.StrictMode>
+   );
+}

@@ -3,7 +3,7 @@ const LOGIN_PATH = "/login.html";
 const LOGIN_API_PATH = "/api/login";
 
 export const config = {
-   matcher: ["/((?!api/login|login|login.html).*)"],
+   matcher: ["/((?!api/login|api/auth/status|login|login.html).*)"],
 };
 
 let cachedKey: CryptoKey | null = null;

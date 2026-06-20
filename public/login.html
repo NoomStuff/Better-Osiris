@@ -43,7 +43,7 @@
             border-radius: 24px;
             border: 2px solid var(--line);
             box-shadow: var(--shadow);
-            padding: 28px 28px 30px;
+            padding: 28px 28px 14px;
             position: relative;
             overflow: hidden;
          }
@@ -123,7 +123,7 @@
          }
 
          .note {
-            margin-top: 18px;
+            margin: 0;
             font-size: 12px;
             color: var(--text-muted);
          }
@@ -139,7 +139,6 @@
             <button id="submit" type="submit">Continue</button>
             <div class="error" id="error" aria-live="polite"></div>
          </form>
-         <div class="note">Access is limited to people with the password.</div>
       </main>
       <script>
          const form = document.getElementById("login-form");
@@ -152,6 +151,8 @@
          const params = new URLSearchParams(window.location.search);
          const requestedNext = params.get("next") || "/";
          const nextPath = sanitizeNextPath(requestedNext);
+
+         void redirectIfAlreadyAuthenticated();
 
          function sanitizeNextPath(pathname) {
             if (!pathname || typeof pathname !== "string") {
@@ -167,6 +168,30 @@
             }
 
             return pathname;
+         }
+
+         async function redirectIfAlreadyAuthenticated() {
+            try {
+               const response = await fetch("/api/auth/status", {
+                  credentials: "same-origin",
+                  cache: "no-store",
+               });
+
+               if (response.ok) {
+                  window.location.replace(nextPath);
+                  return;
+               }
+
+               if (response.status === 401) {
+                  clearAuthCookie();
+               }
+            } catch {
+               // Stay on the login page if the auth check cannot complete.
+            }
+         }
+
+         function clearAuthCookie() {
+            document.cookie = "auth=; Max-Age=0; Path=/; SameSite=lax";
          }
 
          form.addEventListener("submit", async (event) => {

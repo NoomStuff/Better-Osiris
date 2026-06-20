@@ -16,7 +16,7 @@ void describe("auth cookies", () => {
       const header = buildAuthCookieHeader(cookieValue, true);
 
       assert.equal(parseCookie(header, "auth"), encodeURIComponent(cookieValue));
-      assert.match(header, /HttpOnly/);
+      assert.doesNotMatch(header, /HttpOnly/);
       assert.match(header, /Secure/);
       assert.match(header, /SameSite=lax/);
    });
