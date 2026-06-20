@@ -42,6 +42,7 @@ function formatWeekLabel(weekOffset: number) {
 export function WeekNavigator({ title, weekOffset, onPreviousWeek, onNextWeek, onCurrentWeek, canGoPrevious, canGoNext }: WeekNavigatorProps) {
    const label = formatWeekLabel(weekOffset);
    const isCurrentWeek = weekOffset === 0;
+   const weekPosition = weekOffset < 0 ? "past" : weekOffset > 0 ? "future" : "current";
    const tooltipId = useId();
    const { hideTooltip, isTooltipEnabled, isTooltipOpen, showTooltip } = useDelayedTooltip();
    const isShortcutActive = useShortcutActivation("current-week");
@@ -84,6 +85,7 @@ export function WeekNavigator({ title, weekOffset, onPreviousWeek, onNextWeek, o
             aria-describedby={isTooltipEnabled ? tooltipId : undefined}
             data-current={isCurrentWeek}
             data-shortcut-active={isShortcutActive ? "true" : undefined}
+            data-week-position={weekPosition}
             data-tooltip-align="center"
             data-tooltip-host="true"
             data-tooltip-open={isTooltipOpen ? "true" : undefined}

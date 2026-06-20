@@ -119,7 +119,7 @@ function resolveLessonStatus(item: OsirisRosterEntry): LessonStatus {
    return "scheduled";
 }
 
-function normalizeRosterWeekItem(week: OsirisWeek, requestedOffset: number): RosterResponse {
+function normalizeRosterWeekItem(week: OsirisWeek, requestedOffset: number, source: OsirisRosterResponse["source"]): RosterResponse {
    return {
       week: {
          offset: requestedOffset,
@@ -129,8 +129,8 @@ function normalizeRosterWeekItem(week: OsirisWeek, requestedOffset: number): Ros
       },
       lessons: week.dagen.flatMap((day) => day.rooster.map(normalizeLesson)),
       source: {
-         mode: "osiris",
-         note: "Using live OSIRIS roster data.",
+         mode: source === "icalendar" ? "osiris-icalendar" : "osiris",
+         note: source === "icalendar" ? "Using OSIRIS iCalendar roster data. Some lesson details may be limited." : "Using live OSIRIS roster data.",
       },
    };
 }
@@ -140,5 +140,5 @@ export function normalizeRosterWeeksResponse(rawData: OsirisRosterResponse, requ
       throw new Error("OSIRIS roster response did not include week items.");
    }
 
-   return rawData.items.map((week, index) => normalizeRosterWeekItem(week, requestedOffset + index));
+   return rawData.items.map((week, index) => normalizeRosterWeekItem(week, requestedOffset + index, rawData.source));
 }

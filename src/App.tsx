@@ -19,7 +19,7 @@ import "./styles/App.css";
 const STORAGE_KEY = "roster-view-mode";
 const DEVTOOLS_STORAGE_KEY = "roster-devtools-enabled";
 const DEVTOOLS_TIME_STORAGE_KEY = "roster-devtools-time-override";
-const MIN_WEEK_OFFSET = 0; // we cant fetch past weeks, so min is 0 (current week)
+const MIN_WEEK_OFFSET = -1;
 const MAX_WEEK_OFFSET = 50; // the max we can fetch from the API
 const GRID_ZOOM_ORDER = ["hour", "half", "quarter"] as const satisfies readonly GridZoom[];
 const FUTURE_WEEK_KEYS = ["1", "2", "3", "4", "5", "6", "7", "8", "9"] as const;
@@ -254,6 +254,7 @@ export default function App() {
          return new Set<string>();
       }
 
+      const isCurrentWeek = data.week.offset === 0;
       const todayKey = toDayKey(perceivedNow);
       const todayStart = new Date(perceivedNow);
       todayStart.setHours(0, 0, 0, 0);
@@ -262,7 +263,7 @@ export default function App() {
       dayGroups.forEach((group) => {
          const groupStart = new Date(group.date);
          groupStart.setHours(0, 0, 0, 0);
-         const hasPassed = groupStart.getTime() < todayStart.getTime();
+         const hasPassed = isCurrentWeek && groupStart.getTime() < todayStart.getTime();
 
          if (!hasPassed && (group.key === todayKey || group.lessons.length > 0)) {
             nextExpanded.add(group.key);

@@ -35,7 +35,7 @@ const FIRST_RETRY_DELAY_MS = 2_000;
 const MAX_RETRY_DELAY_MS = 5 * 60 * 1000;
 const BATCH_SIZE = 5;
 const PREFETCH_BATCHES = [-1, 1];
-const MIN_WEEK_OFFSET = 0;
+const MIN_WEEK_OFFSET = -1;
 const MAX_WEEK_OFFSET = 50;
 const PASSIVE_REFETCH_INTERVAL_MS = 5 * 60 * 1000;
 
@@ -174,10 +174,18 @@ function getDerivedTitle(offset: number, entries: WeekEntries) {
 }
 
 function getBatchStart(targetOffset: number) {
-   return Math.floor(targetOffset / BATCH_SIZE) * BATCH_SIZE;
+   if (targetOffset < 0) {
+      return targetOffset;
+   }
+
+   return Math.max(MIN_WEEK_OFFSET, Math.floor(targetOffset / BATCH_SIZE) * BATCH_SIZE);
 }
 
 function getBatchOffsets(startOffset: number) {
+   if (startOffset < 0) {
+      return [startOffset];
+   }
+
    const endOffset = Math.min(startOffset + BATCH_SIZE - 1, MAX_WEEK_OFFSET);
    return Array.from({ length: endOffset - startOffset + 1 }, (_, index) => startOffset + index);
 }

@@ -90,7 +90,7 @@ void describe("GET /api/roster/weeks", () => {
       )[0];
 
       const response = await callWeeksHandler({
-         url: "/api/roster/weeks?offset=-4&limit=0",
+         url: "/api/roster/weeks?offset=4&limit=0",
          cookie: [`auth=${createSignedAuthCookieValue(process.env["COOKIE_SECRET"])}`, customTokenCookie].join("; "),
       });
 
@@ -98,8 +98,45 @@ void describe("GET /api/roster/weeks", () => {
       const firstRequest = requests[0];
       assert.ok(firstRequest);
       assert.equal(firstRequest.authorization, customToken);
-      assert.match(firstRequest.url, /offset=0/);
+      assert.match(firstRequest.url, /offset=4/);
       assert.match(firstRequest.url, /limit=1/);
+   });
+
+   void it("uses the OSIRIS iCalendar feed for previous weeks", async () => {
+      const requests: OsirisRequest[] = [];
+      mockOsirisCalendarFetch(requests);
+      process.env["COOKIE_SECRET"] = "api-secret";
+      process.env["BEARER_TOKEN"] = "Bearer server-token";
+
+      const response = await callWeeksHandler({
+         url: "/api/roster/weeks?offset=-1&limit=1",
+         cookie: `auth=${createSignedAuthCookieValue(process.env["COOKIE_SECRET"])}`,
+      });
+
+      assert.equal(response.statusCode, 200);
+
+      const payload = JSON.parse(response.body) as {
+         offset: number;
+         weeks: { source: { mode: string }; week: { offset: number; number: number; start: string }; lessons: { title: string; start: string; room: string }[] }[];
+      };
+      const week = payload.weeks[0];
+      assert.ok(week);
+      const lesson = week.lessons[0];
+      assert.ok(lesson);
+
+      assert.equal(payload.offset, -1);
+      assert.equal(week.week.offset, -1);
+      assert.equal(week.week.number, 24);
+      assert.equal(week.week.start, "2026-06-08");
+      assert.equal(week.source.mode, "osiris-icalendar");
+      assert.equal(lesson.title, "Previous SQL");
+      assert.equal(lesson.start, "2026-06-10T11:30:00");
+      assert.equal(lesson.room, "LMSB538");
+
+      assert.equal(requests.length, 3);
+      assert.match(requests[0]?.url ?? "", /rooster\/per_week/);
+      assert.match(requests[1]?.url ?? "", /icalendar\/url/);
+      assert.match(requests[2]?.url ?? "", /calendar\.ics/);
    });
 
    void it("rejects unauthenticated requests without calling OSIRIS", async () => {
@@ -167,6 +204,42 @@ function mockOsirisFetch(requests: OsirisRequest[], response: OsirisRosterRespon
    };
 }
 
+function mockOsirisCalendarFetch(requests: OsirisRequest[]) {
+   globalThis.fetch = (input, init) => {
+      const url = getFetchUrl(input);
+      const headers = new Headers(init?.headers);
+      requests.push({
+         url,
+         authorization: headers.get("authorization"),
+      });
+
+      if (url.includes("/student/icalendar/url")) {
+         return Promise.resolve(
+            new Response(JSON.stringify({ ical: "https://example.test/calendar.ics" }), {
+               status: 200,
+               headers: { "Content-Type": "application/json" },
+            })
+         );
+      }
+
+      if (url.includes("calendar.ics")) {
+         return Promise.resolve(
+            new Response(createICalendarResponse(), {
+               status: 200,
+               headers: { "Content-Type": "text/calendar" },
+            })
+         );
+      }
+
+      return Promise.resolve(
+         new Response(JSON.stringify(createOsirisRosterResponse()), {
+            status: 200,
+            headers: { "Content-Type": "application/json" },
+         })
+      );
+   };
+}
+
 function getFetchUrl(input: Parameters<typeof fetch>[0]) {
    if (input instanceof Request) {
       return input.url;
@@ -213,4 +286,20 @@ function createOsirisRosterResponse(): OsirisRosterResponse {
          },
       ],
    };
+}
+
+function createICalendarResponse() {
+   return [
+      "BEGIN:VCALENDAR",
+      "VERSION:2.0",
+      "BEGIN:VEVENT",
+      "UID:previous-event@osiris.nl",
+      "SUMMARY:Previous SQL",
+      "DTSTART;TZID=Europe/Amsterdam:20260610T113000",
+      "DTEND;TZID=Europe/Amsterdam:20260610T133000",
+      "LOCATION:LMSB538",
+      "DESCRIPTION:Historical lesson",
+      "END:VEVENT",
+      "END:VCALENDAR",
+   ].join("\r\n");
 }

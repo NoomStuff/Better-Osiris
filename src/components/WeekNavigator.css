@@ -44,6 +44,10 @@
    color: var(--accent);
 }
 
+.weekbar__content[data-week-position="past"] .weekbar__label {
+   color: var(--warning);
+}
+
 .weekbar__content h2 {
    display: inline-flex;
    align-items: center;
