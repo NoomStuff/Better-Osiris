@@ -63,7 +63,7 @@ function toRosterLoadError(error: unknown): RosterLoadError {
 
    return {
       title: "Could not load your roster.",
-      detail: "The roster request crashed before it could finish. Annoying, but I’ll keep trying quietly.",
+      detail: "The roster request crashed before it could finish. Annoying, but I'll keep trying quietly.",
       log: error instanceof Error ? error.message : "Unknown roster fetch error.",
       isAuthRelated: false,
    };
@@ -173,18 +173,10 @@ function getDerivedTitle(offset: number, entries: WeekEntries) {
 }
 
 function getBatchStart(targetOffset: number) {
-   if (targetOffset < 0) {
-      return targetOffset;
-   }
-
    return Math.max(MIN_WEEK_OFFSET, Math.floor(targetOffset / BATCH_SIZE) * BATCH_SIZE);
 }
 
 function getBatchOffsets(startOffset: number) {
-   if (startOffset < 0) {
-      return [startOffset];
-   }
-
    const endOffset = Math.min(startOffset + BATCH_SIZE - 1, MAX_WEEK_OFFSET);
    return Array.from({ length: endOffset - startOffset + 1 }, (_, index) => startOffset + index);
 }

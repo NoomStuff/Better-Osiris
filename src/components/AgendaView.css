@@ -193,6 +193,19 @@
    scale: 0.99;
 }
 
+.agenda-lesson.status-changed .agenda-lesson__time {
+   color: var(--warning);
+}
+
+.agenda-lesson.status-cancelled {
+   border-color: rgba(255, 107, 129, 0.6);
+   background: linear-gradient(90deg, rgba(255, 107, 129, 0.28), rgba(255, 107, 129, 0.08));
+}
+
+.agenda-lesson.status-cancelled .agenda-lesson__time {
+   color: #ffe9ee;
+}
+
 .agenda-breaktime {
    display: grid;
    grid-template-columns: minmax(16px, 1fr) auto minmax(16px, 1fr);

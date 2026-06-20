@@ -116,6 +116,25 @@ function EmptyWeekState({ week }: { week: RosterWeek }) {
    return <RosterOverlayState icon={message.icon} title={message.title} detail={message.detail} />;
 }
 
+function getDefaultExpandedDays(groups: ReturnType<typeof getDayGroups>, weekOffset: number, now: Date) {
+   const todayKey = toDayKey(now);
+   const todayStart = new Date(now);
+   todayStart.setHours(0, 0, 0, 0);
+   const nextExpanded = new Set<string>();
+
+   groups.forEach((group) => {
+      const groupStart = new Date(group.date);
+      groupStart.setHours(0, 0, 0, 0);
+      const hasPassed = weekOffset === 0 && groupStart.getTime() < todayStart.getTime();
+
+      if (!hasPassed && (group.key === todayKey || group.lessons.length > 0)) {
+         nextExpanded.add(group.key);
+      }
+   });
+
+   return nextExpanded;
+}
+
 function getBlankRosterWeek(offset: number, now: Date): RosterWeek {
    const monday = new Date(now);
    monday.setHours(12, 0, 0, 0);
@@ -269,30 +288,17 @@ export default function App() {
    const dayGroups = useMemo(() => (data ? getDayGroups(data.week, positionedLessons) : []), [data, positionedLessons]);
    const blankWeek = useMemo(() => getBlankRosterWeek(weekOffset, perceivedNow), [perceivedNow, weekOffset]);
    const blankDayGroups = useMemo(() => getDayGroups(blankWeek, []), [blankWeek]);
-   const blankExpandedDays = useMemo(() => new Set(blankDayGroups.map((group) => group.key)), [blankDayGroups]);
+   const blankExpandedDays = useMemo(
+      () => getDefaultExpandedDays(blankDayGroups, blankWeek.offset, perceivedNow),
+      [blankDayGroups, blankWeek.offset, perceivedNow]
+   );
 
    const autoExpandedDays = useMemo(() => {
       if (!data) {
          return new Set<string>();
       }
 
-      const isCurrentWeek = data.week.offset === 0;
-      const todayKey = toDayKey(perceivedNow);
-      const todayStart = new Date(perceivedNow);
-      todayStart.setHours(0, 0, 0, 0);
-      const nextExpanded = new Set<string>();
-
-      dayGroups.forEach((group) => {
-         const groupStart = new Date(group.date);
-         groupStart.setHours(0, 0, 0, 0);
-         const hasPassed = isCurrentWeek && groupStart.getTime() < todayStart.getTime();
-
-         if (!hasPassed && (group.key === todayKey || group.lessons.length > 0)) {
-            nextExpanded.add(group.key);
-         }
-      });
-
-      return nextExpanded;
+      return getDefaultExpandedDays(dayGroups, data.week.offset, perceivedNow);
    }, [data, dayGroups, perceivedNow]);
 
    const expandedDays = useMemo(() => {
@@ -639,6 +645,20 @@ export default function App() {
 
    useKeyboardShortcuts(keyboardShortcuts, !isSettingsOpen && selectedLesson === null);
 
+   const visibleDayGroups = data ? dayGroups : blankDayGroups;
+   const visibleExpandedDays = data ? expandedDays : blankExpandedDays;
+   const isVisuallyEmptyWeek = data ? data.lessons.length === 0 : true;
+   const hasOverlayUnderlay = loading || (Boolean(error) && !data) || isVisuallyEmptyWeek;
+   const visibleGridZoom = hasOverlayUnderlay ? "hour" : gridZoom;
+   const frameGridZoom = viewMode === "grid" ? visibleGridZoom : gridZoom;
+   const overlay = loading ? (
+      <LoadingState message="Fetching week data." />
+   ) : error && !data ? (
+      <ErrorState title={error.title} detail={errorDetail} log={error.log} retryCountdownMs={retryCountdownMs} isRetrying={retrying} />
+   ) : data?.lessons.length === 0 ? (
+      <EmptyWeekState week={data.week} />
+   ) : null;
+
    return (
       <div className="shell">
          <div className="mobile-bottom-bar">
@@ -665,71 +685,33 @@ export default function App() {
          </div>
 
          <main className="app-content">
-            {loading ? (
-               <section
-                  className={`app-content-frame app-content-frame--${viewMode} app-content-frame--zoom-${gridZoom} view-enter`}
-                  data-empty-week="true"
-                  data-week-transition={weekTransitionDirection}
-                  onAnimationEnd={handleWeekTransitionEnd}
-               >
-                  {viewMode === "agenda" ? (
-                     <AgendaView
-                        groups={blankDayGroups}
-                        expandedDays={blankExpandedDays}
-                        animate={false}
-                        now={perceivedNow}
-                        onToggleDay={ignoreBlankDayToggle}
-                        onSelectLesson={ignoreBlankLessonSelection}
-                     />
-                  ) : (
-                     <GridView groups={blankDayGroups} zoom={gridZoom} now={perceivedNow} onSelectLesson={ignoreBlankLessonSelection} />
-                  )}
-                  <LoadingState message="Fetching week data." />
-               </section>
-            ) : error && !data ? (
-               <section
-                  className={`app-content-frame app-content-frame--${viewMode} app-content-frame--zoom-${gridZoom} view-enter`}
-                  data-empty-week="true"
-                  data-week-transition={weekTransitionDirection}
-                  onAnimationEnd={handleWeekTransitionEnd}
-               >
-                  {viewMode === "agenda" ? (
-                     <AgendaView
-                        groups={blankDayGroups}
-                        expandedDays={blankExpandedDays}
-                        animate={false}
-                        now={perceivedNow}
-                        onToggleDay={ignoreBlankDayToggle}
-                        onSelectLesson={ignoreBlankLessonSelection}
-                     />
-                  ) : (
-                     <GridView groups={blankDayGroups} zoom={gridZoom} now={perceivedNow} onSelectLesson={ignoreBlankLessonSelection} />
-                  )}
-                  <ErrorState title={error.title} detail={errorDetail} log={error.log} retryCountdownMs={retryCountdownMs} isRetrying={retrying} />
-               </section>
-            ) : data ? (
-               <section
-                  className={`app-content-frame app-content-frame--${viewMode} app-content-frame--zoom-${gridZoom} view-enter`}
-                  data-empty-week={data.lessons.length === 0}
-                  data-week-transition={weekTransitionDirection}
-                  onAnimationEnd={handleWeekTransitionEnd}
-                  key={`${viewMode}-${weekOffset}`}
-               >
-                  {viewMode === "agenda" ? (
-                     <AgendaView
-                        groups={dayGroups}
-                        expandedDays={expandedDays}
-                        animate={animateAgenda}
-                        now={perceivedNow}
-                        onToggleDay={toggleDay}
-                        onSelectLesson={selectLesson}
-                     />
-                  ) : (
-                     <GridView groups={dayGroups} zoom={gridZoom} now={perceivedNow} onSelectLesson={selectLesson} />
-                  )}
-                  {data.lessons.length === 0 ? <EmptyWeekState week={data.week} /> : null}
-               </section>
-            ) : null}
+            <section
+               className={`app-content-frame app-content-frame--${viewMode} app-content-frame--zoom-${frameGridZoom} view-enter`}
+               data-empty-week={isVisuallyEmptyWeek}
+               data-roster-underlay={hasOverlayUnderlay ? "overlay" : "live"}
+               data-week-transition={weekTransitionDirection}
+               onAnimationEnd={handleWeekTransitionEnd}
+               key={`${viewMode}-${weekOffset}`}
+            >
+               {viewMode === "agenda" ? (
+                  <AgendaView
+                     groups={visibleDayGroups}
+                     expandedDays={visibleExpandedDays}
+                     animate={data ? animateAgenda : false}
+                     now={perceivedNow}
+                     onToggleDay={data ? toggleDay : ignoreBlankDayToggle}
+                     onSelectLesson={data ? selectLesson : ignoreBlankLessonSelection}
+                  />
+               ) : (
+                  <GridView
+                     groups={visibleDayGroups}
+                     zoom={visibleGridZoom}
+                     now={perceivedNow}
+                     onSelectLesson={data ? selectLesson : ignoreBlankLessonSelection}
+                  />
+               )}
+               {overlay}
+            </section>
          </main>
 
          <LessonDrawer lesson={selectedLesson} onClose={() => setSelectedLessonId(null)} />

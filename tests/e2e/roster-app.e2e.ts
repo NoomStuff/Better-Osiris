@@ -13,9 +13,18 @@ test("week navigation and view controls work with mocked roster data", async ({ 
    await page.goto("/");
 
    await expect(page.getByRole("heading", { name: /Week 25:/ })).toBeVisible();
-   await expect(page.getByRole("button", { name: "Previous week" })).toBeDisabled();
+   await expect(page.getByRole("button", { name: "Previous week" })).toBeEnabled();
    await expect(page.getByRole("button", { name: "Next week" })).toBeEnabled();
    await expect(page.getByRole("button", { name: "SOURCE_TITLE_0_1" })).toBeVisible();
+
+   await page.getByRole("button", { name: "Previous week" }).click();
+   await expect(page.locator(".weekbar__label")).toHaveText("Last week");
+   await expect(page.getByRole("heading", { name: /Week 24:/ })).toBeVisible();
+   await expect(page.getByRole("button", { name: "SOURCE_TITLE_-1_1" })).toBeVisible();
+
+   await page.locator(".weekbar__content").click();
+   await expect(page.locator(".weekbar__label")).toHaveText("This week");
+   await expect(page.getByRole("heading", { name: /Week 25:/ })).toBeVisible();
 
    await page.getByRole("button", { name: "Next week" }).click();
    await expect(page.locator(".weekbar__label")).toHaveText("Next week");

@@ -24,7 +24,7 @@ interface ErrorStateProps {
 
 export function RosterOverlayState({ title, detail, icon, spinning = false, role, children }: RosterOverlayStateProps) {
    return (
-      <div className="empty-week-state roster-overlay-state" role={role}>
+      <div className="roster-overlay-state" role={role}>
          {spinning ? <span className="spinner roster-overlay-state__spinner" /> : null}
          {icon ? <i className={icon} aria-hidden="true" /> : null}
          <h3>{title}</h3>
