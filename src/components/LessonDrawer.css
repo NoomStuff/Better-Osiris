@@ -1,16 +1,9 @@
 .lesson-panel {
-   position: fixed;
-   inset: 0;
    z-index: 30;
-   display: flex;
-   align-items: flex-end;
-   justify-content: center;
    padding: 18px;
 }
 
 .lesson-panel__backdrop {
-   position: absolute;
-   inset: 0;
    background: rgba(2, 4, 8, 0.54);
    animation: panel-fade 220ms ease both;
 }
@@ -20,8 +13,6 @@
 }
 
 .lesson-panel__card {
-   position: relative;
-   z-index: 1;
    display: grid;
    grid-template-rows: auto minmax(0, 1fr);
    width: min(760px, calc(100vw - 36px));

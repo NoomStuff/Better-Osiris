@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { fetchRosterWeeks, RosterRequestError } from "../api/roster";
 import { formatWeekTitle, getIsoWeekNumber, shiftIsoDateByDays } from "../lib/date";
 import { notifyError } from "../lib/notyf";
+import { MAX_WEEK_OFFSET, MIN_WEEK_OFFSET } from "../../shared/rosterTime";
 import type { RosterResponse } from "../types/roster";
 
 interface WeekEntry {
@@ -35,8 +36,6 @@ const FIRST_RETRY_DELAY_MS = 2_000;
 const MAX_RETRY_DELAY_MS = 5 * 60 * 1000;
 const BATCH_SIZE = 5;
 const PREFETCH_BATCHES = [-1, 1];
-const MIN_WEEK_OFFSET = -1;
-const MAX_WEEK_OFFSET = 50;
 const PASSIVE_REFETCH_INTERVAL_MS = 5 * 60 * 1000;
 
 function createEntry(data: RosterResponse | null, overrides?: Partial<WeekEntry>): WeekEntry {

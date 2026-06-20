@@ -1,8 +1,9 @@
-import { useEffect, useRef, useState, type TouchEvent } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { fullDayLabel, parseLocalDateTime, timeLabel } from "../lib/date";
 import { DETAILS_SEPARATOR } from "../lib/lessonFormat";
 import type { Lesson } from "../types/roster";
 import { IconButton } from "./IconButton";
+import { OverlayPanel } from "./OverlayPanel";
 import "./LessonDrawer.css";
 
 interface LessonDrawerProps {
@@ -13,8 +14,20 @@ interface LessonDrawerProps {
 export function LessonDrawer({ lesson, onClose }: LessonDrawerProps) {
    const [displayLesson, setDisplayLesson] = useState<Lesson | null>(lesson);
    const [isClosing, setIsClosing] = useState(false);
-   const touchStartYRef = useRef<number | null>(null);
    const closeTimerRef = useRef<number | null>(null);
+
+   const closePanel = useCallback(() => {
+      if (isClosing) {
+         return;
+      }
+
+      setIsClosing(true);
+      closeTimerRef.current = window.setTimeout(() => {
+         setDisplayLesson(null);
+         setIsClosing(false);
+         onClose();
+      }, 240);
+   }, [isClosing, onClose]);
 
    useEffect(() => {
       if (!lesson) {
@@ -33,22 +46,6 @@ export function LessonDrawer({ lesson, onClose }: LessonDrawerProps) {
    }, [lesson]);
 
    useEffect(() => {
-      if (!displayLesson) {
-         return;
-      }
-
-      const previousOverflow = document.body.style.overflow;
-      const previousOverscrollBehavior = document.body.style.overscrollBehavior;
-      document.body.style.overflow = "hidden";
-      document.body.style.overscrollBehavior = "contain";
-
-      return () => {
-         document.body.style.overflow = previousOverflow;
-         document.body.style.overscrollBehavior = previousOverscrollBehavior;
-      };
-   }, [displayLesson]);
-
-   useEffect(() => {
       return () => {
          if (closeTimerRef.current) {
             window.clearTimeout(closeTimerRef.current);
@@ -56,125 +53,86 @@ export function LessonDrawer({ lesson, onClose }: LessonDrawerProps) {
       };
    }, []);
 
-   if (!displayLesson) {
+   const activeLesson = lesson === null && !isClosing ? null : displayLesson;
+
+   if (!activeLesson) {
       return null;
    }
 
-   const closePanel = () => {
-      if (isClosing) {
-         return;
-      }
-
-      setIsClosing(true);
-      closeTimerRef.current = window.setTimeout(() => {
-         setDisplayLesson(null);
-         setIsClosing(false);
-         onClose();
-      }, 240);
-   };
-
-   const handleTouchStart = (event: TouchEvent<HTMLElement>) => {
-      if (isScrollablePopoverTarget(event.target)) {
-         touchStartYRef.current = null;
-         return;
-      }
-
-      touchStartYRef.current = event.touches[0]?.clientY ?? null;
-   };
-
-   const handleTouchEnd = (event: TouchEvent<HTMLElement>) => {
-      if (isScrollablePopoverTarget(event.target)) {
-         touchStartYRef.current = null;
-         return;
-      }
-
-      const startY = touchStartYRef.current;
-      touchStartYRef.current = null;
-
-      if (startY === null) {
-         return;
-      }
-
-      const endY = event.changedTouches[0]?.clientY ?? startY;
-      if (endY - startY > 48) {
-         closePanel();
-      }
-   };
-
-   const startDate = parseLocalDateTime(displayLesson.start);
-   const endDate = parseLocalDateTime(displayLesson.end);
-   const room = displayLesson.room.trim();
-   const location = displayLesson.location.trim();
-   const title = displayLesson.title.trim();
-   const subtitle = displayLesson.subject.trim();
-   const details = displayLesson.description.trim();
+   const startDate = parseLocalDateTime(activeLesson.start);
+   const endDate = parseLocalDateTime(activeLesson.end);
+   const room = activeLesson.room.trim();
+   const location = activeLesson.location.trim();
+   const title = activeLesson.title.trim();
+   const subtitle = activeLesson.subject.trim();
+   const details = activeLesson.description.trim();
    const showLocation = Boolean(location) && normalizeField(location) !== normalizeField(room);
    const showDetails = Boolean(details) && normalizeField(details) !== normalizeField(title) && normalizeField(details) !== normalizeField(subtitle);
 
    return (
-      <aside className="lesson-panel" data-closing={isClosing} onClick={closePanel} onTouchStart={handleTouchStart} onTouchEnd={handleTouchEnd}>
-         <div className="lesson-panel__backdrop" />
-         <div
-            className="lesson-panel__card"
-            onClick={(event) => event.stopPropagation()}
-            onTouchStart={(event) => {
-               event.stopPropagation();
-               handleTouchStart(event);
-            }}
-            onTouchEnd={(event) => {
-               event.stopPropagation();
-               handleTouchEnd(event);
-            }}
-         >
-            <div className="lesson-panel__header">
-               <div className="lesson-panel__title">
-                  <h3>{displayLesson.title}</h3>
-                  <p>{displayLesson.subject}</p>
-               </div>
-               <IconButton className="lesson-panel__close" icon="fa-solid fa-xmark" label="Close" onClick={closePanel} />
+      <OverlayPanel
+         className="lesson-panel"
+         surfaceClassName="lesson-panel__card"
+         backdropClassName="lesson-panel__backdrop"
+         closeLabel="Close class details"
+         label="Class details"
+         placement="bottom"
+         isClosing={isClosing}
+         closeOnSwipeDown
+         swipeIgnoreSelector=".lesson-panel__details"
+         onClose={closePanel}
+      >
+         <div className="lesson-panel__header">
+            <div className="lesson-panel__title">
+               <h3>{activeLesson.title}</h3>
+               <p>{activeLesson.subject}</p>
             </div>
-
-            <dl className="lesson-panel__details">
-               <div>
-                  <dt>Time</dt>
-                  <dd>
-                     {fullDayLabel.format(startDate)}
-                     {DETAILS_SEPARATOR}
-                     {timeLabel.format(startDate)} - {timeLabel.format(endDate)}
-                  </dd>
-               </div>
-               <div>
-                  <dt>Teacher</dt>
-                  <dd>{displayLesson.teacher}</dd>
-               </div>
-               <div>
-                  <dt>Room</dt>
-                  <dd>{room}</dd>
-               </div>
-               {showLocation ? (
-                  <div>
-                     <dt>Location</dt>
-                     <dd>{location}</dd>
-                  </div>
-               ) : null}
-               <div>
-                  <dt>Status</dt>
-                  <dd>{displayLesson.status}</dd>
-               </div>
-               {showDetails ? (
-                  <div>
-                     <dt>Details</dt>
-                     <dd>{details}</dd>
-                  </div>
-               ) : null}
-            </dl>
+            <IconButton
+               className="lesson-panel__close"
+               icon="fa-solid fa-xmark"
+               label="Close"
+               tooltipPlacement="bottom"
+               tooltipAlign="end"
+               onClick={closePanel}
+            />
          </div>
-      </aside>
-   );
-}
 
-function isScrollablePopoverTarget(target: EventTarget) {
-   return target instanceof Element && Boolean(target.closest(".lesson-panel__details"));
+         <dl className="lesson-panel__details">
+            <div>
+               <dt>Time</dt>
+               <dd>
+                  {fullDayLabel.format(startDate)}
+                  {DETAILS_SEPARATOR}
+                  {timeLabel.format(startDate)} - {timeLabel.format(endDate)}
+               </dd>
+            </div>
+            <div>
+               <dt>Teacher</dt>
+               <dd>{activeLesson.teacher}</dd>
+            </div>
+            <div>
+               <dt>Room</dt>
+               <dd>{room}</dd>
+            </div>
+            {showLocation ? (
+               <div>
+                  <dt>Location</dt>
+                  <dd>{location}</dd>
+               </div>
+            ) : null}
+            <div>
+               <dt>Status</dt>
+               <dd>{activeLesson.status}</dd>
+            </div>
+            {showDetails ? (
+               <div>
+                  <dt>Details</dt>
+                  <dd>{details}</dd>
+               </div>
+            ) : null}
+         </dl>
+      </OverlayPanel>
+   );
 }
 
 function normalizeField(value: string) {

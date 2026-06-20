@@ -4,10 +4,7 @@ import { getRequestUrl, parseBoundedInt, sendJson, sendMethodNotAllowed } from "
 import { fetchOsirisRosterWeeks } from "../_lib/osirisClient.js";
 import { readOsirisTokenFromCookie } from "../_lib/osirisTokenCookie.js";
 import { normalizeRosterWeeksResponse } from "../_lib/osirisRosterNormalizer.js";
-
-const MIN_WEEK_OFFSET = -1;
-const MAX_WEEK_OFFSET = 50;
-const MAX_WEEK_LIMIT = 5;
+import { MAX_WEEK_LIMIT, MAX_WEEK_OFFSET, MIN_WEEK_OFFSET } from "../../shared/rosterTime.js";
 
 export default async function handler(req: IncomingMessage, res: ServerResponse) {
    if (req.method !== "GET") {

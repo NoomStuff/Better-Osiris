@@ -1,59 +1,24 @@
 .settings-dialog {
-   position: fixed;
-   inset: 0;
    z-index: 60;
-   display: grid;
-   place-items: center;
-   padding: 20px;
-   overflow: hidden;
-}
-
-.settings-dialog__backdrop {
-   position: absolute;
-   inset: 0;
-   background: rgba(2, 4, 8, 0.42);
-   backdrop-filter: blur(6px);
-   cursor: pointer;
-   animation: settings-backdrop-fade 220ms ease both;
-}
-
-.settings-dialog__panel {
-   position: relative;
-   z-index: 1;
-   width: min(calc(100vw - 40px), 560px);
-   max-height: min(86vh, 760px);
-   overflow-x: hidden;
-   overflow-y: auto;
-   border: 2px solid var(--line);
-   border-radius: 20px 20px 16px 16px;
-   background: radial-gradient(circle at top right, rgba(22, 106, 170, 0.1), transparent 30%), rgba(12, 15, 24, 0.92);
-   box-shadow: var(--shadow);
-   backdrop-filter: blur(18px);
-   padding: 18px;
-   animation: settings-panel-rise 380ms cubic-bezier(0.16, 1, 0.3, 1) both;
-}
-
-.settings-dialog__panel * {
-   min-width: 0;
 }
 
 .settings-dialog__header {
-   display: flex;
    align-items: start;
-   justify-content: space-between;
-   gap: 14px;
-   margin-bottom: 18px;
 }
 
 .settings-dialog__header h2 {
-   margin: 0;
-   font-size: 1.2rem;
+   margin: 8px 0 0;
+   font-size: 1.45rem;
    line-height: 1.15;
 }
 
 .settings-dialog__content {
+   min-height: 0;
+   overflow: auto;
+   overscroll-behavior: contain;
    display: grid;
    gap: 16px;
+   padding: 18px 24px 24px;
 }
 
 .settings-section {
@@ -61,11 +26,6 @@
    gap: 12px;
    padding-top: 16px;
    border-top: 1px solid var(--line);
-}
-
-.settings-section:first-child {
-   padding-top: 0;
-   border-top: 0;
 }
 
 .settings-section__header {
@@ -254,44 +214,9 @@
    text-align: right;
 }
 
-@keyframes settings-panel-rise {
-   from {
-      opacity: 0;
-      transform: translateY(28px) scale(0.985);
-   }
-
-   to {
-      opacity: 1;
-      transform: translateY(0) scale(1);
-   }
-}
-
-@keyframes settings-backdrop-fade {
-   from {
-      opacity: 0;
-   }
-
-   to {
-      opacity: 1;
-   }
-}
-
 @media (max-width: 640px) {
-   .settings-dialog {
-      align-items: end;
-      padding: 10px;
-   }
-
-   .settings-dialog__panel {
-      width: calc(100vw - 20px);
-      border-radius: 16px;
-   }
-
-}
-
-@media (prefers-reduced-motion: reduce) {
-   .settings-dialog__backdrop,
-   .settings-dialog__panel {
-      animation: none;
+   .settings-dialog__content {
+      gap: 14px;
+      padding: 16px 20px 20px;
    }
 }

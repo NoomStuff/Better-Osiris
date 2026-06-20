@@ -14,14 +14,12 @@ import { getEnvValue } from "./api/_lib/env.js";
 import { fetchOsirisRosterWeeks } from "./api/_lib/osirisClient.js";
 import { createEncryptedOsirisTokenCookieValue, hasOsirisTokenCookie, readOsirisTokenFromCookie } from "./api/_lib/osirisTokenCookie.js";
 import { normalizeRosterWeeksResponse } from "./api/_lib/osirisRosterNormalizer.js";
+import { MAX_WEEK_LIMIT, MAX_WEEK_OFFSET, MIN_WEEK_OFFSET } from "./shared/rosterTime.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const app = express();
 const port = Number(process.env.PORT) || 8787;
-const MIN_WEEK_OFFSET = -1;
-const MAX_WEEK_OFFSET = 50;
-const MAX_WEEK_LIMIT = 5;
 const shouldBypassAuth = process.argv.includes("--dev-auth-bypass");
 
 app.use(express.json());

@@ -34,5 +34,5 @@
       "noUnusedParameters": true,
       "erasableSyntaxOnly": true
    },
-   "include": ["src"]
+   "include": ["src", "shared"]
 }

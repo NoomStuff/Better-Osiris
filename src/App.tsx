@@ -3,24 +3,23 @@ import { AgendaView } from "./components/AgendaView";
 import { AppToolbar } from "./components/AppToolbar";
 import { GridView } from "./components/GridView";
 import { LessonDrawer } from "./components/LessonDrawer";
-import { ErrorState, LoadingState } from "./components/LoadingState";
+import { ErrorState, LoadingState, RosterOverlayState } from "./components/LoadingState";
 import { SettingsDialog } from "./components/SettingsDialog";
 import { WeekNavigator } from "./components/WeekNavigator";
 import { fetchOsirisTokenSettings } from "./api/settings";
 import { useKeyboardShortcuts, type KeyboardShortcut } from "./hooks/useKeyboardShortcuts";
 import { APP_SHORTCUTS } from "./lib/appShortcuts";
 import { useRosterWeek } from "./hooks/useRosterWeek";
-import { toDayKey } from "./lib/date";
+import { getIsoWeekNumber, toDayKey } from "./lib/date";
 import { getEmptyWeekMessage } from "./lib/rosterFlavor";
 import { getDayGroups, getPositionedLessons } from "./lib/rosterLayout";
+import { MAX_WEEK_OFFSET, MIN_WEEK_OFFSET } from "../shared/rosterTime";
 import type { GridZoom, Lesson, RosterWeek, ViewMode } from "./types/roster";
 import "./styles/App.css";
 
 const STORAGE_KEY = "roster-view-mode";
 const DEVTOOLS_STORAGE_KEY = "roster-devtools-enabled";
 const DEVTOOLS_TIME_STORAGE_KEY = "roster-devtools-time-override";
-const MIN_WEEK_OFFSET = -1;
-const MAX_WEEK_OFFSET = 50; // the max we can fetch from the API
 const GRID_ZOOM_ORDER = ["hour", "half", "quarter"] as const satisfies readonly GridZoom[];
 const FUTURE_WEEK_KEYS = ["1", "2", "3", "4", "5", "6", "7", "8", "9"] as const;
 const IS_DEV_SERVER = import.meta.env.DEV;
@@ -114,13 +113,33 @@ function getToolbarActionActivationId(viewMode: ViewMode, actionNumber: number) 
 function EmptyWeekState({ week }: { week: RosterWeek }) {
    const message = getEmptyWeekMessage(week.number, week.offset);
 
-   return (
-      <div className="empty-week-state">
-         <i className={message.icon} aria-hidden="true" />
-         <h3>{message.title}</h3>
-         <p>{message.detail}</p>
-      </div>
-   );
+   return <RosterOverlayState icon={message.icon} title={message.title} detail={message.detail} />;
+}
+
+function getBlankRosterWeek(offset: number, now: Date): RosterWeek {
+   const monday = new Date(now);
+   monday.setHours(12, 0, 0, 0);
+   const day = monday.getDay();
+   const mondayDelta = day === 0 ? -6 : 1 - day;
+   monday.setDate(monday.getDate() + mondayDelta + offset * 7);
+
+   const friday = new Date(monday);
+   friday.setDate(monday.getDate() + 4);
+
+   return {
+      offset,
+      number: getIsoWeekNumber(formatLocalIsoDate(monday)),
+      start: formatLocalIsoDate(monday),
+      end: formatLocalIsoDate(friday),
+   };
+}
+
+function formatLocalIsoDate(date: Date) {
+   const year = date.getFullYear();
+   const month = String(date.getMonth() + 1).padStart(2, "0");
+   const day = String(date.getDate()).padStart(2, "0");
+
+   return `${year}-${month}-${day}`;
 }
 
 export default function App() {
@@ -248,6 +267,9 @@ export default function App() {
    const positionedLessons = useMemo(() => (data ? getPositionedLessons(data.lessons) : []), [data]);
 
    const dayGroups = useMemo(() => (data ? getDayGroups(data.week, positionedLessons) : []), [data, positionedLessons]);
+   const blankWeek = useMemo(() => getBlankRosterWeek(weekOffset, perceivedNow), [perceivedNow, weekOffset]);
+   const blankDayGroups = useMemo(() => getDayGroups(blankWeek, []), [blankWeek]);
+   const blankExpandedDays = useMemo(() => new Set(blankDayGroups.map((group) => group.key)), [blankDayGroups]);
 
    const autoExpandedDays = useMemo(() => {
       if (!data) {
@@ -320,6 +342,15 @@ export default function App() {
 
       return data.lessons.find((lesson) => lesson.id === selectedLessonId) ?? null;
    }, [data, selectedLessonId]);
+
+   const ignoreBlankDayToggle = useCallback((_dayKey: string) => undefined, []);
+
+   const ignoreBlankLessonSelection = useCallback((_lesson: Lesson) => undefined, []);
+
+   const selectLesson = useCallback((lesson: Lesson) => {
+      setIsSettingsOpen(false);
+      setSelectedLessonId(lesson.id);
+   }, []);
 
    const toggleDay = (dayKey: string) => {
       setAnimateAgenda(true);
@@ -459,6 +490,7 @@ export default function App() {
    }, []);
 
    const openSettings = useCallback(() => {
+      setSelectedLessonId(null);
       setIsSettingsOpen(true);
    }, []);
 
@@ -634,18 +666,46 @@ export default function App() {
 
          <main className="app-content">
             {loading ? (
-               <section className="app-content-frame view-enter" data-week-transition={weekTransitionDirection} onAnimationEnd={handleWeekTransitionEnd}>
+               <section
+                  className={`app-content-frame app-content-frame--${viewMode} app-content-frame--zoom-${gridZoom} view-enter`}
+                  data-empty-week="true"
+                  data-week-transition={weekTransitionDirection}
+                  onAnimationEnd={handleWeekTransitionEnd}
+               >
+                  {viewMode === "agenda" ? (
+                     <AgendaView
+                        groups={blankDayGroups}
+                        expandedDays={blankExpandedDays}
+                        animate={false}
+                        now={perceivedNow}
+                        onToggleDay={ignoreBlankDayToggle}
+                        onSelectLesson={ignoreBlankLessonSelection}
+                     />
+                  ) : (
+                     <GridView groups={blankDayGroups} zoom={gridZoom} now={perceivedNow} onSelectLesson={ignoreBlankLessonSelection} />
+                  )}
                   <LoadingState message="Fetching week data." />
                </section>
             ) : error && !data ? (
-               <section className="app-content-frame view-enter" data-week-transition={weekTransitionDirection} onAnimationEnd={handleWeekTransitionEnd}>
-                  <ErrorState
-                     title={error.title}
-                     detail={errorDetail}
-                     log={error.log}
-                     retryCountdownMs={retryCountdownMs}
-                     isRetrying={retrying}
-                  />
+               <section
+                  className={`app-content-frame app-content-frame--${viewMode} app-content-frame--zoom-${gridZoom} view-enter`}
+                  data-empty-week="true"
+                  data-week-transition={weekTransitionDirection}
+                  onAnimationEnd={handleWeekTransitionEnd}
+               >
+                  {viewMode === "agenda" ? (
+                     <AgendaView
+                        groups={blankDayGroups}
+                        expandedDays={blankExpandedDays}
+                        animate={false}
+                        now={perceivedNow}
+                        onToggleDay={ignoreBlankDayToggle}
+                        onSelectLesson={ignoreBlankLessonSelection}
+                     />
+                  ) : (
+                     <GridView groups={blankDayGroups} zoom={gridZoom} now={perceivedNow} onSelectLesson={ignoreBlankLessonSelection} />
+                  )}
+                  <ErrorState title={error.title} detail={errorDetail} log={error.log} retryCountdownMs={retryCountdownMs} isRetrying={retrying} />
                </section>
             ) : data ? (
                <section
@@ -662,10 +722,10 @@ export default function App() {
                         animate={animateAgenda}
                         now={perceivedNow}
                         onToggleDay={toggleDay}
-                        onSelectLesson={(lesson) => setSelectedLessonId(lesson.id)}
+                        onSelectLesson={selectLesson}
                      />
                   ) : (
-                     <GridView groups={dayGroups} zoom={gridZoom} now={perceivedNow} onSelectLesson={(lesson) => setSelectedLessonId(lesson.id)} />
+                     <GridView groups={dayGroups} zoom={gridZoom} now={perceivedNow} onSelectLesson={selectLesson} />
                   )}
                   {data.lessons.length === 0 ? <EmptyWeekState week={data.week} /> : null}
                </section>
