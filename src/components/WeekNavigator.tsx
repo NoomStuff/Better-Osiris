@@ -43,7 +43,7 @@ export function WeekNavigator({ title, weekOffset, onPreviousWeek, onNextWeek, o
    const label = formatWeekLabel(weekOffset);
    const isCurrentWeek = weekOffset === 0;
    const tooltipId = useId();
-   const { hideTooltip, isTooltipOpen, showTooltip } = useDelayedTooltip();
+   const { hideTooltip, isTooltipEnabled, isTooltipOpen, showTooltip } = useDelayedTooltip();
    const isShortcutActive = useShortcutActivation("current-week");
    const weekTooltip = isCurrentWeek ? "Reset the current week view" : "Jump back to the current week";
 
@@ -81,7 +81,7 @@ export function WeekNavigator({ title, weekOffset, onPreviousWeek, onNextWeek, o
          <button
             className="weekbar__content"
             type="button"
-            aria-describedby={tooltipId}
+            aria-describedby={isTooltipEnabled ? tooltipId : undefined}
             data-current={isCurrentWeek}
             data-shortcut-active={isShortcutActive ? "true" : undefined}
             data-tooltip-align="center"
@@ -98,7 +98,7 @@ export function WeekNavigator({ title, weekOffset, onPreviousWeek, onNextWeek, o
             <h2>
                <span>{title}</span>
             </h2>
-            <TooltipContent id={tooltipId} label={weekTooltip} shortcut={APP_SHORTCUT_LABELS.currentWeek} />
+            {isTooltipEnabled ? <TooltipContent id={tooltipId} label={weekTooltip} shortcut={APP_SHORTCUT_LABELS.currentWeek} /> : null}
          </button>
 
          <IconButton

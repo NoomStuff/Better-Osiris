@@ -1,7 +1,8 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 const TOOLTIP_DELAY_MS = 1000;
 const TOOLTIP_WARM_WINDOW_MS = 1000;
+const MOBILE_TOOLTIP_MEDIA_QUERY = "(hover: none), (pointer: coarse), (max-width: 767px)";
 
 let lastTooltipClosedAt = Number.NEGATIVE_INFINITY;
 
@@ -14,6 +15,35 @@ export function useDelayedTooltip({ disabled = false, enabled = true }: DelayedT
    const timerRef = useRef<number | null>(null);
    const isTooltipOpenRef = useRef(false);
    const [isTooltipOpen, setIsTooltipOpen] = useState(false);
+   const [isMobileTooltipContext, setIsMobileTooltipContext] = useState(() => {
+      if (typeof window === "undefined") {
+         return false;
+      }
+
+      return window.matchMedia(MOBILE_TOOLTIP_MEDIA_QUERY).matches;
+   });
+
+   const isTooltipEnabled = enabled && !disabled && !isMobileTooltipContext;
+   const isTooltipEnabledRef = useRef(isTooltipEnabled);
+
+   const clearTooltipTimer = useCallback(() => {
+      if (timerRef.current === null) {
+         return;
+      }
+
+      window.clearTimeout(timerRef.current);
+      timerRef.current = null;
+   }, []);
+
+   const hideTooltip = useCallback(() => {
+      clearTooltipTimer();
+      if (isTooltipOpenRef.current) {
+         lastTooltipClosedAt = performance.now();
+      }
+
+      isTooltipOpenRef.current = false;
+      setIsTooltipOpen(false);
+   }, [clearTooltipTimer]);
 
    useEffect(() => {
       return () => {
@@ -28,17 +58,31 @@ export function useDelayedTooltip({ disabled = false, enabled = true }: DelayedT
       };
    }, []);
 
-   const clearTooltipTimer = () => {
-      if (timerRef.current === null) {
-         return;
-      }
+   useEffect(() => {
+      isTooltipEnabledRef.current = isTooltipEnabled;
+   }, [isTooltipEnabled]);
 
-      window.clearTimeout(timerRef.current);
-      timerRef.current = null;
-   };
+   useEffect(() => {
+      const mediaQuery = window.matchMedia(MOBILE_TOOLTIP_MEDIA_QUERY);
 
-   const showTooltip = () => {
-      if (!enabled || disabled || isTooltipOpenRef.current) {
+      const handleMediaChange = () => {
+         const isMobile = mediaQuery.matches;
+         setIsMobileTooltipContext(isMobile);
+
+         if (isMobile) {
+            hideTooltip();
+         }
+      };
+
+      mediaQuery.addEventListener("change", handleMediaChange);
+
+      return () => {
+         mediaQuery.removeEventListener("change", handleMediaChange);
+      };
+   }, [hideTooltip]);
+
+   const showTooltip = useCallback(() => {
+      if (!isTooltipEnabled || isTooltipOpenRef.current) {
          return;
       }
 
@@ -48,24 +92,19 @@ export function useDelayedTooltip({ disabled = false, enabled = true }: DelayedT
 
       timerRef.current = window.setTimeout(() => {
          timerRef.current = null;
+         if (!isTooltipEnabledRef.current) {
+            return;
+         }
+
          isTooltipOpenRef.current = true;
          setIsTooltipOpen(true);
       }, delay);
-   };
-
-   const hideTooltip = () => {
-      clearTooltipTimer();
-      if (isTooltipOpenRef.current) {
-         lastTooltipClosedAt = performance.now();
-      }
-
-      isTooltipOpenRef.current = false;
-      setIsTooltipOpen(false);
-   };
+   }, [clearTooltipTimer, isTooltipEnabled]);
 
    return {
       hideTooltip,
-      isTooltipOpen,
+      isTooltipEnabled,
+      isTooltipOpen: isTooltipEnabled && isTooltipOpen,
       showTooltip,
    };
 }

@@ -44,7 +44,7 @@ export function IconButton({
    const tooltipId = useId();
    const tooltipText = tooltip ?? label;
    const hasTooltip = Boolean(tooltipText);
-   const { hideTooltip, isTooltipOpen, showTooltip } = useDelayedTooltip({ disabled, enabled: hasTooltip });
+   const { hideTooltip, isTooltipEnabled, isTooltipOpen, showTooltip } = useDelayedTooltip({ disabled, enabled: hasTooltip });
    const isShortcutActive = useShortcutActivation(activationId);
 
    const handleMouseEnter = (event: MouseEvent<HTMLButtonElement>) => {
@@ -75,7 +75,7 @@ export function IconButton({
          className={classes}
          type={type}
          aria-label={label}
-         aria-describedby={hasTooltip ? tooltipId : undefined}
+         aria-describedby={isTooltipEnabled ? tooltipId : undefined}
          disabled={disabled}
          data-hover-effect={hoverEffect}
          data-shortcut-active={isShortcutActive ? "true" : undefined}
@@ -94,7 +94,7 @@ export function IconButton({
             </span>
             {children}
          </span>
-         {hasTooltip ? <TooltipContent id={tooltipId} label={tooltipText} shortcut={shortcut} /> : null}
+         {isTooltipEnabled ? <TooltipContent id={tooltipId} label={tooltipText} shortcut={shortcut} /> : null}
       </button>
    );
 }

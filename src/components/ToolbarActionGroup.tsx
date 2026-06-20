@@ -117,7 +117,7 @@ function ToolbarActionItem({
    onPress,
 }: ToolbarActionItemProps) {
    const tooltipId = useId();
-   const { hideTooltip, isTooltipOpen, showTooltip } = useDelayedTooltip({ disabled });
+   const { hideTooltip, isTooltipEnabled, isTooltipOpen, showTooltip } = useDelayedTooltip({ disabled });
    const isShortcutActive = useShortcutActivation(activationId);
 
    const handleMouseEnter = (_event: MouseEvent<HTMLButtonElement>) => {
@@ -142,7 +142,7 @@ function ToolbarActionItem({
          type="button"
          role={role}
          aria-checked={role === "radio" ? selected : undefined}
-         aria-describedby={tooltipId}
+         aria-describedby={isTooltipEnabled ? tooltipId : undefined}
          disabled={disabled}
          data-selected={selected ? "true" : undefined}
          data-shortcut-active={isShortcutActive ? "true" : undefined}
@@ -157,7 +157,7 @@ function ToolbarActionItem({
          onMouseLeave={handleMouseLeave}
       >
          {label}
-         <TooltipContent id={tooltipId} label={tooltip} shortcut={shortcut} />
+         {isTooltipEnabled ? <TooltipContent id={tooltipId} label={tooltip} shortcut={shortcut} /> : null}
       </button>
    );
 }
