@@ -24,7 +24,6 @@ interface ErrorStateProps {
 
 interface BearerTokenStateProps {
    token: string;
-   error: string;
    isSaving: boolean;
    onTokenChange: (token: string) => void;
    onSubmit: () => void;
@@ -58,9 +57,15 @@ export function ErrorState({ title, detail, log, retryCountdownMs, isRetrying }:
    );
 }
 
-export function BearerTokenState({ token, error, isSaving, onTokenChange, onSubmit }: BearerTokenStateProps) {
+export function BearerTokenState({ token, isSaving, onTokenChange, onSubmit }: BearerTokenStateProps) {
+   const canSave = token.trim().length > 0 && !isSaving;
+
    const handleSubmit = (event: SyntheticEvent<HTMLFormElement>) => {
       event.preventDefault();
+      if (!canSave) {
+         return;
+      }
+
       onSubmit();
    };
 
@@ -72,22 +77,21 @@ export function BearerTokenState({ token, error, isSaving, onTokenChange, onSubm
          role="alert"
       >
          <form className="roster-overlay-state__form" onSubmit={handleSubmit}>
-            <label className="roster-overlay-state__field">
-               <span>Bearer token</span>
+            <div className="roster-overlay-state__token-row">
                <input
                   type="password"
                   value={token}
+                  aria-label="Bearer token"
                   placeholder="Bearer XXXXXXXXXXXXXXXXXXXXXXXXXXX"
                   autoComplete="off"
                   spellCheck={false}
                   disabled={isSaving}
                   onChange={(event) => onTokenChange(event.target.value)}
                />
-            </label>
-            {error ? <p className="roster-overlay-state__error">{error}</p> : null}
-            <button className="roster-overlay-state__button" type="submit" disabled={isSaving}>
-               {isSaving ? "Saving..." : "Save token"}
-            </button>
+               <button className="roster-overlay-state__button" type="submit" aria-label="Save token" disabled={!canSave}>
+                  <i className="fa-solid fa-check" aria-hidden="true" />
+               </button>
+            </div>
          </form>
       </RosterOverlayState>
    );

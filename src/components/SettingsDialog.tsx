@@ -44,6 +44,7 @@ export function SettingsDialog({
    const [isResetConfirmOpen, setIsResetConfirmOpen] = useState(false);
    const closeTimerRef = useRef<number | null>(null);
    const perceivedMinutes = perceivedNow.getHours() * 60 + perceivedNow.getMinutes();
+   const canSaveToken = token.trim().length > 0 && !isLoading;
 
    const closeSettings = useCallback(() => {
       if (isClosing) {
@@ -204,7 +205,7 @@ export function SettingsDialog({
                      </label>
 
                      <div className="settings-dialog__actions">
-                        <button className="settings-dialog__button settings-dialog__button--primary" type="submit" disabled={isLoading}>
+                        <button className="settings-dialog__button settings-dialog__button--primary" type="submit" disabled={!canSaveToken}>
                            Save token
                         </button>
                         <button

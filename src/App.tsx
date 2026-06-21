@@ -186,7 +186,6 @@ export default function App() {
    const [tokenSettings, setTokenSettings] = useState<OsirisTokenSettings | null>(null);
    const [isTokenSettingsLoading, setIsTokenSettingsLoading] = useState(true);
    const [bearerTokenInput, setBearerTokenInput] = useState("");
-   const [bearerTokenError, setBearerTokenError] = useState("");
    const [isSavingBearerToken, setIsSavingBearerToken] = useState(false);
    const [clockNow, setClockNow] = useState(() => new Date());
    const [isDevToolsEnabled, setIsDevToolsEnabled] = useState(getInitialDevToolsEnabled);
@@ -562,11 +561,9 @@ export default function App() {
    const submitBearerToken = useCallback(async () => {
       const nextToken = bearerTokenInput.trim();
       if (!nextToken) {
-         setBearerTokenError("Enter a bearer token first.");
          return;
       }
 
-      setBearerTokenError("");
       setIsSavingBearerToken(true);
 
       try {
@@ -576,8 +573,6 @@ export default function App() {
          setBearerTokenInput("");
          notifySuccess("Osiris token saved successfully.");
       } catch (requestError) {
-         const message = requestError instanceof Error ? requestError.message : "Failed to save bearer token.";
-         setBearerTokenError(message);
          notifyError(requestError, "Failed to save Osiris token.");
       } finally {
          setIsSavingBearerToken(false);
@@ -738,13 +733,7 @@ export default function App() {
    const overlay = isTokenSettingsLoading ? (
       <LoadingState message="Checking bearer token." />
    ) : !hasBearerToken ? (
-      <BearerTokenState
-         token={bearerTokenInput}
-         error={bearerTokenError}
-         isSaving={isSavingBearerToken}
-         onTokenChange={setBearerTokenInput}
-         onSubmit={() => void submitBearerToken()}
-      />
+      <BearerTokenState token={bearerTokenInput} isSaving={isSavingBearerToken} onTokenChange={setBearerTokenInput} onSubmit={() => void submitBearerToken()} />
    ) : loading ? (
       <LoadingState message="Fetching week data." />
    ) : error && !data ? (

@@ -53,6 +53,7 @@ test("settings dialog opens, resets token state, and closes", async ({ page }) =
    await page.getByRole("button", { name: "Open settings" }).click();
    await expect(page.getByRole("dialog", { name: "Preferences" })).toBeVisible();
    await expect(page.getByText("Roster requests are using your saved bearer token.")).toBeVisible();
+   await expect(page.getByRole("button", { name: "Save token" })).toBeDisabled();
 
    await page.getByRole("button", { name: "Reset" }).click();
    await expect(page.getByRole("dialog", { name: "Reset bearer token?" })).toBeVisible();
@@ -88,7 +89,12 @@ test("missing bearer token shows an entry overlay without requesting roster data
    await page.goto("/");
 
    await expect(page.getByRole("heading", { name: "Bearer token required" })).toBeVisible();
-   await expect(page.getByLabel("Bearer token")).toBeVisible();
+   const tokenInput = page.getByLabel("Bearer token");
+   const saveTokenButton = page.getByRole("button", { name: "Save token" });
+   await expect(tokenInput).toBeVisible();
+   await expect(saveTokenButton).toBeDisabled();
+   await tokenInput.fill("Bearer browser-token");
+   await expect(saveTokenButton).toBeEnabled();
    expect(rosterWasRequested).toBe(false);
 });
 

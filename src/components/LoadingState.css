@@ -33,7 +33,7 @@
    font-weight: 700;
 }
 
-.roster-overlay-state[role="alert"] i {
+.roster-overlay-state[role="alert"] > i {
    color: #ffcf6a;
    filter: drop-shadow(0 10px 22px rgba(255, 207, 106, 0.16));
 }
@@ -57,21 +57,17 @@
 
 .roster-overlay-state__form {
    width: min(440px, 100%);
-   display: grid;
-   gap: 12px;
    margin-top: 8px;
 }
 
-.roster-overlay-state__field {
+.roster-overlay-state__token-row {
    display: grid;
-   gap: 8px;
-   text-align: left;
-   color: var(--text-dim);
-   font-size: 0.8rem;
-   font-weight: 700;
+   grid-template-columns: minmax(0, 1fr) 44px;
+   gap: 10px;
+   align-items: center;
 }
 
-.roster-overlay-state__field input {
+.roster-overlay-state__token-row input {
    width: 100%;
    min-width: 0;
    height: 44px;
@@ -83,21 +79,27 @@
    outline: none;
 }
 
-.roster-overlay-state__field input:focus {
+.roster-overlay-state__token-row input:focus {
    border-color: rgba(124, 199, 255, 0.5);
    background: rgba(255, 255, 255, 0.075);
 }
 
 .roster-overlay-state__button {
-   justify-self: end;
-   min-height: 40px;
+   width: 44px;
+   height: 44px;
    border: 2px solid rgba(124, 199, 255, 0.45);
    border-radius: 10px;
    background: rgba(124, 199, 255, 0.14);
    color: var(--text-strong);
-   padding: 0 16px;
-   font-weight: 700;
+   padding: 0;
+   font-size: 1rem;
    cursor: pointer;
+}
+
+.roster-overlay-state__button i {
+   color: currentColor;
+   font-size: 1rem;
+   opacity: 1;
 }
 
 .roster-overlay-state__button:hover:not(:disabled) {
@@ -106,11 +108,6 @@
 }
 
 .roster-overlay-state__button:disabled {
-   cursor: wait;
-   opacity: 0.58;
-}
-
-.roster-overlay-state__error {
-   color: #ff8ea0;
-   font-size: 0.86rem;
+   cursor: not-allowed;
+   opacity: 0.42;
 }
