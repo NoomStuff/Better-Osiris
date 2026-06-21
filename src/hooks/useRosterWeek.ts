@@ -37,7 +37,6 @@ const LOAD_ERROR_TOAST_MESSAGE = "Something went wrong while loading the roster.
 const FIRST_RETRY_DELAY_MS = 2_000;
 const MAX_RETRY_DELAY_MS = 5 * 60 * 1000;
 const BATCH_SIZE = 5;
-const PREFETCH_BATCHES = [-1, 1];
 const PASSIVE_REFETCH_INTERVAL_MS = 5 * 60 * 1000;
 
 function createEntry(data: RosterResponse | null, overrides?: Partial<WeekEntry>): WeekEntry {
@@ -206,12 +205,27 @@ function getDerivedTitle(offset: number, entries: WeekEntries) {
 }
 
 function getBatchStart(targetOffset: number) {
+   if (targetOffset < 0) {
+      return MIN_WEEK_OFFSET;
+   }
+
    return Math.max(MIN_WEEK_OFFSET, Math.floor(targetOffset / BATCH_SIZE) * BATCH_SIZE);
 }
 
 function getBatchOffsets(startOffset: number) {
+   if (startOffset < 0) {
+      return [MIN_WEEK_OFFSET];
+   }
+
    const endOffset = Math.min(startOffset + BATCH_SIZE - 1, MAX_WEEK_OFFSET);
    return Array.from({ length: endOffset - startOffset + 1 }, (_, index) => startOffset + index);
+}
+
+function getAdjacentBatchStarts(startOffset: number) {
+   const previous = startOffset === 0 ? MIN_WEEK_OFFSET : startOffset > 0 ? Math.max(MIN_WEEK_OFFSET, startOffset - BATCH_SIZE) : null;
+   const next = startOffset < 0 ? 0 : startOffset + BATCH_SIZE;
+
+   return [previous, next].filter((batchStart): batchStart is number => batchStart !== null && batchStart >= MIN_WEEK_OFFSET && batchStart <= MAX_WEEK_OFFSET);
 }
 
 function getBatchRequestKey(startOffset: number) {
@@ -457,8 +471,7 @@ export function useRosterWeek(offset: number) {
       const activeBatchQueued = queuedRefetchesRef.current.has(activeBatchStart);
       loadBatch(activeBatchStart, activeBatchQueued || (activeBatchStart === 0 && Boolean(activeEntry?.isHydrated)));
 
-      PREFETCH_BATCHES.forEach((delta) => {
-         const prefetchBatchStart = activeBatchStart + delta * BATCH_SIZE;
+      getAdjacentBatchStarts(activeBatchStart).forEach((prefetchBatchStart) => {
          loadBatch(prefetchBatchStart, queuedRefetchesRef.current.has(prefetchBatchStart));
       });
    }, [offset, sessionLessonDiffs]);
