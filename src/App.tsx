@@ -724,15 +724,17 @@ export default function App() {
 
    useKeyboardShortcuts(keyboardShortcuts, !isSettingsOpen && selectedLesson === null);
 
+   const hasDisplayedData = Boolean(displayedData);
    const visibleDayGroups = displayedData ? dayGroups : blankDayGroups;
    const visibleExpandedDays = displayedData ? expandedDays : blankExpandedDays;
    const isVisuallyEmptyWeek = displayedData ? displayedData.lessons.length === 0 : true;
-   const hasOverlayUnderlay = isTokenSettingsLoading || !hasBearerToken || loading || (Boolean(error) && !data) || isVisuallyEmptyWeek;
+   const hasBlockingTokenState = isTokenSettingsLoading ? !hasDisplayedData : !hasBearerToken;
+   const hasOverlayUnderlay = hasBlockingTokenState || loading || (Boolean(error) && !data) || isVisuallyEmptyWeek;
    const visibleGridZoom = hasOverlayUnderlay ? "hour" : gridZoom;
    const frameGridZoom = viewMode === "grid" ? visibleGridZoom : gridZoom;
-   const overlay = isTokenSettingsLoading ? (
+   const overlay = isTokenSettingsLoading && !hasDisplayedData ? (
       <LoadingState message="Checking bearer token." />
-   ) : !hasBearerToken ? (
+   ) : !isTokenSettingsLoading && !hasBearerToken ? (
       <BearerTokenState token={bearerTokenInput} isSaving={isSavingBearerToken} onTokenChange={setBearerTokenInput} onSubmit={() => void submitBearerToken()} />
    ) : loading ? (
       <LoadingState message="Fetching week data." />
@@ -748,7 +750,7 @@ export default function App() {
             <AppToolbar
                viewMode={viewMode}
                gridZoom={gridZoom}
-               isRefreshing={refreshing || retrying}
+               isRefreshing={refreshing || retrying || (isTokenSettingsLoading && hasDisplayedData)}
                onChangeView={changeViewMode}
                onChangeGridZoom={setGridZoom}
                onExpandAllAgenda={expandAllDays}
