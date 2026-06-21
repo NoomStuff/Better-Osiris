@@ -1,5 +1,3 @@
-import crypto from "node:crypto";
-
 type SameSiteMode = "lax" | "strict" | "none";
 
 interface CookieOptions {
@@ -10,32 +8,8 @@ interface CookieOptions {
    path?: string;
 }
 
-export const AUTH_COOKIE_NAME = "auth";
-export const COOKIE_MAX_AGE_SECONDS = 60 * 60 * 24 * 7;
 export const OSIRIS_TOKEN_COOKIE_NAME = "osiris_bearer";
 export const OSIRIS_TOKEN_COOKIE_MAX_AGE_SECONDS = 60 * 60 * 24 * 365;
-
-export function createSignedAuthCookieValue(secret: string): string {
-   const value = base64UrlEncode(crypto.randomBytes(18));
-   const signature = signValue(value, secret);
-   return `${value}.${signature}`;
-}
-
-export function isValidAuthCookieValue(cookieValue: string, secret: string): boolean {
-   const [value, signature] = cookieValue.split(".");
-
-   if (!value || !signature) {
-      return false;
-   }
-
-   const expectedSignature = signValue(value, secret);
-
-   if (signature.length !== expectedSignature.length) {
-      return false;
-   }
-
-   return crypto.timingSafeEqual(Buffer.from(signature), Buffer.from(expectedSignature));
-}
 
 export function parseCookie(header: string | undefined, name: string): string | null {
    if (!header) {
@@ -109,21 +83,4 @@ export function buildClearOsirisTokenCookieHeader(isProduction: boolean): string
       path: "/",
       maxAge: 1,
    });
-}
-
-export function buildAuthCookieHeader(value: string, isProduction: boolean): string {
-   return serializeCookie(AUTH_COOKIE_NAME, value, {
-      secure: isProduction,
-      sameSite: "lax",
-      path: "/",
-      maxAge: COOKIE_MAX_AGE_SECONDS,
-   });
-}
-
-function signValue(value: string, secret: string): string {
-   return base64UrlEncode(crypto.createHmac("sha256", secret).update(value).digest());
-}
-
-function base64UrlEncode(buffer: Buffer | Uint8Array): string {
-   return Buffer.from(buffer).toString("base64url");
 }

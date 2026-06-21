@@ -3,22 +3,24 @@ import { AgendaView } from "./components/AgendaView";
 import { AppToolbar } from "./components/AppToolbar";
 import { GridView } from "./components/GridView";
 import { LessonDrawer } from "./components/LessonDrawer";
-import { ErrorState, LoadingState, RosterOverlayState } from "./components/LoadingState";
+import { BearerTokenState, ErrorState, LoadingState, RosterOverlayState } from "./components/LoadingState";
 import { SettingsDialog } from "./components/SettingsDialog";
 import { WeekNavigator } from "./components/WeekNavigator";
-import { fetchOsirisTokenSettings } from "./api/settings";
+import { fetchOsirisTokenSettings, saveOsirisToken, type OsirisTokenSettings } from "./api/settings";
 import { useKeyboardShortcuts, type KeyboardShortcut } from "./hooks/useKeyboardShortcuts";
 import { APP_SHORTCUTS } from "./lib/appShortcuts";
 import { applyDevLessonStatusPreview, isDevLessonStatusPreviewMode, type DevLessonStatusPreviewMode } from "./lib/devRosterStatusPreview";
 import { useRosterWeek } from "./hooks/useRosterWeek";
 import { getIsoWeekNumber, toDayKey } from "./lib/date";
 import { getEmptyWeekMessage } from "./lib/rosterFlavor";
+import { notifyError, notifySuccess } from "./lib/notyf";
 import { getDayGroups, getPositionedLessons } from "./lib/rosterLayout";
 import { MAX_WEEK_OFFSET, MIN_WEEK_OFFSET } from "../shared/rosterTime";
 import type { GridZoom, Lesson, RosterWeek, ViewMode } from "./types/roster";
 import "./styles/App.css";
 
 const STORAGE_KEY = "roster-view-mode";
+const CURRENT_WEEK_CACHE_KEY = "roster-current-week-cache-v2";
 const DEVTOOLS_STORAGE_KEY = "roster-devtools-enabled";
 const DEVTOOLS_TIME_STORAGE_KEY = "roster-devtools-time-override";
 const DEVTOOLS_STATUS_PREVIEW_STORAGE_KEY = "roster-devtools-status-preview";
@@ -181,13 +183,20 @@ export default function App() {
    const [expandedOverrides, setExpandedOverrides] = useState<Set<string>>(new Set());
    const [animateAgenda, setAnimateAgenda] = useState(false);
    const [isSettingsOpen, setIsSettingsOpen] = useState(false);
-   const [hasCustomToken, setHasCustomToken] = useState(false);
+   const [tokenSettings, setTokenSettings] = useState<OsirisTokenSettings | null>(null);
+   const [isTokenSettingsLoading, setIsTokenSettingsLoading] = useState(true);
+   const [bearerTokenInput, setBearerTokenInput] = useState("");
+   const [bearerTokenError, setBearerTokenError] = useState("");
+   const [isSavingBearerToken, setIsSavingBearerToken] = useState(false);
    const [clockNow, setClockNow] = useState(() => new Date());
    const [isDevToolsEnabled, setIsDevToolsEnabled] = useState(getInitialDevToolsEnabled);
    const [timeOverride, setTimeOverride] = useState<Date | null>(getInitialTimeOverride);
    const [devStatusPreviewMode, setDevStatusPreviewMode] = useState<DevLessonStatusPreviewMode>(getInitialStatusPreviewMode);
    const weekSwipeStartRef = useRef<WeekSwipeStart | null>(null);
-   const { data, error, loading, retryCountdownMs, retrying, refreshing, title } = useRosterWeek(weekOffset);
+   const hasBearerToken = tokenSettings?.hasBearerToken === true;
+   const { data, error, loading, retryCountdownMs, retrying, refreshing, title } = useRosterWeek(weekOffset, {
+      enabled: !isTokenSettingsLoading && hasBearerToken,
+   });
    const perceivedNow = isDevToolsEnabled && timeOverride ? timeOverride : clockNow;
    const displayedData = useMemo(
       () => applyDevLessonStatusPreview(data, IS_DEV_SERVER && isDevToolsEnabled ? devStatusPreviewMode : "none"),
@@ -198,15 +207,41 @@ export default function App() {
          return "";
       }
 
-      if (error.isAuthRelated && hasCustomToken) {
+      if (error.isAuthRelated && tokenSettings?.hasCustomToken) {
          return `${error.detail} Your custom bearer token might be expired or pasted wrong. Settings is the place to poke it.`;
       }
 
       return error.detail;
-   }, [error, hasCustomToken]);
+   }, [error, tokenSettings?.hasCustomToken]);
 
    useEffect(() => {
       ensureFontAwesomeKit();
+   }, []);
+
+   useEffect(() => {
+      let isStale = false;
+
+      fetchOsirisTokenSettings()
+         .then((settings) => {
+            if (!isStale) {
+               setTokenSettings(settings);
+            }
+         })
+         .catch((requestError: unknown) => {
+            if (!isStale) {
+               setTokenSettings({ hasCustomToken: false, hasBearerToken: false });
+               notifyError(requestError, "Failed to load bearer token settings.");
+            }
+         })
+         .finally(() => {
+            if (!isStale) {
+               setIsTokenSettingsLoading(false);
+            }
+         });
+
+      return () => {
+         isStale = true;
+      };
    }, []);
 
    useEffect(() => {
@@ -254,12 +289,12 @@ export default function App() {
       fetchOsirisTokenSettings()
          .then((settings) => {
             if (!isStale) {
-               setHasCustomToken(settings.hasCustomToken);
+               setTokenSettings(settings);
             }
          })
          .catch(() => {
             if (!isStale) {
-               setHasCustomToken(false);
+               setTokenSettings((current) => (current ? { ...current, hasCustomToken: false } : current));
             }
          });
 
@@ -524,6 +559,31 @@ export default function App() {
       setIsSettingsOpen(true);
    }, []);
 
+   const submitBearerToken = useCallback(async () => {
+      const nextToken = bearerTokenInput.trim();
+      if (!nextToken) {
+         setBearerTokenError("Enter a bearer token first.");
+         return;
+      }
+
+      setBearerTokenError("");
+      setIsSavingBearerToken(true);
+
+      try {
+         const settings = await saveOsirisToken(nextToken);
+         window.localStorage.removeItem(CURRENT_WEEK_CACHE_KEY);
+         setTokenSettings(settings);
+         setBearerTokenInput("");
+         notifySuccess("Osiris token saved successfully.");
+      } catch (requestError) {
+         const message = requestError instanceof Error ? requestError.message : "Failed to save bearer token.";
+         setBearerTokenError(message);
+         notifyError(requestError, "Failed to save Osiris token.");
+      } finally {
+         setIsSavingBearerToken(false);
+      }
+   }, [bearerTokenInput]);
+
    const toggleDevTools = useCallback((enabled: boolean) => {
       if (!IS_DEV_SERVER) {
          return;
@@ -672,10 +732,20 @@ export default function App() {
    const visibleDayGroups = displayedData ? dayGroups : blankDayGroups;
    const visibleExpandedDays = displayedData ? expandedDays : blankExpandedDays;
    const isVisuallyEmptyWeek = displayedData ? displayedData.lessons.length === 0 : true;
-   const hasOverlayUnderlay = loading || (Boolean(error) && !data) || isVisuallyEmptyWeek;
+   const hasOverlayUnderlay = isTokenSettingsLoading || !hasBearerToken || loading || (Boolean(error) && !data) || isVisuallyEmptyWeek;
    const visibleGridZoom = hasOverlayUnderlay ? "hour" : gridZoom;
    const frameGridZoom = viewMode === "grid" ? visibleGridZoom : gridZoom;
-   const overlay = loading ? (
+   const overlay = isTokenSettingsLoading ? (
+      <LoadingState message="Checking bearer token." />
+   ) : !hasBearerToken ? (
+      <BearerTokenState
+         token={bearerTokenInput}
+         error={bearerTokenError}
+         isSaving={isSavingBearerToken}
+         onTokenChange={setBearerTokenInput}
+         onSubmit={() => void submitBearerToken()}
+      />
+   ) : loading ? (
       <LoadingState message="Fetching week data." />
    ) : error && !data ? (
       <ErrorState title={error.title} detail={errorDetail} log={error.log} retryCountdownMs={retryCountdownMs} isRetrying={retrying} />

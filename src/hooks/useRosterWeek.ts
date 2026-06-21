@@ -30,6 +30,10 @@ interface CachedCurrentWeek {
 
 type WeekEntries = Partial<Record<number, WeekEntry>>;
 
+interface UseRosterWeekOptions {
+   enabled?: boolean;
+}
+
 const CURRENT_WEEK_CACHE_KEY = "roster-current-week-cache-v2";
 const SESSION_LESSON_DIFFS_KEY = "roster-session-lesson-diffs-v1";
 const LOAD_ERROR_MESSAGE = "Something went wrong while loading the roster.";
@@ -299,7 +303,8 @@ function getDisplayWeeksFromPayload(
    return weeks;
 }
 
-export function useRosterWeek(offset: number) {
+export function useRosterWeek(offset: number, options: UseRosterWeekOptions = {}) {
+   const enabled = options.enabled ?? true;
    const [entries, setEntries] = useState<WeekEntries>(getInitialEntries);
    const [now, setNow] = useState<number | null>(null);
    const [sessionLessonDiffs] = useState(readSessionLessonDiffs);
@@ -333,6 +338,10 @@ export function useRosterWeek(offset: number) {
    }, []);
 
    useEffect(() => {
+      if (!enabled) {
+         return;
+      }
+
       const loadBatch = (startOffset: number, force = false) => {
          if (startOffset < MIN_WEEK_OFFSET || startOffset > MAX_WEEK_OFFSET) {
             return;
@@ -474,9 +483,13 @@ export function useRosterWeek(offset: number) {
       getAdjacentBatchStarts(activeBatchStart).forEach((prefetchBatchStart) => {
          loadBatch(prefetchBatchStart, queuedRefetchesRef.current.has(prefetchBatchStart));
       });
-   }, [offset, sessionLessonDiffs]);
+   }, [enabled, offset, sessionLessonDiffs]);
 
    useEffect(() => {
+      if (!enabled) {
+         return;
+      }
+
       const refetchPassiveBatches = () => {
          const activeBatchStart = getBatchStart(offset);
          const passiveBatchStarts = new Set([getBatchStart(0), activeBatchStart]);
@@ -578,12 +591,12 @@ export function useRosterWeek(offset: number) {
 
       const intervalId = window.setInterval(refetchPassiveBatches, PASSIVE_REFETCH_INTERVAL_MS);
       return () => window.clearInterval(intervalId);
-   }, [offset, sessionLessonDiffs]);
+   }, [enabled, offset, sessionLessonDiffs]);
 
    const activeEntry = entries[offset];
    const data = activeEntry?.data ?? null;
    const error = activeEntry?.error ?? null;
-   const loading = !data && !error && (activeEntry?.isFetching ?? true);
+   const loading = enabled && !data && !error && (activeEntry?.isFetching ?? true);
    const refreshing = Boolean(data && activeEntry?.isFetching);
    const retrying = Boolean(!data && activeEntry?.isFetching && error);
    const retryCountdownMs = now === null ? 0 : Math.max(0, (activeEntry?.retryAt ?? 0) - now);

@@ -1,23 +1,23 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { buildAuthCookieHeader, createSignedAuthCookieValue, isValidAuthCookieValue, parseCookie } from "./auth.js";
+import { buildClearOsirisTokenCookieHeader, buildOsirisTokenCookieHeader, parseCookie } from "./auth.js";
 
-void describe("auth cookies", () => {
-   void it("creates signed auth cookies that validate with the same secret", () => {
-      const secret = "test-cookie-secret";
-      const cookieValue = createSignedAuthCookieValue(secret);
-
-      assert.equal(isValidAuthCookieValue(cookieValue, secret), true);
-      assert.equal(isValidAuthCookieValue(cookieValue, "different-secret"), false);
-   });
-
-   void it("serializes and parses encoded cookie values", () => {
+void describe("cookie helpers", () => {
+   void it("serializes and parses encoded OSIRIS token cookie values", () => {
       const cookieValue = "value.with.signature";
-      const header = buildAuthCookieHeader(cookieValue, true);
+      const header = buildOsirisTokenCookieHeader(cookieValue, true);
 
-      assert.equal(parseCookie(header, "auth"), encodeURIComponent(cookieValue));
-      assert.doesNotMatch(header, /HttpOnly/);
+      assert.equal(parseCookie(header, "osiris_bearer"), encodeURIComponent(cookieValue));
+      assert.match(header, /HttpOnly/);
       assert.match(header, /Secure/);
       assert.match(header, /SameSite=lax/);
+   });
+
+   void it("serializes a clearing OSIRIS token cookie", () => {
+      const header = buildClearOsirisTokenCookieHeader(false);
+
+      assert.equal(parseCookie(header, "osiris_bearer"), "");
+      assert.match(header, /Max-Age=1/);
+      assert.doesNotMatch(header, /Secure/);
    });
 });

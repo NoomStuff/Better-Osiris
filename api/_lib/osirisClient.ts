@@ -1,4 +1,3 @@
-import { getEnvValue } from "./env.js";
 import crypto from "node:crypto";
 
 const OSIRIS_ROSTER_URL = "https://mborijnland.osiris-student.nl/student/osiris/student/rooster/per_week";
@@ -58,11 +57,10 @@ function getCacheKey(offset: number, limit: number, bearerToken: string) {
 }
 
 export async function fetchOsirisRosterWeeks(offset: number, limit = 1, tokenOverride?: string | null): Promise<OsirisRosterResponse> {
-   const customToken = normalizeToken(tokenOverride);
-   const bearerToken = customToken ?? getEnvValue("BEARER_TOKEN");
+   const bearerToken = normalizeToken(tokenOverride);
 
    if (!bearerToken) {
-      throw new Error("BEARER_TOKEN is missing. Add it to .env before using live OSIRIS data.");
+      throw new Error("Bearer token is missing. Set one in the app before using live OSIRIS data.");
    }
 
    const safeLimit = Math.max(1, limit);
@@ -154,7 +152,9 @@ async function fetchOsirisRosterWeeksFromICalendar(offset: number, limit: number
    const anchorStart = parseLocalDate(getDatePart(anchorWeek.startdatum));
    const items = Array.from({ length: limit }, (_, index) => createICalendarWeek(anchorStart, offset + index, events));
    const earliestEventStart = events.reduce<Date | null>((earliest, event) => (!earliest || event.start < earliest ? event.start : earliest), null);
-   const allRequestedWeeksAreBeforeFeed = earliestEventStart ? items.every((week) => parseLocalDate(getDatePart(week.einddatum)) < startOfDay(earliestEventStart)) : true;
+   const allRequestedWeeksAreBeforeFeed = earliestEventStart
+      ? items.every((week) => parseLocalDate(getDatePart(week.einddatum)) < startOfDay(earliestEventStart))
+      : true;
 
    if (allRequestedWeeksAreBeforeFeed) {
       const firstAvailable = earliestEventStart ? formatLocalDate(earliestEventStart) : "the requested period";

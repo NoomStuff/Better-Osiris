@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { Readable } from "node:stream";
 import { afterEach, describe, it } from "node:test";
-import { buildOsirisTokenCookieHeader, createSignedAuthCookieValue } from "../_lib/auth.js";
+import { buildOsirisTokenCookieHeader } from "../_lib/auth.js";
 import { createEncryptedOsirisTokenCookieValue } from "../_lib/osirisTokenCookie.js";
 import handler from "./weeks.js";
 import type { IncomingMessage, ServerResponse } from "node:http";
@@ -38,19 +38,18 @@ afterEach(() => {
 });
 
 void describe("GET /api/roster/weeks", () => {
-   void it("returns normalized roster weeks for an authenticated request", async () => {
+   void it("returns normalized roster weeks with the encrypted OSIRIS token cookie", async () => {
       const requests: OsirisRequest[] = [];
       mockOsirisFetch(requests, createOsirisRosterResponse());
       process.env["COOKIE_SECRET"] = "api-secret";
-      process.env["BEARER_TOKEN"] = "Bearer server-token";
+      const token = "Bearer cookie-token";
 
       const response = await callWeeksHandler({
          url: "/api/roster/weeks?offset=2&limit=9",
-         cookie: `auth=${createSignedAuthCookieValue(process.env["COOKIE_SECRET"])}`,
+         cookie: createTokenCookie(token, process.env["COOKIE_SECRET"]),
       });
 
       assert.equal(response.statusCode, 200);
-      assert.match(String(response.headers.get("set-cookie")), /^auth=/);
 
       const payload = JSON.parse(response.body) as {
          offset: number;
@@ -73,25 +72,39 @@ void describe("GET /api/roster/weeks", () => {
       assert.equal(requests.length, 1);
       const firstRequest = requests[0];
       assert.ok(firstRequest);
-      assert.equal(firstRequest.authorization, "Bearer server-token");
+      assert.equal(firstRequest.authorization, token);
       assert.match(firstRequest.url, /offset=2/);
       assert.match(firstRequest.url, /limit=5/);
    });
 
-   void it("uses the encrypted custom OSIRIS token cookie ahead of the server token", async () => {
+   void it("does not fall back to the server token when no cookie is present", async () => {
+      let osirisWasCalled = false;
+      globalThis.fetch = () => {
+         osirisWasCalled = true;
+         return Promise.resolve(new Response("{}", { status: 200 }));
+      };
+      process.env["COOKIE_SECRET"] = "custom-token-secret";
+      process.env["BEARER_TOKEN"] = "Bearer server-token";
+
+      const response = await callWeeksHandler({ url: "/api/roster/weeks?offset=4&limit=0" });
+      const payload = JSON.parse(response.body) as { error?: string };
+
+      assert.equal(response.statusCode, 401);
+      assert.equal(payload.error, "Bearer token is missing. Set one in the app before using live OSIRIS data.");
+      assert.equal(osirisWasCalled, false);
+   });
+
+   void it("uses the encrypted custom OSIRIS token cookie", async () => {
       const requests: OsirisRequest[] = [];
       mockOsirisFetch(requests, createOsirisRosterResponse());
       process.env["COOKIE_SECRET"] = "custom-token-secret";
       process.env["BEARER_TOKEN"] = "Bearer server-token";
 
       const customToken = "Bearer custom-token";
-      const customTokenCookie = buildOsirisTokenCookieHeader(createEncryptedOsirisTokenCookieValue(customToken, process.env["COOKIE_SECRET"]), false).split(
-         ";"
-      )[0];
 
       const response = await callWeeksHandler({
          url: "/api/roster/weeks?offset=4&limit=0",
-         cookie: [`auth=${createSignedAuthCookieValue(process.env["COOKIE_SECRET"])}`, customTokenCookie].join("; "),
+         cookie: createTokenCookie(customToken, process.env["COOKIE_SECRET"]),
       });
 
       assert.equal(response.statusCode, 200);
@@ -106,18 +119,21 @@ void describe("GET /api/roster/weeks", () => {
       const requests: OsirisRequest[] = [];
       mockOsirisCalendarFetch(requests);
       process.env["COOKIE_SECRET"] = "api-secret";
-      process.env["BEARER_TOKEN"] = "Bearer server-token";
 
       const response = await callWeeksHandler({
          url: "/api/roster/weeks?offset=-1&limit=1",
-         cookie: `auth=${createSignedAuthCookieValue(process.env["COOKIE_SECRET"])}`,
+         cookie: createTokenCookie("Bearer calendar-token", process.env["COOKIE_SECRET"]),
       });
 
       assert.equal(response.statusCode, 200);
 
       const payload = JSON.parse(response.body) as {
          offset: number;
-         weeks: { source: { mode: string }; week: { offset: number; number: number; start: string }; lessons: { title: string; start: string; room: string }[] }[];
+         weeks: {
+            source: { mode: string };
+            week: { offset: number; number: number; start: string };
+            lessons: { title: string; start: string; room: string }[];
+         }[];
       };
       const week = payload.weeks[0];
       assert.ok(week);
@@ -139,20 +155,19 @@ void describe("GET /api/roster/weeks", () => {
       assert.match(requests[2]?.url ?? "", /calendar\.ics/);
    });
 
-   void it("rejects unauthenticated requests without calling OSIRIS", async () => {
+   void it("asks for a bearer token without calling OSIRIS when none is configured", async () => {
       let osirisWasCalled = false;
       globalThis.fetch = () => {
          osirisWasCalled = true;
          return Promise.resolve(new Response("{}", { status: 200 }));
       };
-      process.env["COOKIE_SECRET"] = "api-secret";
-      process.env["BEARER_TOKEN"] = "Bearer server-token";
+      process.env["BEARER_TOKEN"] = "";
 
       const response = await callWeeksHandler({ url: "/api/roster/weeks?offset=1&limit=3" });
       const payload = JSON.parse(response.body) as { error?: string };
 
       assert.equal(response.statusCode, 401);
-      assert.equal(payload.error, "Unauthorized");
+      assert.equal(payload.error, "Bearer token is missing. Set one in the app before using live OSIRIS data.");
       assert.equal(osirisWasCalled, false);
    });
 });
@@ -180,6 +195,10 @@ function createRequest({ method = "GET", url, cookie }: MockRequestOptions): Inc
       url,
       headers,
    }) as IncomingMessage;
+}
+
+function createTokenCookie(token: string, secret: string) {
+   return buildOsirisTokenCookieHeader(createEncryptedOsirisTokenCookieValue(token, secret), false).split(";")[0] ?? "";
 }
 
 interface OsirisRequest {

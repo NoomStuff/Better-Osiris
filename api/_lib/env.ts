@@ -2,9 +2,9 @@ import fs from "node:fs";
 import path from "node:path";
 
 export function getEnvValue(key: string): string | undefined {
-   const existing = process.env[key];
-   if (existing) {
-      return existing;
+   if (Object.hasOwn(process.env, key)) {
+      const existing = process.env[key];
+      return existing === "" ? undefined : existing;
    }
 
    for (const envFile of [".env", ".env.local", ".env.production", ".env.production.local"]) {

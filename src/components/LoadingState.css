@@ -54,3 +54,63 @@
    font-size: 0.9em;
    color: var(--text-muted);
 }
+
+.roster-overlay-state__form {
+   width: min(440px, 100%);
+   display: grid;
+   gap: 12px;
+   margin-top: 8px;
+}
+
+.roster-overlay-state__field {
+   display: grid;
+   gap: 8px;
+   text-align: left;
+   color: var(--text-dim);
+   font-size: 0.8rem;
+   font-weight: 700;
+}
+
+.roster-overlay-state__field input {
+   width: 100%;
+   min-width: 0;
+   height: 44px;
+   border: 2px solid var(--line);
+   border-radius: 10px;
+   background: rgba(255, 255, 255, 0.055);
+   color: var(--text-strong);
+   padding: 0 12px;
+   outline: none;
+}
+
+.roster-overlay-state__field input:focus {
+   border-color: rgba(124, 199, 255, 0.5);
+   background: rgba(255, 255, 255, 0.075);
+}
+
+.roster-overlay-state__button {
+   justify-self: end;
+   min-height: 40px;
+   border: 2px solid rgba(124, 199, 255, 0.45);
+   border-radius: 10px;
+   background: rgba(124, 199, 255, 0.14);
+   color: var(--text-strong);
+   padding: 0 16px;
+   font-weight: 700;
+   cursor: pointer;
+}
+
+.roster-overlay-state__button:hover:not(:disabled) {
+   border-color: rgba(124, 199, 255, 0.62);
+   background: rgba(124, 199, 255, 0.2);
+}
+
+.roster-overlay-state__button:disabled {
+   cursor: wait;
+   opacity: 0.58;
+}
+
+.roster-overlay-state__error {
+   color: #ff8ea0;
+   font-size: 0.86rem;
+}

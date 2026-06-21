@@ -55,12 +55,41 @@ test("settings dialog opens, resets token state, and closes", async ({ page }) =
    await expect(page.getByText("Roster requests are using your saved bearer token.")).toBeVisible();
 
    await page.getByRole("button", { name: "Reset" }).click();
+   await expect(page.getByRole("dialog", { name: "Reset bearer token?" })).toBeVisible();
+   await page.getByRole("button", { name: "Reset token" }).click();
    await page.waitForLoadState("domcontentloaded");
    await page.getByRole("button", { name: "Open settings" }).click();
-   await expect(page.getByText("Roster requests are using the server default.")).toBeVisible();
+   await expect(page.getByText("No bearer token is set.")).toBeVisible();
 
    await page.locator(".settings-dialog__header").getByRole("button", { name: "Close settings" }).click();
    await expect(page.getByRole("dialog", { name: "Preferences" })).toBeHidden();
+});
+
+test("missing bearer token shows an entry overlay without requesting roster data", async ({ page }) => {
+   let rosterWasRequested = false;
+
+   await page.route("**/api/settings/osiris-token", async (route) => {
+      await route.fulfill({
+         status: 200,
+         contentType: "application/json",
+         body: JSON.stringify({ hasCustomToken: false, hasBearerToken: false }),
+      });
+   });
+
+   await page.route("**/api/roster/weeks?*", async (route) => {
+      rosterWasRequested = true;
+      await route.fulfill({
+         status: 500,
+         contentType: "application/json",
+         body: JSON.stringify({ error: "Roster should not be requested before a bearer token is set." }),
+      });
+   });
+
+   await page.goto("/");
+
+   await expect(page.getByRole("heading", { name: "Bearer token required" })).toBeVisible();
+   await expect(page.getByLabel("Bearer token")).toBeVisible();
+   expect(rosterWasRequested).toBe(false);
 });
 
 test("devtools can preview changed and cancelled lesson states", async ({ page }) => {
@@ -144,12 +173,14 @@ async function mockAppApis(page: Page) {
       const method = route.request().method();
       if (method === "DELETE") {
          hasCustomToken = false;
+      } else if (method === "PUT") {
+         hasCustomToken = true;
       }
 
       await route.fulfill({
          status: 200,
          contentType: "application/json",
-         body: JSON.stringify({ hasCustomToken }),
+         body: JSON.stringify({ hasCustomToken, hasBearerToken: hasCustomToken }),
       });
    });
 

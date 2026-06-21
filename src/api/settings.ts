@@ -1,5 +1,6 @@
 export interface OsirisTokenSettings {
    hasCustomToken: boolean;
+   hasBearerToken: boolean;
 }
 
 export async function fetchOsirisTokenSettings(): Promise<OsirisTokenSettings> {
@@ -28,7 +29,7 @@ export async function clearOsirisToken(): Promise<OsirisTokenSettings> {
 }
 
 async function parseSettingsResponse(response: Response): Promise<OsirisTokenSettings> {
-   const payload = (await response.json()) as { hasCustomToken?: unknown; error?: string };
+   const payload = (await response.json()) as { hasCustomToken?: unknown; hasBearerToken?: unknown; error?: string };
 
    if (!response.ok) {
       throw new Error(payload.error ?? `Settings request failed with HTTP ${response.status}.`);
@@ -36,5 +37,6 @@ async function parseSettingsResponse(response: Response): Promise<OsirisTokenSet
 
    return {
       hasCustomToken: payload.hasCustomToken === true,
+      hasBearerToken: payload.hasBearerToken === true || payload.hasCustomToken === true,
    };
 }

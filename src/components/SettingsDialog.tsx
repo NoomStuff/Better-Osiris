@@ -3,6 +3,7 @@ import type { SyntheticEvent } from "react";
 import { clearOsirisToken, fetchOsirisTokenSettings, saveOsirisToken } from "../api/settings";
 import { DEV_LESSON_STATUS_PREVIEW_MODES, type DevLessonStatusPreviewMode } from "../lib/devRosterStatusPreview";
 import { notifyError, notifySuccess, notifyWarning } from "../lib/notyf";
+import { ConfirmDialog } from "./ConfirmDialog";
 import { IconButton } from "./IconButton";
 import { OverlayPanel } from "./OverlayPanel";
 import "./SettingsDialog.css";
@@ -37,8 +38,10 @@ export function SettingsDialog({
 }: SettingsDialogProps) {
    const [token, setToken] = useState("");
    const [hasCustomToken, setHasCustomToken] = useState(false);
+   const [hasBearerToken, setHasBearerToken] = useState(false);
    const [isLoading, setIsLoading] = useState(false);
    const [isClosing, setIsClosing] = useState(false);
+   const [isResetConfirmOpen, setIsResetConfirmOpen] = useState(false);
    const closeTimerRef = useRef<number | null>(null);
    const perceivedMinutes = perceivedNow.getHours() * 60 + perceivedNow.getMinutes();
 
@@ -66,6 +69,7 @@ export function SettingsDialog({
          .then((settings) => {
             if (isActive) {
                setHasCustomToken(settings.hasCustomToken);
+               setHasBearerToken(settings.hasBearerToken);
             }
          })
          .catch((requestError: unknown) => {
@@ -150,144 +154,166 @@ export function SettingsDialog({
    }
 
    return (
-      <OverlayPanel
-         className="settings-dialog lesson-panel"
-         backdropClassName="lesson-panel__backdrop"
-         surfaceClassName="settings-dialog__panel lesson-panel__card"
-         closeLabel="Close settings"
-         labelledBy="settings-title"
-         placement="bottom"
-         isClosing={isClosing}
-         closeOnSwipeDown
-         swipeIgnoreSelector=".settings-dialog__content"
-         onClose={closeSettings}
-      >
-         <header className="settings-dialog__header lesson-panel__header">
-            <div className="lesson-panel__title">
-               <p className="eyebrow">Settings</p>
-               <h2 id="settings-title">Preferences</h2>
-            </div>
-            <IconButton
-               className="lesson-panel__close"
-               icon="fa-solid fa-xmark"
-               label="Close settings"
-               tooltipPlacement="bottom"
-               tooltipAlign="end"
-               onClick={closeSettings}
-            />
-         </header>
-
-         <div className="settings-dialog__content">
-            <section className="settings-section" aria-labelledby="token-settings-title">
-               <div className="settings-section__header">
-                  <h3 id="token-settings-title">Roster access</h3>
-                  <p>{hasCustomToken ? "Roster requests are using your saved bearer token." : "Roster requests are using the server default."}</p>
+      <>
+         <OverlayPanel
+            className="settings-dialog lesson-panel"
+            backdropClassName="lesson-panel__backdrop"
+            surfaceClassName="settings-dialog__panel lesson-panel__card"
+            closeLabel="Close settings"
+            labelledBy="settings-title"
+            placement="bottom"
+            isClosing={isClosing}
+            closeOnSwipeDown
+            swipeIgnoreSelector=".settings-dialog__content"
+            onClose={closeSettings}
+         >
+            <header className="settings-dialog__header lesson-panel__header">
+               <div className="lesson-panel__title">
+                  <p className="eyebrow">Settings</p>
+                  <h2 id="settings-title">Preferences</h2>
                </div>
+               <IconButton
+                  className="lesson-panel__close"
+                  icon="fa-solid fa-xmark"
+                  label="Close settings"
+                  tooltipPlacement="bottom"
+                  tooltipAlign="end"
+                  onClick={closeSettings}
+               />
+            </header>
 
-               <form className="settings-dialog__form" onSubmit={(event) => void handleSubmit(event)}>
-                  <label className="settings-dialog__field">
-                     <span>Bearer token</span>
-                     <input
-                        type="password"
-                        value={token}
-                        placeholder={hasCustomToken ? "Replace custom token" : "Bearer XXXXXXXXXXXXXXXXXXXXXXXXXXX"}
-                        autoComplete="off"
-                        spellCheck={false}
-                        disabled={isLoading}
-                        onChange={(event) => setToken(event.target.value)}
-                     />
-                  </label>
-
-                  <div className="settings-dialog__actions">
-                     <button className="settings-dialog__button settings-dialog__button--primary" type="submit" disabled={isLoading}>
-                        Save token
-                     </button>
-                     <button className="settings-dialog__button" type="button" disabled={isLoading || !hasCustomToken} onClick={() => void handleClear()}>
-                        Reset
-                     </button>
-                  </div>
-               </form>
-            </section>
-
-            {IS_DEV_SERVER ? (
-               <section className="settings-section" aria-labelledby="devtools-settings-title">
+            <div className="settings-dialog__content">
+               <section className="settings-section" aria-labelledby="token-settings-title">
                   <div className="settings-section__header">
-                     <h3 id="devtools-settings-title">Devtools</h3>
-                     <p>Local-only roster testing tools. These controls are not available in production.</p>
+                     <h3 id="token-settings-title">Roster access</h3>
+                     <p>{hasCustomToken || hasBearerToken ? "Roster requests are using your saved bearer token." : "No bearer token is set."}</p>
                   </div>
 
-                  <label className="settings-toggle">
-                     <input type="checkbox" checked={isDevToolsEnabled} onChange={(event) => onToggleDevTools(event.target.checked)} />
-                     <span>
-                        <strong>Enable devtools</strong>
-                        <small>
-                           {timeOverride
-                              ? `Override: ${formatDateLabel(timeOverride)} ${formatTimeLabel(timeOverride)}`
-                              : `Real time: ${formatDateLabel(perceivedNow)} ${formatTimeLabel(perceivedNow)}`}
-                        </small>
-                     </span>
-                  </label>
+                  <form className="settings-dialog__form" onSubmit={(event) => void handleSubmit(event)}>
+                     <label className="settings-dialog__field">
+                        <span>Bearer token</span>
+                        <input
+                           type="password"
+                           value={token}
+                           placeholder={hasCustomToken ? "Replace custom token" : "Bearer XXXXXXXXXXXXXXXXXXXXXXXXXXX"}
+                           autoComplete="off"
+                           spellCheck={false}
+                           disabled={isLoading}
+                           onChange={(event) => setToken(event.target.value)}
+                        />
+                     </label>
 
-                  {isDevToolsEnabled ? (
-                     <div className="devtools-panel">
-                        <label className="settings-dialog__field settings-dialog__field--compact">
-                           <span>Perceived date</span>
-                           <input type="date" value={formatDateInputValue(perceivedNow)} onChange={(event) => handleDateOverrideChange(event.target.value)} />
-                        </label>
-
-                        <div className="time-slider">
-                           <div className="time-slider__header">
-                              <span>Perceived time</span>
-                              <strong>{formatTimeLabel(perceivedNow)}</strong>
-                           </div>
-                           <input
-                              type="range"
-                              min={0}
-                              max={DAY_MINUTES - TIME_SLIDER_STEP_MINUTES}
-                              step={TIME_SLIDER_STEP_MINUTES}
-                              value={Math.round(perceivedMinutes / TIME_SLIDER_STEP_MINUTES) * TIME_SLIDER_STEP_MINUTES}
-                              onChange={(event) => handleTimeOverrideChange(event.target.value)}
-                           />
-                           <div className="time-slider__ticks" aria-hidden="true">
-                              <span>00:00</span>
-                              <span>06:00</span>
-                              <span>12:00</span>
-                              <span>18:00</span>
-                              <span>23:45</span>
-                           </div>
-                        </div>
-
-                        <div className="settings-dialog__actions">
-                           <button className="settings-dialog__button" type="button" onClick={() => onChangeTimeOverride(new Date())}>
-                              Use current time
-                           </button>
-                           <button className="settings-dialog__button" type="button" disabled={!timeOverride} onClick={() => onChangeTimeOverride(null)}>
-                              Clear override
-                           </button>
-                        </div>
-
-                        <div className="devtools-option">
-                           <span className="devtools-option__label">Lesson status preview</span>
-                           <div className="settings-segmented-control" role="group" aria-label="Lesson status preview">
-                              {DEV_LESSON_STATUS_PREVIEW_MODES.map((mode) => (
-                                 <button
-                                    type="button"
-                                    key={mode.id}
-                                    aria-pressed={statusPreviewMode === mode.id}
-                                    data-active={statusPreviewMode === mode.id}
-                                    onClick={() => onChangeStatusPreviewMode(mode.id)}
-                                 >
-                                    {mode.label}
-                                 </button>
-                              ))}
-                           </div>
-                        </div>
+                     <div className="settings-dialog__actions">
+                        <button className="settings-dialog__button settings-dialog__button--primary" type="submit" disabled={isLoading}>
+                           Save token
+                        </button>
+                        <button
+                           className="settings-dialog__button settings-dialog__button--danger"
+                           type="button"
+                           disabled={isLoading || !hasCustomToken}
+                           onClick={() => setIsResetConfirmOpen(true)}
+                        >
+                           Reset
+                        </button>
                      </div>
-                  ) : null}
+                  </form>
                </section>
-            ) : null}
-         </div>
-      </OverlayPanel>
+
+               {IS_DEV_SERVER ? (
+                  <section className="settings-section" aria-labelledby="devtools-settings-title">
+                     <div className="settings-section__header">
+                        <h3 id="devtools-settings-title">Devtools</h3>
+                        <p>Local-only roster testing tools. These controls are not available in production.</p>
+                     </div>
+
+                     <label className="settings-toggle">
+                        <input type="checkbox" checked={isDevToolsEnabled} onChange={(event) => onToggleDevTools(event.target.checked)} />
+                        <span>
+                           <strong>Enable devtools</strong>
+                           <small>
+                              {timeOverride
+                                 ? `Override: ${formatDateLabel(timeOverride)} ${formatTimeLabel(timeOverride)}`
+                                 : `Real time: ${formatDateLabel(perceivedNow)} ${formatTimeLabel(perceivedNow)}`}
+                           </small>
+                        </span>
+                     </label>
+
+                     {isDevToolsEnabled ? (
+                        <div className="devtools-panel">
+                           <label className="settings-dialog__field settings-dialog__field--compact">
+                              <span>Perceived date</span>
+                              <input
+                                 type="date"
+                                 value={formatDateInputValue(perceivedNow)}
+                                 onChange={(event) => handleDateOverrideChange(event.target.value)}
+                              />
+                           </label>
+
+                           <div className="time-slider">
+                              <div className="time-slider__header">
+                                 <span>Perceived time</span>
+                                 <strong>{formatTimeLabel(perceivedNow)}</strong>
+                              </div>
+                              <input
+                                 type="range"
+                                 min={0}
+                                 max={DAY_MINUTES - TIME_SLIDER_STEP_MINUTES}
+                                 step={TIME_SLIDER_STEP_MINUTES}
+                                 value={Math.round(perceivedMinutes / TIME_SLIDER_STEP_MINUTES) * TIME_SLIDER_STEP_MINUTES}
+                                 onChange={(event) => handleTimeOverrideChange(event.target.value)}
+                              />
+                              <div className="time-slider__ticks" aria-hidden="true">
+                                 <span>00:00</span>
+                                 <span>06:00</span>
+                                 <span>12:00</span>
+                                 <span>18:00</span>
+                                 <span>23:45</span>
+                              </div>
+                           </div>
+
+                           <div className="settings-dialog__actions">
+                              <button className="settings-dialog__button" type="button" onClick={() => onChangeTimeOverride(new Date())}>
+                                 Use current time
+                              </button>
+                              <button className="settings-dialog__button" type="button" disabled={!timeOverride} onClick={() => onChangeTimeOverride(null)}>
+                                 Clear override
+                              </button>
+                           </div>
+
+                           <div className="devtools-option">
+                              <span className="devtools-option__label">Lesson status preview</span>
+                              <div className="settings-segmented-control" role="group" aria-label="Lesson status preview">
+                                 {DEV_LESSON_STATUS_PREVIEW_MODES.map((mode) => (
+                                    <button
+                                       type="button"
+                                       key={mode.id}
+                                       aria-pressed={statusPreviewMode === mode.id}
+                                       data-active={statusPreviewMode === mode.id}
+                                       onClick={() => onChangeStatusPreviewMode(mode.id)}
+                                    >
+                                       {mode.label}
+                                    </button>
+                                 ))}
+                              </div>
+                           </div>
+                        </div>
+                     ) : null}
+                  </section>
+               ) : null}
+            </div>
+         </OverlayPanel>
+
+         <ConfirmDialog
+            isOpen={isResetConfirmOpen}
+            title="Reset bearer token?"
+            detail="This will remove the saved bearer token and reload the roster."
+            confirmLabel="Reset token"
+            variant="danger"
+            isConfirming={isLoading}
+            onCancel={() => setIsResetConfirmOpen(false)}
+            onConfirm={() => void handleClear()}
+         />
+      </>
    );
 }
 

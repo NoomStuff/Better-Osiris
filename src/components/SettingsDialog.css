@@ -110,6 +110,17 @@
    background: rgba(124, 199, 255, 0.14);
 }
 
+.settings-dialog__button--danger {
+   border-color: rgba(255, 88, 112, 0.58);
+   background: rgba(255, 88, 112, 0.14);
+   color: #ffb3be;
+}
+
+.settings-dialog__button--danger:hover:not(:disabled) {
+   border-color: rgba(255, 88, 112, 0.76);
+   background: rgba(255, 88, 112, 0.22);
+}
+
 .settings-dialog__button:disabled {
    cursor: not-allowed;
    opacity: 0.45;
