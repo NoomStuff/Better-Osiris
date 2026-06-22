@@ -47,6 +47,72 @@ test("week navigation and view controls work with mocked roster data", async ({ 
    await expect(page.locator(".agenda-view")).toBeVisible();
 });
 
+test("previous week is disabled when the preloaded past week is unavailable", async ({ page }) => {
+   await page.route("**/api/roster/weeks?*", async (route) => {
+      const url = new URL(route.request().url());
+      const offset = Number(url.searchParams.get("offset") ?? "0");
+      const limit = Number(url.searchParams.get("limit") ?? "5");
+
+      if (offset < 0) {
+         await route.fulfill({
+            status: 502,
+            contentType: "application/json",
+            body: JSON.stringify({ error: "OSIRIS iCalendar does not expose roster data before 2026-06-22." }),
+         });
+         return;
+      }
+
+      await route.fulfill({
+         status: 200,
+         contentType: "application/json",
+         body: JSON.stringify(createRosterBatch(offset, limit)),
+      });
+   });
+
+   await page.goto("/");
+
+   await expect(page.getByRole("heading", { name: /Week 25:/ })).toBeVisible();
+   await expect(page.getByRole("button", { name: "SOURCE_TITLE_0_1" })).toBeVisible();
+   await expect(page.getByRole("button", { name: "Previous week" })).toBeDisabled();
+});
+
+test("next week and future shortcuts are disabled when a preloaded future week is unavailable", async ({ page }) => {
+   await page.route("**/api/roster/weeks?*", async (route) => {
+      const url = new URL(route.request().url());
+      const offset = Number(url.searchParams.get("offset") ?? "0");
+      const limit = Number(url.searchParams.get("limit") ?? "5");
+
+      if (offset >= 5) {
+         await route.fulfill({
+            status: 502,
+            contentType: "application/json",
+            body: JSON.stringify({ error: "OSIRIS request failed with 502." }),
+         });
+         return;
+      }
+
+      await route.fulfill({
+         status: 200,
+         contentType: "application/json",
+         body: JSON.stringify(createRosterBatch(offset, limit)),
+      });
+   });
+
+   await page.goto("/");
+
+   await page.keyboard.press("4");
+   await expect(page.locator(".weekbar__label")).toHaveText("In 4 weeks");
+   await expect(page.getByRole("heading", { name: /Week 29:/ })).toBeVisible();
+   await expect(page.getByRole("button", { name: "SOURCE_TITLE_4_1" })).toBeVisible();
+   await expect(page.getByRole("button", { name: "Next week" })).toBeDisabled();
+
+   await page.keyboard.press("ArrowRight");
+   await expect(page.locator(".weekbar__label")).toHaveText("In 4 weeks");
+
+   await page.keyboard.press("5");
+   await expect(page.locator(".weekbar__label")).toHaveText("In 4 weeks");
+});
+
 test("settings dialog opens, resets token state, and closes", async ({ page }) => {
    await page.goto("/");
 

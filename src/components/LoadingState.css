@@ -6,7 +6,7 @@
    align-content: center;
    justify-items: center;
    gap: 16px;
-   padding: 64px;
+   padding: 8px;
    text-align: center;
    font-weight: 500;
    color: var(--text-dim);

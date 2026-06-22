@@ -1,5 +1,7 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
+import { RosterRequestError } from "../api/roster.js";
+import { toRosterLoadError } from "../lib/rosterLoadError.js";
 import { applySessionLessonDiffs, recordSessionLessonDiffs, type SessionLessonDiffsByWeek } from "../lib/rosterSessionDiffs.js";
 import type { Lesson, RosterResponse } from "../types/roster";
 
@@ -44,6 +46,23 @@ void describe("session roster diff states", () => {
 
       assert.equal(display.lessons.find((lesson) => lesson.id === "old-id")?.status, "cancelled");
       assert.equal(display.lessons.find((lesson) => lesson.id === "new-id")?.status, "changed");
+   });
+});
+
+void describe("roster load errors", () => {
+   void it("explains when OSIRIS iCalendar has no older roster data", () => {
+      const firstAvailableDate = "2027-01-05";
+      const error = new RosterRequestError(
+         `Roster request failed with HTTP 502: OSIRIS iCalendar does not expose roster data before ${firstAvailableDate}.`,
+         502,
+         `OSIRIS iCalendar does not expose roster data before ${firstAvailableDate}.`
+      );
+
+      const loadError = toRosterLoadError(error);
+
+      assert.equal(loadError.title, "Could not load your roster.");
+      assert.equal(loadError.detail, `Osiris did not hand over the goods. The calendar does not go back further than ${firstAvailableDate}.`);
+      assert.equal(loadError.log, `Roster request failed with HTTP 502: OSIRIS iCalendar does not expose roster data before ${firstAvailableDate}.`);
    });
 });
 

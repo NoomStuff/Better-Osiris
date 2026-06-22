@@ -16,7 +16,6 @@ import { getEmptyWeekMessage } from "./lib/rosterFlavor";
 import { clearRosterBrowserCache } from "./lib/rosterCache";
 import { notifyError, notifySuccess } from "./lib/notyf";
 import { getDayGroups, getPositionedLessons } from "./lib/rosterLayout";
-import { MAX_WEEK_OFFSET, MIN_WEEK_OFFSET } from "../shared/rosterTime";
 import type { GridZoom, Lesson, RosterWeek, ViewMode } from "./types/roster";
 import "./styles/App.css";
 
@@ -193,7 +192,7 @@ export default function App() {
    const [devStatusPreviewMode, setDevStatusPreviewMode] = useState<DevLessonStatusPreviewMode>(getInitialStatusPreviewMode);
    const weekSwipeStartRef = useRef<WeekSwipeStart | null>(null);
    const hasBearerToken = tokenSettings?.hasBearerToken === true;
-   const { data, error, loading, retryCountdownMs, retrying, refreshing, title } = useRosterWeek(weekOffset, {
+   const { canGoNext, canGoPrevious, data, error, isWeekNavigable, loading, retryCountdownMs, retrying, refreshing, title } = useRosterWeek(weekOffset, {
       enabled: !isTokenSettingsLoading && hasBearerToken,
       clearCache: !isTokenSettingsLoading && !hasBearerToken,
    });
@@ -467,12 +466,22 @@ export default function App() {
    }, [autoExpandedDays, data]);
 
    const goPreviousWeek = useCallback(() => {
-      updateWeekOffset((current) => Math.max(current - 1, MIN_WEEK_OFFSET), "previous");
-   }, [updateWeekOffset]);
+      const targetOffset = weekOffset - 1;
+      if (!isWeekNavigable(targetOffset)) {
+         return;
+      }
+
+      updateWeekOffset(targetOffset, "previous");
+   }, [isWeekNavigable, updateWeekOffset, weekOffset]);
 
    const goNextWeek = useCallback(() => {
-      updateWeekOffset((current) => Math.min(current + 1, MAX_WEEK_OFFSET), "next");
-   }, [updateWeekOffset]);
+      const targetOffset = weekOffset + 1;
+      if (!isWeekNavigable(targetOffset)) {
+         return;
+      }
+
+      updateWeekOffset(targetOffset, "next");
+   }, [isWeekNavigable, updateWeekOffset, weekOffset]);
 
    const handleCurrentWeek = useCallback(() => {
       if (weekOffset === 0) {
@@ -482,8 +491,12 @@ export default function App() {
          return;
       }
 
+      if (!isWeekNavigable(0)) {
+         return;
+      }
+
       updateWeekOffset(0);
-   }, [updateWeekOffset, weekOffset]);
+   }, [isWeekNavigable, updateWeekOffset, weekOffset]);
 
    const handleWeekSwipeStart = useCallback((event: TouchEvent) => {
       if (event.touches.length !== 1) {
@@ -653,14 +666,14 @@ export default function App() {
             id: "previous-week",
             ...APP_SHORTCUTS.previousWeek,
             activationTargetId: "previous-week",
-            disabled: weekOffset <= MIN_WEEK_OFFSET,
+            disabled: !canGoPrevious,
             onPress: goPreviousWeek,
          },
          {
             id: "next-week",
             ...APP_SHORTCUTS.nextWeek,
             activationTargetId: "next-week",
-            disabled: weekOffset >= MAX_WEEK_OFFSET,
+            disabled: !canGoNext,
             onPress: goNextWeek,
          },
          {
@@ -708,7 +721,13 @@ export default function App() {
          ...FUTURE_WEEK_KEYS.map<KeyboardShortcut>((key) => ({
             id: `future-week-${key}`,
             key,
-            onPress: () => updateWeekOffset(Number(key)),
+            disabled: !isWeekNavigable(Number(key)),
+            onPress: () => {
+               const targetOffset = Number(key);
+               if (isWeekNavigable(targetOffset)) {
+                  updateWeekOffset(targetOffset);
+               }
+            },
          })),
          ...FUTURE_WEEK_KEYS.map<KeyboardShortcut>((key) => ({
             id: `toolbar-action-${key}`,
@@ -719,11 +738,14 @@ export default function App() {
          })),
       ],
       [
+         canGoPrevious,
+         canGoNext,
          changeViewMode,
          goNextWeek,
          goPreviousWeek,
          gridZoom,
          handleCurrentWeek,
+         isWeekNavigable,
          moveToolbarAction,
          openSettings,
          selectToolbarAction,
@@ -775,8 +797,8 @@ export default function App() {
                onPreviousWeek={goPreviousWeek}
                onNextWeek={goNextWeek}
                onCurrentWeek={handleCurrentWeek}
-               canGoPrevious={weekOffset > MIN_WEEK_OFFSET}
-               canGoNext={weekOffset < MAX_WEEK_OFFSET}
+               canGoPrevious={canGoPrevious}
+               canGoNext={canGoNext}
             />
          </div>
 

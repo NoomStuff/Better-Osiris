@@ -1,8 +1,9 @@
-import { useEffect, useMemo, useRef, useState } from "react";
-import { fetchRosterWeeks, RosterRequestError } from "../api/roster";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { fetchRosterWeeks } from "../api/roster";
 import { formatWeekTitle, getIsoWeekNumber, shiftIsoDateByDays } from "../lib/date";
 import { notifyError } from "../lib/notyf";
 import { clearRosterBrowserCache, CURRENT_WEEK_CACHE_KEY, SESSION_LESSON_DIFFS_KEY } from "../lib/rosterCache";
+import { toRosterLoadError, type RosterLoadError } from "../lib/rosterLoadError";
 import { applySessionLessonDiffs, recordSessionLessonDiffs, type SessionLessonDiff, type SessionLessonDiffsByWeek } from "../lib/rosterSessionDiffs";
 import { MAX_WEEK_OFFSET, MIN_WEEK_OFFSET } from "../../shared/rosterTime";
 import type { RosterBatchResponse, RosterResponse } from "../types/roster";
@@ -15,13 +16,6 @@ interface WeekEntry {
    retryAt: number;
    retryDelayMs: number;
    updatedAt: number;
-}
-
-export interface RosterLoadError {
-   title: string;
-   detail: string;
-   log: string;
-   isAuthRelated: boolean;
 }
 
 interface CachedCurrentWeek {
@@ -53,24 +47,6 @@ function createEntry(data: RosterResponse | null, overrides?: Partial<WeekEntry>
       retryDelayMs: 0,
       updatedAt: data ? Date.now() : 0,
       ...overrides,
-   };
-}
-
-function toRosterLoadError(error: unknown): RosterLoadError {
-   if (error instanceof RosterRequestError) {
-      return {
-         title: "Could not load your roster.",
-         detail: "Osiris did not hand over the goods.",
-         log: error.message,
-         isAuthRelated: error.isAuthRelated,
-      };
-   }
-
-   return {
-      title: "Could not load your roster.",
-      detail: "The roster request crashed before it could finish. Annoying, but I'll keep trying quietly.",
-      log: error instanceof Error ? error.message : "Unknown roster fetch error.",
-      isAuthRelated: false,
    };
 }
 
@@ -234,6 +210,15 @@ function getAdjacentBatchStarts(startOffset: number) {
 
 function getBatchRequestKey(startOffset: number) {
    return `${startOffset}:${getBatchOffsets(startOffset).length}`;
+}
+
+function canNavigateToWeek(offset: number, entries: WeekEntries) {
+   if (offset < MIN_WEEK_OFFSET || offset > MAX_WEEK_OFFSET) {
+      return false;
+   }
+
+   const entry = entries[offset];
+   return !(entry?.error && !entry.data);
 }
 
 function isSameRosterData(left: RosterResponse | null | undefined, right: RosterResponse) {
@@ -622,10 +607,19 @@ export function useRosterWeek(offset: number, options: UseRosterWeekOptions = {}
    const retrying = Boolean(!data && activeEntry?.isFetching && error);
    const retryCountdownMs = now === null ? 0 : Math.max(0, (activeEntry?.retryAt ?? 0) - now);
    const title = useMemo(() => (shouldSuppressCachedData ? "Loading week..." : getDerivedTitle(offset, entries)), [entries, offset, shouldSuppressCachedData]);
+   const isWeekNavigable = useCallback(
+      (targetOffset: number) => !shouldSuppressCachedData && canNavigateToWeek(targetOffset, entries),
+      [entries, shouldSuppressCachedData]
+   );
+   const canGoPrevious = isWeekNavigable(offset - 1);
+   const canGoNext = isWeekNavigable(offset + 1);
 
    return {
+      canGoPrevious,
+      canGoNext,
       data,
       error,
+      isWeekNavigable,
       loading,
       retryCountdownMs,
       retrying,
