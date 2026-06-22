@@ -3,6 +3,7 @@ import type { SyntheticEvent } from "react";
 import { clearOsirisToken, fetchOsirisTokenSettings, saveOsirisToken } from "../api/settings";
 import { DEV_LESSON_STATUS_PREVIEW_MODES, type DevLessonStatusPreviewMode } from "../lib/devRosterStatusPreview";
 import { notifyError, notifySuccess, notifyWarning } from "../lib/notyf";
+import { clearRosterBrowserCache } from "../lib/rosterCache";
 import { ConfirmDialog } from "./ConfirmDialog";
 import { IconButton } from "./IconButton";
 import { OverlayPanel } from "./OverlayPanel";
@@ -20,7 +21,6 @@ interface SettingsDialogProps {
    onChangeStatusPreviewMode: (mode: DevLessonStatusPreviewMode) => void;
 }
 
-const CURRENT_WEEK_CACHE_KEY = "roster-current-week-cache-v2";
 const IS_DEV_SERVER = import.meta.env.DEV;
 const DAY_MINUTES = 24 * 60;
 const TIME_SLIDER_STEP_MINUTES = 15;
@@ -341,6 +341,6 @@ function formatDateLabel(date: Date) {
 }
 
 function reloadRosterData() {
-   window.localStorage.removeItem(CURRENT_WEEK_CACHE_KEY);
+   clearRosterBrowserCache();
    window.location.reload();
 }

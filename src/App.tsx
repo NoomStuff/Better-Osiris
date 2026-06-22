@@ -13,6 +13,7 @@ import { applyDevLessonStatusPreview, isDevLessonStatusPreviewMode, type DevLess
 import { useRosterWeek } from "./hooks/useRosterWeek";
 import { getIsoWeekNumber, toDayKey } from "./lib/date";
 import { getEmptyWeekMessage } from "./lib/rosterFlavor";
+import { clearRosterBrowserCache } from "./lib/rosterCache";
 import { notifyError, notifySuccess } from "./lib/notyf";
 import { getDayGroups, getPositionedLessons } from "./lib/rosterLayout";
 import { MAX_WEEK_OFFSET, MIN_WEEK_OFFSET } from "../shared/rosterTime";
@@ -20,7 +21,6 @@ import type { GridZoom, Lesson, RosterWeek, ViewMode } from "./types/roster";
 import "./styles/App.css";
 
 const STORAGE_KEY = "roster-view-mode";
-const CURRENT_WEEK_CACHE_KEY = "roster-current-week-cache-v2";
 const DEVTOOLS_STORAGE_KEY = "roster-devtools-enabled";
 const DEVTOOLS_TIME_STORAGE_KEY = "roster-devtools-time-override";
 const DEVTOOLS_STATUS_PREVIEW_STORAGE_KEY = "roster-devtools-status-preview";
@@ -195,6 +195,7 @@ export default function App() {
    const hasBearerToken = tokenSettings?.hasBearerToken === true;
    const { data, error, loading, retryCountdownMs, retrying, refreshing, title } = useRosterWeek(weekOffset, {
       enabled: !isTokenSettingsLoading && hasBearerToken,
+      clearCache: !isTokenSettingsLoading && !hasBearerToken,
    });
    const perceivedNow = isDevToolsEnabled && timeOverride ? timeOverride : clockNow;
    const displayedData = useMemo(
@@ -223,11 +224,15 @@ export default function App() {
       fetchOsirisTokenSettings()
          .then((settings) => {
             if (!isStale) {
+               if (!settings.hasBearerToken) {
+                  clearRosterBrowserCache();
+               }
                setTokenSettings(settings);
             }
          })
          .catch((requestError: unknown) => {
             if (!isStale) {
+               clearRosterBrowserCache();
                setTokenSettings({ hasCustomToken: false, hasBearerToken: false });
                notifyError(requestError, "Failed to load bearer token settings.");
             }
@@ -293,7 +298,13 @@ export default function App() {
          })
          .catch(() => {
             if (!isStale) {
-               setTokenSettings((current) => (current ? { ...current, hasCustomToken: false } : current));
+               setTokenSettings((current) => {
+                  const next = current ? { ...current, hasCustomToken: false } : current;
+                  if (next && !next.hasBearerToken) {
+                     clearRosterBrowserCache();
+                  }
+                  return next;
+               });
             }
          });
 
@@ -568,7 +579,7 @@ export default function App() {
 
       try {
          const settings = await saveOsirisToken(nextToken);
-         window.localStorage.removeItem(CURRENT_WEEK_CACHE_KEY);
+         clearRosterBrowserCache();
          setTokenSettings(settings);
          setBearerTokenInput("");
          notifySuccess("Osiris token saved successfully.");

@@ -1,0 +1,11 @@
+export const CURRENT_WEEK_CACHE_KEY = "roster-current-week-cache-v2";
+export const SESSION_LESSON_DIFFS_KEY = "roster-session-lesson-diffs-v1";
+
+export function clearRosterBrowserCache() {
+   if (typeof window === "undefined") {
+      return;
+   }
+
+   window.localStorage.removeItem(CURRENT_WEEK_CACHE_KEY);
+   window.sessionStorage.removeItem(SESSION_LESSON_DIFFS_KEY);
+}

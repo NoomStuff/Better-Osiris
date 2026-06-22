@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { fetchRosterWeeks, RosterRequestError } from "../api/roster";
 import { formatWeekTitle, getIsoWeekNumber, shiftIsoDateByDays } from "../lib/date";
 import { notifyError } from "../lib/notyf";
+import { clearRosterBrowserCache, CURRENT_WEEK_CACHE_KEY, SESSION_LESSON_DIFFS_KEY } from "../lib/rosterCache";
 import { applySessionLessonDiffs, recordSessionLessonDiffs, type SessionLessonDiff, type SessionLessonDiffsByWeek } from "../lib/rosterSessionDiffs";
 import { MAX_WEEK_OFFSET, MIN_WEEK_OFFSET } from "../../shared/rosterTime";
 import type { RosterBatchResponse, RosterResponse } from "../types/roster";
@@ -32,10 +33,9 @@ type WeekEntries = Partial<Record<number, WeekEntry>>;
 
 interface UseRosterWeekOptions {
    enabled?: boolean;
+   clearCache?: boolean;
 }
 
-const CURRENT_WEEK_CACHE_KEY = "roster-current-week-cache-v2";
-const SESSION_LESSON_DIFFS_KEY = "roster-session-lesson-diffs-v1";
 const LOAD_ERROR_MESSAGE = "Something went wrong while loading the roster.";
 const LOAD_ERROR_TOAST_MESSAGE = "Something went wrong while loading the roster.";
 const FIRST_RETRY_DELAY_MS = 2_000;
@@ -305,6 +305,7 @@ function getDisplayWeeksFromPayload(
 
 export function useRosterWeek(offset: number, options: UseRosterWeekOptions = {}) {
    const enabled = options.enabled ?? true;
+   const clearCache = options.clearCache ?? false;
    const [entries, setEntries] = useState<WeekEntries>(getInitialEntries);
    const [now, setNow] = useState<number | null>(null);
    const [sessionLessonDiffs] = useState(readSessionLessonDiffs);
@@ -323,6 +324,25 @@ export function useRosterWeek(offset: number, options: UseRosterWeekOptions = {}
    useEffect(() => {
       activeOffsetRef.current = offset;
    }, [offset]);
+
+   useEffect(() => {
+      if (!clearCache) {
+         return;
+      }
+
+      clearRosterBrowserCache();
+      entriesRef.current = {};
+      requestsRef.current.clear();
+      queuedRefetchesRef.current.clear();
+      latestRawWeeksRef.current.clear();
+      hasShownLoadErrorToastRef.current = false;
+      retryTimersRef.current.forEach((timerId) => window.clearTimeout(timerId));
+      retryTimersRef.current.clear();
+      sessionLessonDiffs.clear();
+
+      const resetTimerId = window.setTimeout(() => setEntries({}), 0);
+      return () => window.clearTimeout(resetTimerId);
+   }, [clearCache, sessionLessonDiffs]);
 
    useEffect(() => {
       const intervalId = window.setInterval(() => setNow(Date.now()), 1_000);
@@ -594,13 +614,14 @@ export function useRosterWeek(offset: number, options: UseRosterWeekOptions = {}
    }, [enabled, offset, sessionLessonDiffs]);
 
    const activeEntry = entries[offset];
-   const data = activeEntry?.data ?? null;
-   const error = activeEntry?.error ?? null;
+   const shouldSuppressCachedData = clearCache;
+   const data = shouldSuppressCachedData ? null : (activeEntry?.data ?? null);
+   const error = shouldSuppressCachedData ? null : (activeEntry?.error ?? null);
    const loading = enabled && !data && !error && (activeEntry?.isFetching ?? true);
    const refreshing = Boolean(data && activeEntry?.isFetching);
    const retrying = Boolean(!data && activeEntry?.isFetching && error);
    const retryCountdownMs = now === null ? 0 : Math.max(0, (activeEntry?.retryAt ?? 0) - now);
-   const title = useMemo(() => getDerivedTitle(offset, entries), [entries, offset]);
+   const title = useMemo(() => (shouldSuppressCachedData ? "Loading week..." : getDerivedTitle(offset, entries)), [entries, offset, shouldSuppressCachedData]);
 
    return {
       data,

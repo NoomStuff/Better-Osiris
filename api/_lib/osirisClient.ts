@@ -52,6 +52,11 @@ const WEEK_CACHE_TTL_MS = 60_000;
 const weekCache = new Map<string, { data: OsirisRosterResponse; expiresAt: number }>();
 const inFlightRequests = new Map<string, Promise<OsirisRosterResponse>>();
 
+export function clearOsirisRosterCache() {
+   weekCache.clear();
+   inFlightRequests.clear();
+}
+
 function getCacheKey(offset: number, limit: number, bearerToken: string) {
    return `${hashToken(bearerToken)}:${offset}:${limit}`;
 }
@@ -60,6 +65,7 @@ export async function fetchOsirisRosterWeeks(offset: number, limit = 1, tokenOve
    const bearerToken = normalizeToken(tokenOverride);
 
    if (!bearerToken) {
+      clearOsirisRosterCache();
       throw new Error("Bearer token is missing. Set one in the app before using live OSIRIS data.");
    }
 
