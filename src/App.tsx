@@ -93,10 +93,22 @@ function setStableViewportHeight() {
       return;
    }
 
-   const height = window.innerHeight;
+   const height = window.visualViewport?.height ?? window.innerHeight;
    document.documentElement.style.setProperty("--stable-vh", `${height}px`);
    document.documentElement.style.setProperty("--stable-vh-double", `${height * 2}px`);
    document.documentElement.style.setProperty("--stable-vh-quad", `${height * 4}px`);
+}
+
+function setPageScrollability() {
+   if (typeof window === "undefined" || typeof document === "undefined") {
+      return;
+   }
+
+   const viewportHeight = window.visualViewport?.height ?? window.innerHeight;
+   const scrollHeight = Math.max(document.documentElement.scrollHeight, document.body.scrollHeight);
+   const isScrollable = scrollHeight - viewportHeight > 1;
+
+   document.documentElement.dataset["pageScrollable"] = isScrollable ? "true" : "false";
 }
 
 function getAdjacentZoom(currentZoom: GridZoom, direction: -1 | 1) {
@@ -344,6 +356,37 @@ export default function App() {
       return () => {
          window.removeEventListener("resize", updateForStableViewportChange);
          window.removeEventListener("orientationchange", updateAfterOrientationChange);
+      };
+   }, []);
+
+   useEffect(() => {
+      if (typeof window === "undefined" || typeof document === "undefined") {
+         return;
+      }
+
+      let animationFrame = 0;
+
+      const updatePageScrollability = () => {
+         window.cancelAnimationFrame(animationFrame);
+         animationFrame = window.requestAnimationFrame(setPageScrollability);
+      };
+
+      updatePageScrollability();
+
+      const resizeObserver = new ResizeObserver(updatePageScrollability);
+      resizeObserver.observe(document.documentElement);
+      resizeObserver.observe(document.body);
+
+      window.addEventListener("resize", updatePageScrollability);
+      window.visualViewport?.addEventListener("resize", updatePageScrollability);
+      window.addEventListener("orientationchange", updatePageScrollability);
+
+      return () => {
+         window.cancelAnimationFrame(animationFrame);
+         resizeObserver.disconnect();
+         window.removeEventListener("resize", updatePageScrollability);
+         window.visualViewport?.removeEventListener("resize", updatePageScrollability);
+         window.removeEventListener("orientationchange", updatePageScrollability);
       };
    }, []);
 
@@ -751,7 +794,6 @@ export default function App() {
          selectToolbarAction,
          updateWeekOffset,
          viewMode,
-         weekOffset,
       ]
    );
 

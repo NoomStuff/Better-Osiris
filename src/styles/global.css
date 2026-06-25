@@ -49,8 +49,6 @@ body,
 html {
    overflow-x: clip;
    background-color: #06080e;
-   background:
-      radial-gradient(circle at top, rgba(44, 68, 173, 0.16), transparent 30%), linear-gradient(180deg, #0e111f 0%, #000000 52%, #0e121d 100%) !important;
 }
 
 body,
@@ -62,8 +60,26 @@ select {
 }
 
 body {
+   position: relative;
+   isolation: isolate;
    min-height: 100vh;
    overflow-x: clip;
+   background: transparent;
+}
+
+body::before {
+   content: "";
+   position: fixed;
+   inset: 0;
+   z-index: -1;
+   pointer-events: none;
+   background:
+      radial-gradient(circle at 50% 0, rgba(44, 68, 173, 0.16), transparent 30%),
+      linear-gradient(180deg, #0e111f 0%, #000000 52%, #0e121d 100%);
+}
+
+#app {
+   position: relative;
 }
 
 button {
@@ -96,4 +112,18 @@ button {
    box-shadow: 0 18px 48px rgba(0, 0, 0, 0.34);
    animation-duration: 260ms;
    animation-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+@media (max-width: 640px) {
+   html[data-page-scrollable="false"],
+   html[data-page-scrollable="false"] body {
+      overflow-y: hidden;
+      overscroll-behavior-y: none;
+   }
+
+   html[data-page-scrollable="true"],
+   html[data-page-scrollable="true"] body {
+      overflow-y: auto;
+      overscroll-behavior-y: auto;
+   }
 }
