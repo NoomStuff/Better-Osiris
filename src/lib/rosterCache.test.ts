@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { afterEach, describe, it } from "node:test";
-import { clearRosterBrowserCache, CURRENT_WEEK_CACHE_KEY, SESSION_LESSON_DIFFS_KEY } from "./rosterCache.js";
+import { clearRosterBrowserCache, CURRENT_WEEK_CACHE_KEY, LAST_WEEK_CACHE_KEY, SESSION_LESSON_DIFFS_KEY } from "./rosterCache.js";
 
 class MemoryStorage {
    private readonly items = new Map<string, string>();
@@ -27,6 +27,7 @@ void describe("roster browser cache", () => {
       const localStorage = new MemoryStorage();
       const sessionStorage = new MemoryStorage();
       localStorage.setItem(CURRENT_WEEK_CACHE_KEY, "cached-week");
+      localStorage.setItem(LAST_WEEK_CACHE_KEY, "cached-last-week");
       sessionStorage.setItem(SESSION_LESSON_DIFFS_KEY, "cached-diffs");
 
       (globalThis as { window?: unknown }).window = { localStorage, sessionStorage };
@@ -34,6 +35,7 @@ void describe("roster browser cache", () => {
       clearRosterBrowserCache();
 
       assert.equal(localStorage.getItem(CURRENT_WEEK_CACHE_KEY), null);
+      assert.equal(localStorage.getItem(LAST_WEEK_CACHE_KEY), null);
       assert.equal(sessionStorage.getItem(SESSION_LESSON_DIFFS_KEY), null);
    });
 });

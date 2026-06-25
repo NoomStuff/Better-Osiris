@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { fetchRosterWeeks } from "../api/roster";
 import { formatWeekTitle, getIsoWeekNumber, shiftIsoDateByDays } from "../lib/date";
 import { notifyError } from "../lib/notyf";
-import { clearRosterBrowserCache, CURRENT_WEEK_CACHE_KEY, SESSION_LESSON_DIFFS_KEY } from "../lib/rosterCache";
+import { clearRosterBrowserCache, CURRENT_WEEK_CACHE_KEY, LAST_WEEK_CACHE_KEY, SESSION_LESSON_DIFFS_KEY } from "../lib/rosterCache";
 import { toRosterLoadError, type RosterLoadError } from "../lib/rosterLoadError";
 import { applySessionLessonDiffs, recordSessionLessonDiffs, type SessionLessonDiff, type SessionLessonDiffsByWeek } from "../lib/rosterSessionDiffs";
 import { MAX_WEEK_OFFSET, MIN_WEEK_OFFSET } from "../../shared/rosterTime";
@@ -21,6 +21,13 @@ interface WeekEntry {
 interface CachedCurrentWeek {
    data: RosterResponse;
    weekNumber: number;
+   weekStart?: string;
+}
+
+interface CachedRosterWeek {
+   data: RosterResponse;
+   weekNumber: number;
+   weekStart?: string;
 }
 
 type WeekEntries = Partial<Record<number, WeekEntry>>;
@@ -58,7 +65,7 @@ function getNextRetryDelay(previousDelayMs: number) {
    return Math.min(previousDelayMs * 2, MAX_RETRY_DELAY_MS);
 }
 
-function getCurrentWeekNumber() {
+function getRosterReferenceDate() {
    const date = new Date();
    const day = date.getDay();
 
@@ -68,7 +75,65 @@ function getCurrentWeekNumber() {
       date.setDate(date.getDate() + 1);
    }
 
-   return getIsoWeekNumber(date.toISOString());
+   return date;
+}
+
+function formatLocalIsoDate(date: Date) {
+   const year = date.getFullYear();
+   const month = String(date.getMonth() + 1).padStart(2, "0");
+   const day = String(date.getDate()).padStart(2, "0");
+   return `${year}-${month}-${day}`;
+}
+
+function getWeekStartIso(date: Date) {
+   const monday = new Date(date);
+   const day = monday.getDay();
+   const mondayDelta = day === 0 ? -6 : 1 - day;
+   monday.setDate(monday.getDate() + mondayDelta);
+   return formatLocalIsoDate(monday);
+}
+
+function getCurrentWeekNumber() {
+   return getIsoWeekNumber(getRosterReferenceDate().toISOString());
+}
+
+function getCurrentWeekStartIso() {
+   return getWeekStartIso(getRosterReferenceDate());
+}
+
+function getLastWeekStartIso() {
+   const date = getRosterReferenceDate();
+   date.setDate(date.getDate() - 7);
+   return getWeekStartIso(date);
+}
+
+function normalizeCachedWeek(data: RosterResponse, offset: number, note?: string): RosterResponse {
+   return {
+      ...data,
+      week: {
+         ...data.week,
+         offset,
+      },
+      source: note
+         ? {
+              ...data.source,
+              note,
+           }
+         : data.source,
+   };
+}
+
+function parseCachedRosterWeek(cacheKey: string) {
+   const cached = window.localStorage.getItem(cacheKey);
+   if (!cached) {
+      return null;
+   }
+
+   const parsed = JSON.parse(cached) as CachedRosterWeek | RosterResponse;
+   const data = "data" in parsed ? parsed.data : parsed;
+   const weekNumber = "weekNumber" in parsed ? parsed.weekNumber : data.week.number;
+   const weekStart = "weekStart" in parsed ? parsed.weekStart : data.week.start;
+   return { data, weekNumber, weekStart };
 }
 
 function readCachedCurrentWeek() {
@@ -77,25 +142,70 @@ function readCachedCurrentWeek() {
    }
 
    try {
-      const cached = window.localStorage.getItem(CURRENT_WEEK_CACHE_KEY);
+      const cached = parseCachedRosterWeek(CURRENT_WEEK_CACHE_KEY);
       if (!cached) {
          return null;
       }
 
-      const parsed = JSON.parse(cached) as CachedCurrentWeek | RosterResponse;
-      const data = "data" in parsed ? parsed.data : parsed;
-      const weekNumber = "weekNumber" in parsed ? parsed.weekNumber : data.week.number;
+      const { data, weekNumber, weekStart } = cached;
 
-      if (weekNumber !== getCurrentWeekNumber()) {
+      if (weekNumber !== getCurrentWeekNumber() || weekStart !== getCurrentWeekStartIso()) {
          window.localStorage.removeItem(CURRENT_WEEK_CACHE_KEY);
          return null;
       }
 
-      return data;
+      return normalizeCachedWeek(data, 0);
    } catch (error) {
       notifyError(error, "Failed to parse cached current week.");
       return null;
    }
+}
+
+function readCachedLastWeek() {
+   if (typeof window === "undefined") {
+      return null;
+   }
+
+   const lastWeekStart = getLastWeekStartIso();
+
+   try {
+      const cachedLastWeek = parseCachedRosterWeek(LAST_WEEK_CACHE_KEY);
+      if (cachedLastWeek?.weekStart === lastWeekStart) {
+         return normalizeCachedWeek(cachedLastWeek.data, -1, "Using locally cached OSIRIS roster data from last week.");
+      }
+
+      if (cachedLastWeek) {
+         window.localStorage.removeItem(LAST_WEEK_CACHE_KEY);
+      }
+
+      const cachedCurrentWeek = parseCachedRosterWeek(CURRENT_WEEK_CACHE_KEY);
+      if (cachedCurrentWeek?.weekStart === lastWeekStart) {
+         const lastWeek = normalizeCachedWeek(cachedCurrentWeek.data, -1, "Using locally cached OSIRIS roster data from last week.");
+         storeCachedLastWeek(lastWeek);
+         window.localStorage.removeItem(CURRENT_WEEK_CACHE_KEY);
+         return lastWeek;
+      }
+
+      return null;
+   } catch (error) {
+      notifyError(error, "Failed to parse cached last week.");
+      return null;
+   }
+}
+
+function storeCachedLastWeek(data: RosterResponse) {
+   if (typeof window === "undefined") {
+      return;
+   }
+
+   window.localStorage.setItem(
+      LAST_WEEK_CACHE_KEY,
+      JSON.stringify({
+         data: normalizeCachedWeek(data, -1),
+         weekNumber: data.week.number,
+         weekStart: data.week.start,
+      } satisfies CachedRosterWeek)
+   );
 }
 
 function storeCachedCurrentWeek(data: RosterResponse) {
@@ -103,11 +213,21 @@ function storeCachedCurrentWeek(data: RosterResponse) {
       return;
    }
 
+   try {
+      const cachedCurrentWeek = parseCachedRosterWeek(CURRENT_WEEK_CACHE_KEY);
+      if (cachedCurrentWeek?.weekStart === getLastWeekStartIso()) {
+         storeCachedLastWeek(cachedCurrentWeek.data);
+      }
+   } catch (error) {
+      notifyError(error, "Failed to update cached last week.");
+   }
+
    window.localStorage.setItem(
       CURRENT_WEEK_CACHE_KEY,
       JSON.stringify({
          data,
          weekNumber: data.week.number,
+         weekStart: data.week.start,
       } satisfies CachedCurrentWeek)
    );
 }
@@ -144,16 +264,23 @@ function storeSessionLessonDiffs(weekDiffs: SessionLessonDiffsByWeek) {
 }
 
 function getInitialEntries(): WeekEntries {
+   const cachedLastWeek = readCachedLastWeek();
    const cachedCurrentWeek = readCachedCurrentWeek();
-   if (!cachedCurrentWeek) {
-      return {};
+   const entries: WeekEntries = {};
+
+   if (cachedLastWeek) {
+      entries[-1] = createEntry(cachedLastWeek, {
+         isHydrated: true,
+      });
    }
 
-   return {
-      0: createEntry(cachedCurrentWeek, {
+   if (cachedCurrentWeek) {
+      entries[0] = createEntry(cachedCurrentWeek, {
          isHydrated: true,
-      }),
-   };
+      });
+   }
+
+   return entries;
 }
 
 function getDerivedTitle(offset: number, entries: WeekEntries) {
@@ -218,6 +345,10 @@ function canNavigateToWeek(offset: number, entries: WeekEntries) {
    }
 
    const entry = entries[offset];
+   if (offset < 0) {
+      return Boolean(entry?.data);
+   }
+
    return !(entry?.error && !entry.data);
 }
 
@@ -349,6 +480,10 @@ export function useRosterWeek(offset: number, options: UseRosterWeekOptions = {}
 
       const loadBatch = (startOffset: number, force = false) => {
          if (startOffset < MIN_WEEK_OFFSET || startOffset > MAX_WEEK_OFFSET) {
+            return;
+         }
+
+         if (startOffset < 0) {
             return;
          }
 
@@ -509,6 +644,10 @@ export function useRosterWeek(offset: number, options: UseRosterWeekOptions = {}
 
          passiveBatchStarts.forEach((batchStart) => {
             if (batchStart < MIN_WEEK_OFFSET || batchStart > MAX_WEEK_OFFSET) {
+               return;
+            }
+
+            if (batchStart < 0) {
                return;
             }
 

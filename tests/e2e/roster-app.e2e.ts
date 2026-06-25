@@ -10,6 +10,7 @@ test.beforeEach(async ({ page }) => {
 });
 
 test("week navigation and view controls work with mocked roster data", async ({ page }) => {
+   await installCachedLastWeek(page);
    await page.goto("/");
 
    await expect(page.getByRole("heading", { name: /Week 25:/ })).toBeVisible();
@@ -47,20 +48,11 @@ test("week navigation and view controls work with mocked roster data", async ({ 
    await expect(page.locator(".agenda-view")).toBeVisible();
 });
 
-test("previous week is disabled when the preloaded past week is unavailable", async ({ page }) => {
+test("previous week is disabled when no locally cached last week is available", async ({ page }) => {
    await page.route("**/api/roster/weeks?*", async (route) => {
       const url = new URL(route.request().url());
       const offset = Number(url.searchParams.get("offset") ?? "0");
       const limit = Number(url.searchParams.get("limit") ?? "5");
-
-      if (offset < 0) {
-         await route.fulfill({
-            status: 502,
-            contentType: "application/json",
-            body: JSON.stringify({ error: "OSIRIS iCalendar does not expose roster data before 2026-06-22." }),
-         });
-         return;
-      }
 
       await route.fulfill({
          status: 200,
@@ -232,6 +224,25 @@ async function installFixedClock(page: Page) {
       Object.setPrototypeOf(MockDate, RealDate);
       globalThis.Date = MockDate as DateConstructor;
    }, FIXED_NOW_ISO);
+}
+
+async function installCachedLastWeek(page: Page) {
+   await page.addInitScript(
+      ({ cacheKey, week }) => {
+         window.localStorage.setItem(
+            cacheKey,
+            JSON.stringify({
+               data: week,
+               weekNumber: week.week.number,
+               weekStart: week.week.start,
+            })
+         );
+      },
+      {
+         cacheKey: "roster-last-week-cache-v1",
+         week: createRosterWeek(-1),
+      }
+   );
 }
 
 async function mockAppApis(page: Page) {

@@ -5,7 +5,9 @@ import { fetchOsirisRosterWeeks } from "../_lib/osirisClient.js";
 import { getDefaultOsirisToken } from "../_lib/osirisToken.js";
 import { readOsirisTokenFromCookie } from "../_lib/osirisTokenCookie.js";
 import { normalizeRosterWeeksResponse } from "../_lib/osirisRosterNormalizer.js";
-import { MAX_WEEK_LIMIT, MAX_WEEK_OFFSET, MIN_WEEK_OFFSET } from "../../shared/rosterTime.js";
+import { MAX_WEEK_LIMIT, MAX_WEEK_OFFSET } from "../../shared/rosterTime.js";
+
+const MIN_OSIRIS_WEEK_OFFSET = 0;
 
 export default async function handler(req: IncomingMessage, res: ServerResponse) {
    if (req.method !== "GET") {
@@ -14,7 +16,7 @@ export default async function handler(req: IncomingMessage, res: ServerResponse)
    }
 
    const url = getRequestUrl(req);
-   const offset = parseBoundedInt(url.searchParams.get("offset"), MIN_WEEK_OFFSET, MIN_WEEK_OFFSET, MAX_WEEK_OFFSET);
+   const offset = parseBoundedInt(url.searchParams.get("offset"), MIN_OSIRIS_WEEK_OFFSET, MIN_OSIRIS_WEEK_OFFSET, MAX_WEEK_OFFSET);
    const limit = parseBoundedInt(url.searchParams.get("limit"), MAX_WEEK_LIMIT, 1, MAX_WEEK_LIMIT);
    const safeLimit = Math.min(limit, MAX_WEEK_OFFSET - offset + 1);
    const cookieSecret = getEnvValue("COOKIE_SECRET");
