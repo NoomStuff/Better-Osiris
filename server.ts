@@ -4,6 +4,7 @@ import { fileURLToPath } from "node:url";
 import { buildClearOsirisTokenCookieHeader, buildOsirisTokenCookieHeader } from "./api/_lib/auth.js";
 import { getEnvValue } from "./api/_lib/env.js";
 import { fetchOsirisRosterWeeks } from "./api/_lib/osirisClient.js";
+import { getDefaultOsirisToken } from "./api/_lib/osirisToken.js";
 import { createEncryptedOsirisTokenCookieValue, hasOsirisTokenCookie, readOsirisTokenFromCookie } from "./api/_lib/osirisTokenCookie.js";
 import { normalizeRosterWeeksResponse } from "./api/_lib/osirisRosterNormalizer.js";
 import { MAX_WEEK_LIMIT, MAX_WEEK_OFFSET, MIN_WEEK_OFFSET } from "./shared/rosterTime.js";
@@ -27,10 +28,10 @@ app.get("/api/roster/weeks", async (req, res) => {
    const offset = Number.isNaN(rawOffset) ? MIN_WEEK_OFFSET : Math.min(Math.max(rawOffset, MIN_WEEK_OFFSET), MAX_WEEK_OFFSET);
    const limit = Number.isNaN(rawLimit) ? MAX_WEEK_LIMIT : Math.min(Math.max(rawLimit, 1), MAX_WEEK_LIMIT);
    const safeLimit = Math.min(limit, MAX_WEEK_OFFSET - offset + 1);
-   const tokenOverride = getOsirisTokenOverride(req.headers.cookie);
+   const bearerToken = getOsirisTokenOverride(req.headers.cookie) ?? getDefaultOsirisToken();
 
    try {
-      const rawResponse = await fetchOsirisRosterWeeks(offset, safeLimit, tokenOverride);
+      const rawResponse = await fetchOsirisRosterWeeks(offset, safeLimit, bearerToken);
       res.json({
          weeks: normalizeRosterWeeksResponse(rawResponse, offset),
          offset,
@@ -73,8 +74,9 @@ app.put("/api/settings/osiris-token", (req, res) => {
 
 app.delete("/api/settings/osiris-token", (_req, res) => {
    const defaultTokenCookie = createDefaultTokenCookieHeader();
+   const hasDefaultToken = Boolean(getDefaultOsirisToken());
    res.setHeader("Set-Cookie", defaultTokenCookie ?? buildClearOsirisTokenCookieHeader(process.env.NODE_ENV === "production"));
-   res.json(defaultTokenCookie ? { hasCustomToken: true, hasBearerToken: true } : { hasCustomToken: false, hasBearerToken: false });
+   res.json(hasDefaultToken ? { hasCustomToken: false, hasBearerToken: true } : { hasCustomToken: false, hasBearerToken: false });
 });
 
 const distPath = path.join(__dirname, "dist");
@@ -125,8 +127,15 @@ function getOsirisTokenSettings(cookieHeader: string | undefined) {
    const defaultTokenCookie = createDefaultTokenCookieHeader();
    if (defaultTokenCookie) {
       return {
-         settings: { hasCustomToken: true, hasBearerToken: true },
+         settings: { hasCustomToken: false, hasBearerToken: true },
          cookieHeader: defaultTokenCookie,
+      };
+   }
+
+   if (getDefaultOsirisToken()) {
+      return {
+         settings: { hasCustomToken: false, hasBearerToken: true },
+         cookieHeader: null,
       };
    }
 
@@ -138,7 +147,7 @@ function getOsirisTokenSettings(cookieHeader: string | undefined) {
 
 function createDefaultTokenCookieHeader(): string | null {
    const cookieSecret = getEnvValue("COOKIE_SECRET");
-   const defaultToken = getEnvValue("BEARER_TOKEN")?.trim();
+   const defaultToken = getDefaultOsirisToken();
 
    if (!cookieSecret || !defaultToken) {
       return null;

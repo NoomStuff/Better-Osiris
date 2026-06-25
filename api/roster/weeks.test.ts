@@ -77,21 +77,18 @@ void describe("GET /api/roster/weeks", () => {
       assert.match(firstRequest.url, /limit=5/);
    });
 
-   void it("does not fall back to the server token when no cookie is present", async () => {
-      let osirisWasCalled = false;
-      globalThis.fetch = () => {
-         osirisWasCalled = true;
-         return Promise.resolve(new Response("{}", { status: 200 }));
-      };
+   void it("falls back to the server token when no cookie is present", async () => {
+      const requests: OsirisRequest[] = [];
+      mockOsirisFetch(requests, createOsirisRosterResponse());
       process.env["COOKIE_SECRET"] = "custom-token-secret";
       process.env["BEARER_TOKEN"] = "Bearer server-token";
 
       const response = await callWeeksHandler({ url: "/api/roster/weeks?offset=4&limit=0" });
-      const payload = JSON.parse(response.body) as { error?: string };
 
-      assert.equal(response.statusCode, 401);
-      assert.equal(payload.error, "Bearer token is missing. Set one in the app before using live OSIRIS data.");
-      assert.equal(osirisWasCalled, false);
+      assert.equal(response.statusCode, 200);
+      const firstRequest = requests[0];
+      assert.ok(firstRequest);
+      assert.equal(firstRequest.authorization, process.env["BEARER_TOKEN"]);
    });
 
    void it("uses the encrypted custom OSIRIS token cookie", async () => {

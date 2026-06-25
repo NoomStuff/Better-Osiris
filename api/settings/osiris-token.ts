@@ -2,6 +2,7 @@ import type { IncomingMessage, ServerResponse } from "node:http";
 import { buildClearOsirisTokenCookieHeader, buildOsirisTokenCookieHeader } from "../_lib/auth.js";
 import { getEnvValue } from "../_lib/env.js";
 import { readJsonBody, sendJson, sendMethodNotAllowed } from "../_lib/http.js";
+import { getDefaultOsirisToken } from "../_lib/osirisToken.js";
 import { createEncryptedOsirisTokenCookieValue, hasOsirisTokenCookie, readOsirisTokenFromCookie } from "../_lib/osirisTokenCookie.js";
 
 export default async function handler(req: IncomingMessage, res: ServerResponse) {
@@ -18,7 +19,8 @@ export default async function handler(req: IncomingMessage, res: ServerResponse)
 
    if (req.method === "DELETE") {
       const defaultTokenCookie = createDefaultTokenCookieHeader();
-      const settings = defaultTokenCookie ? { hasCustomToken: true, hasBearerToken: true } : { hasCustomToken: false, hasBearerToken: false };
+      const hasDefaultToken = Boolean(getDefaultOsirisToken());
+      const settings = hasDefaultToken ? { hasCustomToken: false, hasBearerToken: true } : { hasCustomToken: false, hasBearerToken: false };
       sendJson(res, 200, settings, { headers: { "Set-Cookie": defaultTokenCookie ?? buildClearOsirisTokenCookieHeader(isProduction()) } });
       return;
    }
@@ -59,8 +61,15 @@ function getOsirisTokenSettings(cookieHeader: string | undefined) {
    const defaultTokenCookie = createDefaultTokenCookieHeader();
    if (defaultTokenCookie) {
       return {
-         settings: { hasCustomToken: true, hasBearerToken: true },
+         settings: { hasCustomToken: false, hasBearerToken: true },
          cookieHeader: defaultTokenCookie,
+      };
+   }
+
+   if (getDefaultOsirisToken()) {
+      return {
+         settings: { hasCustomToken: false, hasBearerToken: true },
+         cookieHeader: null,
       };
    }
 
@@ -72,7 +81,7 @@ function getOsirisTokenSettings(cookieHeader: string | undefined) {
 
 function createDefaultTokenCookieHeader(): string | null {
    const cookieSecret = getEnvValue("COOKIE_SECRET");
-   const defaultToken = getEnvValue("BEARER_TOKEN")?.trim();
+   const defaultToken = getDefaultOsirisToken();
 
    if (!cookieSecret || !defaultToken) {
       return null;

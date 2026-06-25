@@ -2,6 +2,7 @@ import type { IncomingMessage, ServerResponse } from "node:http";
 import { getEnvValue } from "../_lib/env.js";
 import { getRequestUrl, parseBoundedInt, sendJson, sendMethodNotAllowed } from "../_lib/http.js";
 import { fetchOsirisRosterWeeks } from "../_lib/osirisClient.js";
+import { getDefaultOsirisToken } from "../_lib/osirisToken.js";
 import { readOsirisTokenFromCookie } from "../_lib/osirisTokenCookie.js";
 import { normalizeRosterWeeksResponse } from "../_lib/osirisRosterNormalizer.js";
 import { MAX_WEEK_LIMIT, MAX_WEEK_OFFSET, MIN_WEEK_OFFSET } from "../../shared/rosterTime.js";
@@ -18,9 +19,10 @@ export default async function handler(req: IncomingMessage, res: ServerResponse)
    const safeLimit = Math.min(limit, MAX_WEEK_OFFSET - offset + 1);
    const cookieSecret = getEnvValue("COOKIE_SECRET");
    const tokenOverride = cookieSecret ? readOsirisTokenFromCookie(req.headers.cookie, cookieSecret) : null;
+   const bearerToken = tokenOverride ?? getDefaultOsirisToken();
 
    try {
-      const rawResponse = await fetchOsirisRosterWeeks(offset, safeLimit, tokenOverride);
+      const rawResponse = await fetchOsirisRosterWeeks(offset, safeLimit, bearerToken);
       const weeks = normalizeRosterWeeksResponse(rawResponse, offset);
       sendJson(res, 200, {
          weeks,

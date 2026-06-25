@@ -41,9 +41,22 @@ void describe("/api/settings/osiris-token", () => {
       const cookieHeader = response.headers.get("set-cookie");
 
       assert.equal(response.statusCode, 200);
-      assert.equal(payload.hasCustomToken, true);
+      assert.equal(payload.hasCustomToken, false);
       assert.equal(payload.hasBearerToken, true);
       assert.equal(readOsirisTokenFromCookie(String(cookieHeader), process.env["COOKIE_SECRET"]), process.env["BEARER_TOKEN"]);
+   });
+
+   void it("reports the server bearer token even when cookies cannot be encrypted", async () => {
+      process.env["COOKIE_SECRET"] = "";
+      process.env["BEARER_TOKEN"] = "Bearer default-token";
+
+      const response = await callSettingsHandler({ method: "GET" });
+      const payload = JSON.parse(response.body) as { hasCustomToken?: boolean; hasBearerToken?: boolean };
+
+      assert.equal(response.statusCode, 200);
+      assert.equal(payload.hasCustomToken, false);
+      assert.equal(payload.hasBearerToken, true);
+      assert.equal(response.headers.get("set-cookie"), undefined);
    });
 
    void it("reports no bearer token when the default bearer token is blank", async () => {
