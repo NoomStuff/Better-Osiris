@@ -48,6 +48,33 @@ test("week navigation and view controls work with mocked roster data", async ({ 
    await expect(page.locator(".agenda-view")).toBeVisible();
 });
 
+test("defaults to grid on desktop when no roster view was saved", async ({ page }) => {
+   await page.setViewportSize({ width: 1280, height: 720 });
+   await page.goto("/");
+
+   await expect(page.locator(".grid-shell")).toBeVisible();
+   await expect(page.getByRole("tab", { name: "Grid view" })).toHaveAttribute("aria-selected", "true");
+});
+
+test("defaults to agenda on mobile when no roster view was saved", async ({ page }) => {
+   await page.setViewportSize({ width: 390, height: 844 });
+   await page.goto("/");
+
+   await expect(page.locator(".agenda-view")).toBeVisible();
+   await expect(page.getByRole("tab", { name: "Agenda view" })).toHaveAttribute("aria-selected", "true");
+});
+
+test("keeps a saved roster view over the viewport default", async ({ page }) => {
+   await page.setViewportSize({ width: 390, height: 844 });
+   await page.addInitScript(() => {
+      window.localStorage.setItem("roster-view-mode", "grid");
+   });
+   await page.goto("/");
+
+   await expect(page.locator(".grid-shell")).toBeVisible();
+   await expect(page.getByRole("tab", { name: "Grid view" })).toHaveAttribute("aria-selected", "true");
+});
+
 test("previous week is disabled when no locally cached last week is available", async ({ page }) => {
    await page.route("**/api/roster/weeks?*", async (route) => {
       const url = new URL(route.request().url());
@@ -159,6 +186,7 @@ test("missing bearer token shows an entry overlay without requesting roster data
 test("devtools can preview changed and cancelled lesson states", async ({ page }) => {
    await page.goto("/");
 
+   await page.getByRole("tab", { name: "Agenda view" }).click();
    await page.getByRole("button", { name: "Open settings" }).click();
    await page.getByLabel("Enable devtools").check();
    await page.getByRole("button", { name: "Mixed" }).click();
@@ -174,6 +202,7 @@ test("devtools can preview changed and cancelled lesson states", async ({ page }
 test("time indicators are visible and positioned for the fixed current time", async ({ page }) => {
    await page.goto("/");
 
+   await page.getByRole("tab", { name: "Agenda view" }).click();
    const agendaIndicator = page.locator(".agenda-current-indicator");
    await expect(agendaIndicator).toBeVisible();
    await expect(agendaIndicator).toHaveAttribute("data-visible", "true");

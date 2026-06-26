@@ -28,6 +28,7 @@ const FUTURE_WEEK_KEYS = ["1", "2", "3", "4", "5", "6", "7", "8", "9"] as const;
 const IS_DEV_SERVER = import.meta.env.DEV;
 const WEEK_SWIPE_MIN_DISTANCE_PX = 56;
 const WEEK_SWIPE_MAX_VERTICAL_DRIFT_PX = 72;
+const MOBILE_VIEW_MODE_MEDIA_QUERY = "(max-width: 640px)";
 
 type WeekTransitionDirection = "default" | "previous" | "next" | "settled";
 
@@ -38,11 +39,15 @@ interface WeekSwipeStart {
 
 function getInitialViewMode(): ViewMode {
    if (typeof window === "undefined") {
-      return "agenda";
+      return "grid";
    }
 
    const stored = window.localStorage.getItem(STORAGE_KEY);
-   return stored === "grid" ? "grid" : "agenda";
+   if (stored === "agenda" || stored === "grid") {
+      return stored;
+   }
+
+   return window.matchMedia(MOBILE_VIEW_MODE_MEDIA_QUERY).matches ? "agenda" : "grid";
 }
 
 function getInitialDevToolsEnabled() {
