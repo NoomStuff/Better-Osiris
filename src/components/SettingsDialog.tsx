@@ -3,6 +3,7 @@ import type { SyntheticEvent } from "react";
 import { clearOsirisToken, fetchOsirisTokenSettings, saveOsirisToken } from "../api/settings";
 import { DEV_LESSON_STATUS_PREVIEW_MODES, type DevLessonStatusPreviewMode } from "../lib/devRosterStatusPreview";
 import { notifyError, notifySuccess, notifyWarning } from "../lib/notyf";
+import { OSIRIS_BEARER_TOKEN_VIDEO_URL } from "../lib/osirisTokenHelp";
 import { clearRosterBrowserCache } from "../lib/rosterCache";
 import { ConfirmDialog } from "./ConfirmDialog";
 import { IconButton } from "./IconButton";
@@ -192,7 +193,12 @@ export function SettingsDialog({
 
                   <form className="settings-dialog__form" onSubmit={(event) => void handleSubmit(event)}>
                      <label className="settings-dialog__field">
-                        <span>Bearer token</span>
+                        <span className="settings-dialog__field-header">
+                           <span>Bearer token</span>
+                           <a href={OSIRIS_BEARER_TOKEN_VIDEO_URL} target="_blank" rel="noreferrer">
+                              How to get one
+                           </a>
+                        </span>
                         <input
                            type="password"
                            value={token}

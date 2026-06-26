@@ -1,4 +1,5 @@
 import type { ReactNode, SyntheticEvent } from "react";
+import { OSIRIS_BEARER_TOKEN_VIDEO_URL } from "../lib/osirisTokenHelp";
 import "./LoadingState.css";
 
 interface RosterOverlayStateProps {
@@ -77,6 +78,9 @@ export function BearerTokenState({ token, isSaving, onTokenChange, onSubmit }: B
          role="alert"
       >
          <form className="roster-overlay-state__form" onSubmit={handleSubmit}>
+            <a className="roster-overlay-state__help-link" href={OSIRIS_BEARER_TOKEN_VIDEO_URL} target="_blank" rel="noreferrer">
+               Learn how to get your bearer token
+            </a>
             <div className="roster-overlay-state__token-row">
                <input
                   type="password"

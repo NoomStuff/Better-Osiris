@@ -61,6 +61,24 @@
    font-weight: 700;
 }
 
+.settings-dialog__field-header {
+   display: flex;
+   flex-wrap: wrap;
+   align-items: baseline;
+   justify-content: space-between;
+   gap: 8px;
+}
+
+.settings-dialog__field-header a {
+   color: var(--accent);
+   font-size: 0.76rem;
+   text-decoration: none;
+}
+
+.settings-dialog__field-header a:hover {
+   text-decoration: underline;
+}
+
 .settings-dialog__field input {
    width: 100%;
    min-width: 0;

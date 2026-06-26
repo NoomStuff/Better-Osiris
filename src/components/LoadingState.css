@@ -56,8 +56,22 @@
 }
 
 .roster-overlay-state__form {
+   display: grid;
+   gap: 10px;
    width: min(440px, 100%);
    margin-top: 8px;
+}
+
+.roster-overlay-state__help-link {
+   justify-self: center;
+   color: var(--accent);
+   font-size: 0.86rem;
+   font-weight: 700;
+   text-decoration: none;
+}
+
+.roster-overlay-state__help-link:hover {
+   text-decoration: underline;
 }
 
 .roster-overlay-state__token-row {

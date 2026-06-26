@@ -3,6 +3,7 @@ import { expect, test, type Page } from "@playwright/test";
 const FIXED_NOW_ISO = "2026-06-16T09:45:00+02:00";
 const WEEK_START_ISO = "2026-06-15";
 const MS_PER_DAY = 24 * 60 * 60 * 1000;
+const OSIRIS_BEARER_TOKEN_VIDEO_URL = "https://youtu.be/MbcI61KIQbI";
 
 test.beforeEach(async ({ page }) => {
    await installFixedClock(page);
@@ -138,6 +139,7 @@ test("settings dialog opens, resets token state, and closes", async ({ page }) =
    await page.getByRole("button", { name: "Open settings" }).click();
    await expect(page.getByRole("dialog", { name: "Preferences" })).toBeVisible();
    await expect(page.getByText("Roster requests are using your saved bearer token.")).toBeVisible();
+   await expect(page.getByRole("link", { name: "How to get one" })).toHaveAttribute("href", OSIRIS_BEARER_TOKEN_VIDEO_URL);
    await expect(page.getByRole("button", { name: "Save token" })).toBeDisabled();
 
    await page.getByRole("button", { name: "Reset" }).click();
@@ -174,6 +176,7 @@ test("missing bearer token shows an entry overlay without requesting roster data
    await page.goto("/");
 
    await expect(page.getByRole("heading", { name: "Bearer token required" })).toBeVisible();
+   await expect(page.getByRole("link", { name: "Learn how to get your bearer token" })).toHaveAttribute("href", OSIRIS_BEARER_TOKEN_VIDEO_URL);
    const tokenInput = page.getByLabel("Bearer token");
    const saveTokenButton = page.getByRole("button", { name: "Save token" });
    await expect(tokenInput).toBeVisible();
