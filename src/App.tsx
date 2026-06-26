@@ -140,7 +140,7 @@ function getToolbarActionActivationId(viewMode: ViewMode, actionNumber: number) 
 }
 
 function EmptyWeekState({ week }: { week: RosterWeek }) {
-   const message = getEmptyWeekMessage(week.number, week.offset);
+   const message = getEmptyWeekMessage(week.start);
 
    return <RosterOverlayState icon={message.icon} title={message.title} detail={message.detail} />;
 }

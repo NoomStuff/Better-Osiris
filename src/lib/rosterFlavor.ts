@@ -128,6 +128,38 @@ function getStableIndex(seed: string, length: number) {
    return hash % length;
 }
 
+function getPositiveModulo(value: number, divisor: number) {
+   return ((value % divisor) + divisor) % divisor;
+}
+
+function getWeekIndex(weekStart: string) {
+   const timestamp = Date.parse(`${weekStart}T12:00:00Z`);
+   return Math.floor(timestamp / (7 * 24 * 60 * 60 * 1000));
+}
+
+function getShuffledWeekMessageIndexes(cycleIndex: number) {
+   return EMPTY_WEEK_MESSAGES.map((_, index) => index).sort((leftIndex, rightIndex) => {
+      return getStableIndex(`${cycleIndex}:${leftIndex}`, 1_000_000) - getStableIndex(`${cycleIndex}:${rightIndex}`, 1_000_000);
+   });
+}
+
+function getWeekMessageIndex(weekStart: string) {
+   const messageCount = EMPTY_WEEK_MESSAGES.length;
+   const weekIndex = getWeekIndex(weekStart);
+   const cycleIndex = Math.floor(weekIndex / messageCount);
+   const weekPosition = getPositiveModulo(weekIndex, messageCount);
+   const indexes = getShuffledWeekMessageIndexes(cycleIndex);
+   const previousIndexes = getShuffledWeekMessageIndexes(cycleIndex - 1);
+   const previousCycleLastIndex = previousIndexes[messageCount - 1] ?? 0;
+   const currentCycleFirstIndex = indexes[0] ?? 0;
+
+   if (currentCycleFirstIndex === previousCycleLastIndex) {
+      indexes.push(indexes.shift() ?? 0);
+   }
+
+   return indexes[weekPosition] ?? 0;
+}
+
 export function getEmptyTodayMessage(dayKey: string): EmptyDayMessage {
    return EMPTY_TODAY_MESSAGES[getStableIndex(dayKey, EMPTY_TODAY_MESSAGES.length)] ?? EMPTY_TODAY_MESSAGES[0];
 }
@@ -136,8 +168,8 @@ export function getEmptyDayMessage(): string {
    return EMPTY_DAY_MESSAGE;
 }
 
-export function getEmptyWeekMessage(weekNumber: number, weekOffset: number): EmptyWeekMessage {
-   return EMPTY_WEEK_MESSAGES[(weekNumber + weekOffset) % EMPTY_WEEK_MESSAGES.length] ?? EMPTY_WEEK_MESSAGES[0];
+export function getEmptyWeekMessage(weekStart: string): EmptyWeekMessage {
+   return EMPTY_WEEK_MESSAGES[getWeekMessageIndex(weekStart)] ?? EMPTY_WEEK_MESSAGES[0];
 }
 
 export function getBreakIcon(previousLessonEnd: Date, nextLessonStart: Date, lessonIndex: number): string {
