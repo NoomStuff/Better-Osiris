@@ -19,7 +19,7 @@ export const APP_SHORTCUTS: Record<AppShortcutId, AppShortcutDefinition> = {
 export const APP_SHORTCUT_LABELS: Record<AppShortcutId, string> = {
    previousWeek: formatShortcut(APP_SHORTCUTS.previousWeek),
    nextWeek: formatShortcut(APP_SHORTCUTS.nextWeek),
-   currentWeek: "R / 0",
+   currentWeek: "Space / R / 0",
    agendaView: "A",
    gridView: "G",
    settings: "I",

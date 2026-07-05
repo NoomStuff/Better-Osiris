@@ -423,6 +423,12 @@ export default function App() {
             onPress: handleCurrentWeek,
          },
          {
+            id: "current-week-space",
+            key: " ",
+            activationTargetId: "current-week",
+            onPress: handleCurrentWeek,
+         },
+         {
             id: "agenda-view",
             ...APP_SHORTCUTS.agendaView,
             activationTargetId: "agenda-view",
