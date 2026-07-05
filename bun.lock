@@ -3,7 +3,7 @@
   "configVersion": 1,
   "workspaces": {
     "": {
-      "name": "osiris-but-better",
+      "name": "Better-Osiris",
       "dependencies": {
         "@fontsource-variable/quicksand": "^5.2.10",
         "@fortawesome/fontawesome-free": "^7.3.0",
