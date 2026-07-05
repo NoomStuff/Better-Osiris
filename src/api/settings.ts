@@ -1,7 +1,6 @@
-export interface OsirisTokenSettings {
-   hasCustomToken: boolean;
-   hasBearerToken: boolean;
-}
+import type { OsirisTokenSettings } from "../../shared/osirisTokenSettings";
+
+export type { OsirisTokenSettings } from "../../shared/osirisTokenSettings";
 
 export async function fetchOsirisTokenSettings(): Promise<OsirisTokenSettings> {
    const response = await fetch("/api/settings/osiris-token");

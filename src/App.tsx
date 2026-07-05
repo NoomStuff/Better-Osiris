@@ -11,7 +11,7 @@ import { useKeyboardShortcuts, type KeyboardShortcut } from "./hooks/useKeyboard
 import { APP_SHORTCUTS } from "./lib/appShortcuts";
 import { applyDevLessonStatusPreview, isDevLessonStatusPreviewMode, type DevLessonStatusPreviewMode } from "./lib/devRosterStatusPreview";
 import { useRosterWeek } from "./hooks/useRosterWeek";
-import { getIsoWeekNumber, toDayKey } from "./lib/date";
+import { formatLocalIsoDate, getIsoWeekNumber, toDayKey } from "./lib/date";
 import { getEmptyWeekMessage } from "./lib/rosterFlavor";
 import { clearRosterBrowserCache } from "./lib/rosterCache";
 import { notifyError, notifySuccess } from "./lib/notyf";
@@ -79,18 +79,6 @@ function getInitialStatusPreviewMode(): DevLessonStatusPreviewMode {
 
    const stored = window.localStorage.getItem(DEVTOOLS_STATUS_PREVIEW_STORAGE_KEY);
    return isDevLessonStatusPreviewMode(stored) ? stored : "none";
-}
-
-function ensureFontAwesomeKit() {
-   if (document.querySelector("script[data-font-awesome-kit]")) {
-      return;
-   }
-
-   const script = document.createElement("script");
-   script.src = "https://kit.fontawesome.com/a7bbea504e.js";
-   script.crossOrigin = "anonymous";
-   script.dataset["fontAwesomeKit"] = "true";
-   document.head.appendChild(script);
 }
 
 function setStableViewportHeight() {
@@ -182,14 +170,6 @@ function getBlankRosterWeek(offset: number, now: Date): RosterWeek {
    };
 }
 
-function formatLocalIsoDate(date: Date) {
-   const year = date.getFullYear();
-   const month = String(date.getMonth() + 1).padStart(2, "0");
-   const day = String(date.getDate()).padStart(2, "0");
-
-   return `${year}-${month}-${day}`;
-}
-
 export default function App() {
    const [weekOffset, setWeekOffset] = useState(0);
    const [weekTransitionDirection, setWeekTransitionDirection] = useState<WeekTransitionDirection>("default");
@@ -203,6 +183,7 @@ export default function App() {
    const [isTokenSettingsLoading, setIsTokenSettingsLoading] = useState(true);
    const [bearerTokenInput, setBearerTokenInput] = useState("");
    const [isSavingBearerToken, setIsSavingBearerToken] = useState(false);
+   const [rosterResetKey, setRosterResetKey] = useState(0);
    const [clockNow, setClockNow] = useState(() => new Date());
    const [isDevToolsEnabled, setIsDevToolsEnabled] = useState(getInitialDevToolsEnabled);
    const [timeOverride, setTimeOverride] = useState<Date | null>(getInitialTimeOverride);
@@ -212,8 +193,11 @@ export default function App() {
    const { canGoNext, canGoPrevious, data, error, isWeekNavigable, loading, retryCountdownMs, retrying, refreshing, title } = useRosterWeek(weekOffset, {
       enabled: !isTokenSettingsLoading && hasBearerToken,
       clearCache: !isTokenSettingsLoading && !hasBearerToken,
+      resetKey: rosterResetKey,
    });
    const perceivedNow = isDevToolsEnabled && timeOverride ? timeOverride : clockNow;
+   const perceivedDayKey = toDayKey(perceivedNow);
+   const perceivedDay = useMemo(() => new Date(`${perceivedDayKey}T12:00:00`), [perceivedDayKey]);
    const displayedData = useMemo(
       () => applyDevLessonStatusPreview(data, IS_DEV_SERVER && isDevToolsEnabled ? devStatusPreviewMode : "none"),
       [data, devStatusPreviewMode, isDevToolsEnabled]
@@ -229,10 +213,6 @@ export default function App() {
 
       return error.detail;
    }, [error, tokenSettings?.hasCustomToken]);
-
-   useEffect(() => {
-      ensureFontAwesomeKit();
-   }, []);
 
    useEffect(() => {
       let isStale = false;
@@ -402,11 +382,11 @@ export default function App() {
    const positionedLessons = useMemo(() => (displayedData ? getPositionedLessons(displayedData.lessons) : []), [displayedData]);
 
    const dayGroups = useMemo(() => (displayedData ? getDayGroups(displayedData.week, positionedLessons) : []), [displayedData, positionedLessons]);
-   const blankWeek = useMemo(() => getBlankRosterWeek(weekOffset, perceivedNow), [perceivedNow, weekOffset]);
+   const blankWeek = useMemo(() => getBlankRosterWeek(weekOffset, perceivedDay), [perceivedDay, weekOffset]);
    const blankDayGroups = useMemo(() => getDayGroups(blankWeek, []), [blankWeek]);
    const blankExpandedDays = useMemo(
-      () => getDefaultExpandedDays(blankDayGroups, blankWeek.offset, perceivedNow),
-      [blankDayGroups, blankWeek.offset, perceivedNow]
+      () => getDefaultExpandedDays(blankDayGroups, blankWeek.offset, perceivedDay),
+      [blankDayGroups, blankWeek.offset, perceivedDay]
    );
 
    const autoExpandedDays = useMemo(() => {
@@ -414,8 +394,8 @@ export default function App() {
          return new Set<string>();
       }
 
-      return getDefaultExpandedDays(dayGroups, displayedData.week.offset, perceivedNow);
-   }, [displayedData, dayGroups, perceivedNow]);
+      return getDefaultExpandedDays(dayGroups, displayedData.week.offset, perceivedDay);
+   }, [displayedData, dayGroups, perceivedDay]);
 
    const expandedDays = useMemo(() => {
       if (!displayedData) {
@@ -601,6 +581,11 @@ export default function App() {
    }, []);
 
    useEffect(() => {
+      if (isSettingsOpen || selectedLesson !== null) {
+         weekSwipeStartRef.current = null;
+         return;
+      }
+
       window.addEventListener("touchstart", handleWeekSwipeStart, { passive: true });
       window.addEventListener("touchend", handleWeekSwipeEnd, { passive: true });
       window.addEventListener("touchcancel", handleWeekSwipeCancel, { passive: true });
@@ -610,7 +595,7 @@ export default function App() {
          window.removeEventListener("touchend", handleWeekSwipeEnd);
          window.removeEventListener("touchcancel", handleWeekSwipeCancel);
       };
-   }, [handleWeekSwipeCancel, handleWeekSwipeEnd, handleWeekSwipeStart]);
+   }, [handleWeekSwipeCancel, handleWeekSwipeEnd, handleWeekSwipeStart, isSettingsOpen, selectedLesson]);
 
    const handleWeekTransitionEnd = useCallback((event: AnimationEvent<HTMLElement>) => {
       if (event.currentTarget !== event.target) {
@@ -630,6 +615,10 @@ export default function App() {
       setIsSettingsOpen(true);
    }, []);
 
+   const closeLesson = useCallback(() => setSelectedLessonId(null), []);
+
+   const closeSettings = useCallback(() => setIsSettingsOpen(false), []);
+
    const submitBearerToken = useCallback(async () => {
       const nextToken = bearerTokenInput.trim();
       if (!nextToken) {
@@ -642,6 +631,7 @@ export default function App() {
          const settings = await saveOsirisToken(nextToken);
          clearRosterBrowserCache();
          setTokenSettings(settings);
+         setRosterResetKey((current) => current + 1);
          setBearerTokenInput("");
          notifySuccess("Osiris token saved successfully.");
       } catch (requestError) {
@@ -650,6 +640,12 @@ export default function App() {
          setIsSavingBearerToken(false);
       }
    }, [bearerTokenInput]);
+
+   const handleTokenSettingsChange = useCallback((settings: OsirisTokenSettings) => {
+      clearRosterBrowserCache();
+      setTokenSettings(settings);
+      setRosterResetKey((current) => current + 1);
+   }, []);
 
    const toggleDevTools = useCallback((enabled: boolean) => {
       if (!IS_DEV_SERVER) {
@@ -812,17 +808,23 @@ export default function App() {
    const hasOverlayUnderlay = hasBlockingTokenState || loading || (Boolean(error) && !data) || isVisuallyEmptyWeek;
    const visibleGridZoom = hasOverlayUnderlay ? "hour" : gridZoom;
    const frameGridZoom = viewMode === "grid" ? visibleGridZoom : gridZoom;
-   const overlay = isTokenSettingsLoading && !hasDisplayedData ? (
-      <LoadingState message="Checking bearer token." />
-   ) : !isTokenSettingsLoading && !hasBearerToken ? (
-      <BearerTokenState token={bearerTokenInput} isSaving={isSavingBearerToken} onTokenChange={setBearerTokenInput} onSubmit={() => void submitBearerToken()} />
-   ) : loading ? (
-      <LoadingState message="Fetching week data." />
-   ) : error && !data ? (
-      <ErrorState title={error.title} detail={errorDetail} log={error.log} retryCountdownMs={retryCountdownMs} isRetrying={retrying} />
-   ) : displayedData?.lessons.length === 0 ? (
-      <EmptyWeekState week={displayedData.week} />
-   ) : null;
+   const overlay =
+      isTokenSettingsLoading && !hasDisplayedData ? (
+         <LoadingState message="Checking bearer token." />
+      ) : !isTokenSettingsLoading && !hasBearerToken ? (
+         <BearerTokenState
+            token={bearerTokenInput}
+            isSaving={isSavingBearerToken}
+            onTokenChange={setBearerTokenInput}
+            onSubmit={() => void submitBearerToken()}
+         />
+      ) : loading ? (
+         <LoadingState message="Fetching week data." />
+      ) : error && !data ? (
+         <ErrorState title={error.title} detail={errorDetail} log={error.log} retryCountdownMs={retryCountdownMs} isRetrying={retrying} />
+      ) : displayedData?.lessons.length === 0 ? (
+         <EmptyWeekState week={displayedData.week} />
+      ) : null;
 
    return (
       <div className="shell">
@@ -879,14 +881,15 @@ export default function App() {
             </section>
          </main>
 
-         <LessonDrawer lesson={selectedLesson} onClose={() => setSelectedLessonId(null)} />
+         <LessonDrawer lesson={selectedLesson} onClose={closeLesson} />
          <SettingsDialog
             isOpen={isSettingsOpen}
             isDevToolsEnabled={isDevToolsEnabled}
             perceivedNow={perceivedNow}
             timeOverride={timeOverride}
             statusPreviewMode={devStatusPreviewMode}
-            onClose={() => setIsSettingsOpen(false)}
+            onTokenSettingsChange={handleTokenSettingsChange}
+            onClose={closeSettings}
             onToggleDevTools={toggleDevTools}
             onChangeTimeOverride={changeTimeOverride}
             onChangeStatusPreviewMode={setDevStatusPreviewMode}

@@ -40,12 +40,3 @@ export async function readJsonBody<TPayload>(req: IncomingMessage): Promise<TPay
 export function getRequestUrl(req: IncomingMessage) {
    return new URL(req.url ?? "/", `http://${req.headers.host ?? "localhost"}`);
 }
-
-export function parseBoundedInt(value: string | null, fallback: number, min: number, max: number) {
-   const parsed = value === null ? Number.NaN : Number.parseInt(value, 10);
-   if (Number.isNaN(parsed)) {
-      return fallback;
-   }
-
-   return Math.min(Math.max(parsed, min), max);
-}

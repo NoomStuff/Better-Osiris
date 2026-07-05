@@ -1,9 +1,6 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
-import { buildClearOsirisTokenCookieHeader, buildOsirisTokenCookieHeader } from "../_lib/auth.js";
-import { getEnvValue } from "../_lib/env.js";
 import { readJsonBody, sendJson, sendMethodNotAllowed } from "../_lib/http.js";
-import { getDefaultOsirisToken } from "../_lib/osirisToken.js";
-import { createEncryptedOsirisTokenCookieValue, hasOsirisTokenCookie, readOsirisTokenFromCookie } from "../_lib/osirisTokenCookie.js";
+import { clearOsirisTokenSetting, getOsirisTokenSettings, OsirisTokenSettingsError, saveOsirisTokenSetting } from "../_lib/osirisTokenSettingsService.js";
 
 export default async function handler(req: IncomingMessage, res: ServerResponse) {
    if (req.method !== "GET" && req.method !== "PUT" && req.method !== "DELETE") {
@@ -18,86 +15,18 @@ export default async function handler(req: IncomingMessage, res: ServerResponse)
    }
 
    if (req.method === "DELETE") {
-      const defaultTokenCookie = createDefaultTokenCookieHeader();
-      const hasDefaultToken = Boolean(getDefaultOsirisToken());
-      const settings = hasDefaultToken ? { hasCustomToken: false, hasBearerToken: true } : { hasCustomToken: false, hasBearerToken: false };
-      sendJson(res, 200, settings, { headers: { "Set-Cookie": defaultTokenCookie ?? buildClearOsirisTokenCookieHeader(isProduction()) } });
-      return;
-   }
-
-   const cookieSecret = getEnvValue("COOKIE_SECRET");
-   if (!cookieSecret) {
-      sendJson(res, 500, { error: "COOKIE_SECRET is required before a browser bearer token can be saved." });
+      const result = clearOsirisTokenSetting();
+      sendJson(res, 200, result.settings, result.cookieHeader ? { headers: { "Set-Cookie": result.cookieHeader } } : undefined);
       return;
    }
 
    const payload = await readJsonBody<{ token?: unknown }>(req);
-   const token = typeof payload?.token === "string" ? payload.token.trim() : "";
-   if (!token) {
-      sendJson(res, 400, { error: "Token is required." });
-      return;
+   try {
+      const result = saveOsirisTokenSetting(payload?.token);
+      sendJson(res, 200, result.settings, result.cookieHeader ? { headers: { "Set-Cookie": result.cookieHeader } } : undefined);
+   } catch (error) {
+      const status = error instanceof OsirisTokenSettingsError ? error.status : 500;
+      const message = error instanceof Error ? error.message : "Failed to save bearer token.";
+      sendJson(res, status, { error: message });
    }
-
-   const encryptedToken = createEncryptedOsirisTokenCookieValue(token, cookieSecret);
-   sendJson(
-      res,
-      200,
-      { hasCustomToken: true, hasBearerToken: true },
-      { headers: { "Set-Cookie": buildOsirisTokenCookieHeader(encryptedToken, isProduction()) } }
-   );
-}
-
-function getOsirisTokenSettings(cookieHeader: string | undefined) {
-   const cookieSecret = getEnvValue("COOKIE_SECRET");
-   const hasCustomToken = cookieSecret ? hasValidOsirisTokenOverride(cookieHeader, cookieSecret) : false;
-
-   if (hasCustomToken) {
-      return {
-         settings: { hasCustomToken: true, hasBearerToken: true },
-         cookieHeader: null,
-      };
-   }
-
-   const defaultTokenCookie = createDefaultTokenCookieHeader();
-   if (defaultTokenCookie) {
-      return {
-         settings: { hasCustomToken: false, hasBearerToken: true },
-         cookieHeader: defaultTokenCookie,
-      };
-   }
-
-   if (getDefaultOsirisToken()) {
-      return {
-         settings: { hasCustomToken: false, hasBearerToken: true },
-         cookieHeader: null,
-      };
-   }
-
-   return {
-      settings: { hasCustomToken: false, hasBearerToken: false },
-      cookieHeader: null,
-   };
-}
-
-function createDefaultTokenCookieHeader(): string | null {
-   const cookieSecret = getEnvValue("COOKIE_SECRET");
-   const defaultToken = getDefaultOsirisToken();
-
-   if (!cookieSecret || !defaultToken) {
-      return null;
-   }
-
-   return buildOsirisTokenCookieHeader(createEncryptedOsirisTokenCookieValue(defaultToken, cookieSecret), isProduction());
-}
-
-function hasValidOsirisTokenOverride(cookieHeader: string | undefined, secret: string): boolean {
-   if (!hasOsirisTokenCookie(cookieHeader)) {
-      return false;
-   }
-
-   return Boolean(readOsirisTokenFromCookie(cookieHeader, secret));
-}
-
-function isProduction() {
-   return process.env["NODE_ENV"] === "production";
 }

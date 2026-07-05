@@ -145,12 +145,141 @@ test("settings dialog opens, resets token state, and closes", async ({ page }) =
    await page.getByRole("button", { name: "Reset" }).click();
    await expect(page.getByRole("dialog", { name: "Reset bearer token?" })).toBeVisible();
    await page.getByRole("button", { name: "Reset token" }).click();
-   await page.waitForLoadState("domcontentloaded");
-   await page.getByRole("button", { name: "Open settings" }).click();
+   await expect(page.getByRole("dialog", { name: "Reset bearer token?" })).toBeHidden();
+   await expect(page.getByRole("dialog", { name: "Preferences" })).toBeVisible();
    await expect(page.getByText("No bearer token is set.")).toBeVisible();
 
    await page.locator(".settings-dialog__header").getByRole("button", { name: "Close settings" }).click();
    await expect(page.getByRole("dialog", { name: "Preferences" })).toBeHidden();
+});
+
+test("only the topmost dialog handles Escape and focus stays contained", async ({ page }) => {
+   await page.goto("/");
+   await page.getByRole("button", { name: "Open settings" }).click();
+   const settings = page.getByRole("dialog", { name: "Preferences" });
+   await expect(settings).toBeVisible();
+   const closeSettingsButton = settings.getByRole("button", { name: "Close settings" });
+   await expect(closeSettingsButton).toBeFocused();
+   await page.keyboard.press("Shift+Tab");
+   await expect(page.getByLabel("Enable devtools")).toBeFocused();
+   await page.keyboard.press("Tab");
+   await expect(closeSettingsButton).toBeFocused();
+
+   await page.getByRole("button", { name: "Reset" }).click();
+   const confirmation = page.getByRole("dialog", { name: "Reset bearer token?" });
+   await expect(confirmation).toBeVisible();
+   await page.keyboard.press("Escape");
+
+   await expect(confirmation).toBeHidden();
+   await expect(settings).toBeVisible();
+   await expect(page.getByRole("button", { name: "Reset" })).toBeFocused();
+});
+
+test("saving a replacement token refreshes roster data without reloading the page", async ({ page }) => {
+   let rosterRequestCount = 0;
+   page.on("request", (request) => {
+      if (request.url().includes("/api/roster/weeks?")) {
+         rosterRequestCount += 1;
+      }
+   });
+
+   await page.goto("/");
+   await expect(page.getByRole("button", { name: "SOURCE_TITLE_0_1" })).toBeVisible();
+   const initialRequestCount = rosterRequestCount;
+
+   await page.getByRole("button", { name: "Open settings" }).click();
+   const settings = page.getByRole("dialog", { name: "Preferences" });
+   await settings.getByLabel("Bearer token").fill("Bearer replacement-token");
+   await settings.getByRole("button", { name: "Save token" }).click();
+
+   await expect.poll(() => rosterRequestCount).toBeGreaterThan(initialRequestCount);
+   await expect(settings).toBeVisible();
+   await expect(page.getByRole("button", { name: "SOURCE_TITLE_0_1" })).toBeVisible();
+});
+
+test("an aborted credential request cannot restore stale roster data", async ({ page }) => {
+   let tokenVersion = 1;
+   let releaseInitialRequest = () => undefined;
+   const initialRequestGate = new Promise<void>((resolve) => {
+      releaseInitialRequest = resolve;
+   });
+
+   await page.route("**/api/settings/osiris-token", async (route) => {
+      const method = route.request().method();
+      if (method === "DELETE") {
+         tokenVersion = 0;
+      } else if (method === "PUT") {
+         tokenVersion = 2;
+      }
+
+      await route.fulfill({
+         status: 200,
+         contentType: "application/json",
+         body: JSON.stringify({ hasCustomToken: tokenVersion > 0, hasBearerToken: tokenVersion > 0 }),
+      });
+   });
+
+   await page.route("**/api/roster/weeks?*", async (route) => {
+      const requestedTokenVersion = tokenVersion;
+      const url = new URL(route.request().url());
+      const offset = Number(url.searchParams.get("offset") ?? "0");
+      const limit = Number(url.searchParams.get("limit") ?? "5");
+
+      if (requestedTokenVersion === 1 && offset === 0) {
+         await initialRequestGate;
+      }
+
+      const batch = createRosterBatch(offset, limit);
+      const firstLesson = batch.weeks[0]?.lessons[0];
+      if (firstLesson) {
+         firstLesson.title = `TOKEN_${requestedTokenVersion}_TITLE`;
+      }
+      await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(batch) });
+   });
+
+   await page.goto("/");
+   await page.getByRole("button", { name: "Open settings" }).click();
+   await page.getByRole("button", { name: "Reset" }).click();
+   await page.getByRole("button", { name: "Reset token" }).click();
+   await expect(page.getByText("No bearer token is set.")).toBeVisible();
+
+   releaseInitialRequest();
+   await expect(page.getByRole("button", { name: "TOKEN_1_TITLE" })).toHaveCount(0);
+
+   const settings = page.getByRole("dialog", { name: "Preferences" });
+   await settings.getByLabel("Bearer token").fill("Bearer fresh-token");
+   await settings.getByRole("button", { name: "Save token" }).click();
+   await settings.getByRole("button", { name: "Close settings" }).click();
+
+   await expect(page.getByRole("button", { name: "TOKEN_2_TITLE" })).toBeVisible();
+   await expect(page.getByRole("button", { name: "TOKEN_1_TITLE" })).toHaveCount(0);
+});
+
+test("week swipe navigation is disabled while an overlay is open", async ({ page }) => {
+   await page.goto("/");
+   await page.getByRole("button", { name: "Open settings" }).click();
+
+   await page.evaluate(() => {
+      const target = document.body;
+      const start = new Touch({ identifier: 1, target, clientX: 320, clientY: 300 });
+      const end = new Touch({ identifier: 1, target, clientX: 120, clientY: 300 });
+      window.dispatchEvent(new TouchEvent("touchstart", { touches: [start] }));
+      window.dispatchEvent(new TouchEvent("touchend", { changedTouches: [end] }));
+   });
+
+   await expect(page.locator(".weekbar__label")).toHaveText("This week");
+});
+
+test("collapsed agenda days remove hidden lessons from keyboard navigation", async ({ page }) => {
+   await page.goto("/");
+   await page.getByRole("tab", { name: "Agenda view" }).click();
+   const currentDay = page.locator(".day-group").filter({ hasText: "SOURCE_TITLE_0_1" });
+   const currentDayHeader = currentDay.locator(".day-group__header");
+   await currentDayHeader.click();
+
+   const collapsedBody = currentDay.locator(".day-group__body");
+   await expect(collapsedBody).toHaveAttribute("aria-hidden", "true");
+   await expect(collapsedBody).toHaveAttribute("inert", "");
 });
 
 test("missing bearer token shows an entry overlay without requesting roster data", async ({ page }) => {

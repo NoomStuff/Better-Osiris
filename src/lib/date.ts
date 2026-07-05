@@ -78,6 +78,20 @@ export function toDayKey(date: Date) {
    return AMSTERDAM_DATE_FORMATTER.format(date);
 }
 
+export function formatLocalIsoDate(date: Date) {
+   const year = date.getFullYear();
+   const month = String(date.getMonth() + 1).padStart(2, "0");
+   const day = String(date.getDate()).padStart(2, "0");
+   return `${year}-${month}-${day}`;
+}
+
+export function getLocalWeekStartIso(date: Date) {
+   const monday = new Date(date);
+   const day = monday.getDay();
+   monday.setDate(monday.getDate() + (day === 0 ? -6 : 1 - day));
+   return formatLocalIsoDate(monday);
+}
+
 export function formatWeekTitle(startIso: string, endIso: string, weekNumber: number) {
    const start = parseIsoDateToLocal(startIso);
    const end = parseIsoDateToLocal(endIso);

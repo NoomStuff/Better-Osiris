@@ -8,6 +8,7 @@ import type { IncomingMessage, ServerResponse } from "node:http";
 interface MockRequestOptions {
    method?: string;
    cookie?: string;
+   body?: unknown;
 }
 
 class MockResponse {
@@ -71,6 +72,34 @@ void describe("/api/settings/osiris-token", () => {
       assert.equal(payload.hasBearerToken, false);
       assert.equal(response.headers.get("set-cookie"), undefined);
    });
+
+   void it("saves an encrypted custom token", async () => {
+      process.env["COOKIE_SECRET"] = "settings-secret";
+
+      const response = await callSettingsHandler({
+         method: "PUT",
+         body: { token: "Bearer custom-token" },
+      });
+      const payload = JSON.parse(response.body) as { hasCustomToken?: boolean; hasBearerToken?: boolean };
+      const cookieHeader = response.headers.get("set-cookie");
+
+      assert.equal(response.statusCode, 200);
+      assert.deepEqual(payload, { hasCustomToken: true, hasBearerToken: true });
+      assert.equal(readOsirisTokenFromCookie(String(cookieHeader), process.env["COOKIE_SECRET"]), "Bearer custom-token");
+   });
+
+   void it("restores the default token when the custom token is cleared", async () => {
+      process.env["COOKIE_SECRET"] = "settings-secret";
+      process.env["BEARER_TOKEN"] = "Bearer default-token";
+
+      const response = await callSettingsHandler({ method: "DELETE" });
+      const payload = JSON.parse(response.body) as { hasCustomToken?: boolean; hasBearerToken?: boolean };
+      const cookieHeader = response.headers.get("set-cookie");
+
+      assert.equal(response.statusCode, 200);
+      assert.deepEqual(payload, { hasCustomToken: false, hasBearerToken: true });
+      assert.equal(readOsirisTokenFromCookie(String(cookieHeader), process.env["COOKIE_SECRET"]), "Bearer default-token");
+   });
 });
 
 async function callSettingsHandler(options: MockRequestOptions) {
@@ -81,8 +110,8 @@ async function callSettingsHandler(options: MockRequestOptions) {
    return res;
 }
 
-function createRequest({ method = "GET", cookie }: MockRequestOptions): IncomingMessage {
-   const req = Readable.from([]);
+function createRequest({ method = "GET", cookie, body }: MockRequestOptions): IncomingMessage {
+   const req = Readable.from(body === undefined ? [] : [JSON.stringify(body)]);
    const headers: IncomingMessage["headers"] = {
       host: "example.test",
    };

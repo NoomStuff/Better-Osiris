@@ -1,4 +1,4 @@
-import { Fragment, useLayoutEffect, useRef, useState } from "react";
+import { Fragment, useEffectEvent, useLayoutEffect, useRef, useState } from "react";
 import { dayLabel, monthDayLabel, timeLabel, toDayKey } from "../lib/date";
 import { DETAILS_SEPARATOR, getLessonLocationLabel } from "../lib/lessonFormat";
 import { getBreakIcon, getEmptyDayMessage, getEmptyTodayMessage } from "../lib/rosterFlavor";
@@ -151,55 +151,55 @@ export function AgendaView({ groups, expandedDays, animate, now, onToggleDay, on
    const [indicatorPlacement, setIndicatorPlacement] = useState<CurrentIndicatorPlacement | null>(null);
    const todayKey = toDayKey(now);
 
+   const measureIndicator = useEffectEvent(() => {
+      const agendaElement = agendaRef.current;
+      if (!agendaElement) {
+         return;
+      }
+
+      const todayBodyElement = agendaElement.querySelector<HTMLElement>(`[data-day="${CSS.escape(toDayKey(now))}"] .day-group__body-inner`);
+      const activeSegment = getCurrentAgendaSegment(groups, now);
+      const todayExpanded = expandedDays.has(toDayKey(now));
+      const selector = activeSegment ? `[data-current-segment="${CSS.escape(activeSegment.key)}"]` : null;
+      const targetElement = selector && todayBodyElement ? todayBodyElement.querySelector<HTMLElement>(selector) : null;
+      const progress = getSegmentProgress(activeSegment, now);
+
+      if (activeSegment && targetElement && todayBodyElement && todayExpanded) {
+         const bodyRect = todayBodyElement.getBoundingClientRect();
+         const targetRect = targetElement.getBoundingClientRect();
+         const inset = activeSegment.type === "break" ? CURRENT_INDICATOR_BREAK_INSET : CURRENT_INDICATOR_LESSON_INSET;
+         const height = Math.max(CURRENT_INDICATOR_MIN_HEIGHT, Math.min(CURRENT_INDICATOR_MAX_HEIGHT, targetRect.height - inset));
+         const top = targetRect.top - bodyRect.top + (targetRect.height - height) / 2;
+
+         setIndicatorPlacement({ visible: true, top, height, progress });
+         return;
+      }
+
+      const anchor = getTodayProgressAnchor(groups, now);
+      const firstLesson = groups.find((group) => group.key === toDayKey(now))?.lessons[0];
+      const lastLesson = groups.find((group) => group.key === toDayKey(now))?.lessons.at(-1);
+      const anchorLesson = anchor === "before-first" ? firstLesson : lastLesson;
+      const anchorElement =
+         anchorLesson && todayBodyElement ? todayBodyElement.querySelector<HTMLElement>(`[data-current-segment="${CSS.escape(anchorLesson.id)}"]`) : null;
+
+      if (anchorElement && todayBodyElement && todayExpanded) {
+         const bodyRect = todayBodyElement.getBoundingClientRect();
+         const anchorRect = anchorElement.getBoundingClientRect();
+         const height = Math.max(CURRENT_INDICATOR_MIN_HEIGHT, Math.min(CURRENT_INDICATOR_MAX_HEIGHT, anchorRect.height - CURRENT_INDICATOR_LESSON_INSET));
+         const top = anchor === "before-first" ? anchorRect.top - bodyRect.top - height - 8 : anchorRect.bottom - bodyRect.top + 8;
+
+         setIndicatorPlacement({ visible: false, top, height, progress: 0 });
+         return;
+      }
+
+      setIndicatorPlacement((current) => (current ? { ...current, visible: false, progress: 0 } : null));
+   });
+
    useLayoutEffect(() => {
       const agendaElement = agendaRef.current;
-
       if (!agendaElement) {
          return undefined;
       }
-
-      const measureIndicator = () => {
-         const todayBodyElement = agendaElement.querySelector<HTMLElement>(`[data-day="${CSS.escape(toDayKey(now))}"] .day-group__body-inner`);
-         const activeSegment = getCurrentAgendaSegment(groups, now);
-         const todayExpanded = expandedDays.has(toDayKey(now));
-         const selector = activeSegment ? `[data-current-segment="${CSS.escape(activeSegment.key)}"]` : null;
-         const targetElement = selector && todayBodyElement ? todayBodyElement.querySelector<HTMLElement>(selector) : null;
-         const progress = getSegmentProgress(activeSegment, now);
-
-         if (activeSegment && targetElement && todayBodyElement && todayExpanded) {
-            const bodyRect = todayBodyElement.getBoundingClientRect();
-            const targetRect = targetElement.getBoundingClientRect();
-            const inset = activeSegment.type === "break" ? CURRENT_INDICATOR_BREAK_INSET : CURRENT_INDICATOR_LESSON_INSET;
-            const height = Math.max(CURRENT_INDICATOR_MIN_HEIGHT, Math.min(CURRENT_INDICATOR_MAX_HEIGHT, targetRect.height - inset));
-            const top = targetRect.top - bodyRect.top + (targetRect.height - height) / 2;
-
-            setIndicatorPlacement({ visible: true, top, height, progress });
-            return;
-         }
-
-         const anchor = getTodayProgressAnchor(groups, now);
-         const firstLesson = groups.find((group) => group.key === toDayKey(now))?.lessons[0];
-         const lastLesson = groups.find((group) => group.key === toDayKey(now))?.lessons.at(-1);
-         const anchorLesson = anchor === "before-first" ? firstLesson : lastLesson;
-         const anchorElement =
-            anchorLesson && todayBodyElement ? todayBodyElement.querySelector<HTMLElement>(`[data-current-segment="${CSS.escape(anchorLesson.id)}"]`) : null;
-
-         if (anchorElement && todayBodyElement && todayExpanded) {
-            const bodyRect = todayBodyElement.getBoundingClientRect();
-            const anchorRect = anchorElement.getBoundingClientRect();
-            const height = Math.max(CURRENT_INDICATOR_MIN_HEIGHT, Math.min(CURRENT_INDICATOR_MAX_HEIGHT, anchorRect.height - CURRENT_INDICATOR_LESSON_INSET));
-            const top =
-               anchor === "before-first"
-                  ? anchorRect.top - bodyRect.top - height - 8
-                  : anchorRect.bottom - bodyRect.top + 8;
-
-            setIndicatorPlacement({ visible: false, top, height, progress: 0 });
-            return;
-         }
-
-         setIndicatorPlacement((current) => (current ? { ...current, visible: false, progress: 0 } : null));
-      };
-
       measureIndicator();
 
       const resizeObserver = new ResizeObserver(measureIndicator);
@@ -210,6 +210,10 @@ export function AgendaView({ groups, expandedDays, animate, now, onToggleDay, on
          resizeObserver.disconnect();
          window.removeEventListener("resize", measureIndicator);
       };
+   }, []);
+
+   useLayoutEffect(() => {
+      measureIndicator();
    }, [expandedDays, groups, now]);
 
    return (
@@ -242,7 +246,7 @@ export function AgendaView({ groups, expandedDays, animate, now, onToggleDay, on
                      </div>
                   </button>
 
-                  <div className="day-group__body" aria-hidden={!expanded}>
+                  <div className="day-group__body" aria-hidden={!expanded} inert={!expanded ? true : undefined}>
                      <div className="day-group__body-inner">
                         {isToday && indicatorPlacement ? (
                            <span

@@ -1,14 +1,7 @@
 import { formatShortcut, type KeyboardShortcut } from "../hooks/useKeyboardShortcuts";
 
 export type AppShortcutId =
-   | "previousWeek"
-   | "nextWeek"
-   | "currentWeek"
-   | "agendaView"
-   | "gridView"
-   | "settings"
-   | "previousToolbarAction"
-   | "nextToolbarAction";
+   "previousWeek" | "nextWeek" | "currentWeek" | "agendaView" | "gridView" | "settings" | "previousToolbarAction" | "nextToolbarAction";
 
 type AppShortcutDefinition = Pick<KeyboardShortcut, "ctrlKey" | "key" | "shiftKey">;
 

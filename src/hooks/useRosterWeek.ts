@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { fetchRosterWeeks } from "../api/roster";
-import { formatWeekTitle, getIsoWeekNumber, shiftIsoDateByDays } from "../lib/date";
+import { formatWeekTitle, getIsoWeekNumber, getLocalWeekStartIso, shiftIsoDateByDays } from "../lib/date";
 import { notifyError } from "../lib/notyf";
 import { clearRosterBrowserCache, CURRENT_WEEK_CACHE_KEY, LAST_WEEK_CACHE_KEY, SESSION_LESSON_DIFFS_KEY } from "../lib/rosterCache";
 import { toRosterLoadError, type RosterLoadError } from "../lib/rosterLoadError";
@@ -35,14 +35,24 @@ type WeekEntries = Partial<Record<number, WeekEntry>>;
 interface UseRosterWeekOptions {
    enabled?: boolean;
    clearCache?: boolean;
+   resetKey?: number;
 }
 
-const LOAD_ERROR_MESSAGE = "Something went wrong while loading the roster.";
 const LOAD_ERROR_TOAST_MESSAGE = "Something went wrong while loading the roster.";
 const FIRST_RETRY_DELAY_MS = 2_000;
 const MAX_RETRY_DELAY_MS = 5 * 60 * 1000;
 const BATCH_SIZE = 5;
 const PASSIVE_REFETCH_INTERVAL_MS = 5 * 60 * 1000;
+
+interface BatchLoadOptions {
+   force?: boolean;
+   passive?: boolean;
+}
+
+interface BatchRequest {
+   controller: AbortController;
+   promise: Promise<void>;
+}
 
 function createEntry(data: RosterResponse | null, overrides?: Partial<WeekEntry>): WeekEntry {
    return {
@@ -78,33 +88,18 @@ function getRosterReferenceDate() {
    return date;
 }
 
-function formatLocalIsoDate(date: Date) {
-   const year = date.getFullYear();
-   const month = String(date.getMonth() + 1).padStart(2, "0");
-   const day = String(date.getDate()).padStart(2, "0");
-   return `${year}-${month}-${day}`;
-}
-
-function getWeekStartIso(date: Date) {
-   const monday = new Date(date);
-   const day = monday.getDay();
-   const mondayDelta = day === 0 ? -6 : 1 - day;
-   monday.setDate(monday.getDate() + mondayDelta);
-   return formatLocalIsoDate(monday);
-}
-
 function getCurrentWeekNumber() {
    return getIsoWeekNumber(getRosterReferenceDate().toISOString());
 }
 
 function getCurrentWeekStartIso() {
-   return getWeekStartIso(getRosterReferenceDate());
+   return getLocalWeekStartIso(getRosterReferenceDate());
 }
 
 function getLastWeekStartIso() {
    const date = getRosterReferenceDate();
    date.setDate(date.getDate() - 7);
-   return getWeekStartIso(date);
+   return getLocalWeekStartIso(date);
 }
 
 function normalizeCachedWeek(data: RosterResponse, offset: number, note?: string): RosterResponse {
@@ -335,10 +330,6 @@ function getAdjacentBatchStarts(startOffset: number) {
    return [previous, next].filter((batchStart): batchStart is number => batchStart !== null && batchStart >= MIN_WEEK_OFFSET && batchStart <= MAX_WEEK_OFFSET);
 }
 
-function getBatchRequestKey(startOffset: number) {
-   return `${startOffset}:${getBatchOffsets(startOffset).length}`;
-}
-
 function canNavigateToWeek(offset: number, entries: WeekEntries) {
    if (offset < MIN_WEEK_OFFSET || offset > MAX_WEEK_OFFSET) {
       return false;
@@ -422,16 +413,20 @@ function getDisplayWeeksFromPayload(
 export function useRosterWeek(offset: number, options: UseRosterWeekOptions = {}) {
    const enabled = options.enabled ?? true;
    const clearCache = options.clearCache ?? false;
+   const resetKey = options.resetKey ?? 0;
    const [entries, setEntries] = useState<WeekEntries>(getInitialEntries);
    const [now, setNow] = useState<number | null>(null);
    const [sessionLessonDiffs] = useState(readSessionLessonDiffs);
    const entriesRef = useRef(entries);
-   const requestsRef = useRef(new Map<string, Promise<void>>());
+   const requestsRef = useRef(new Map<string, BatchRequest>());
+   const requestGenerationRef = useRef(0);
+   const loadBatchRef = useRef<(startOffset: number, options?: BatchLoadOptions) => void>(() => undefined);
    const queuedRefetchesRef = useRef(new Set<number>());
    const retryTimersRef = useRef(new Map<string, number>());
    const latestRawWeeksRef = useRef(new Map<number, RosterResponse>());
    const hasShownLoadErrorToastRef = useRef(false);
    const activeOffsetRef = useRef(offset);
+   const previousResetKeyRef = useRef(resetKey);
 
    useEffect(() => {
       entriesRef.current = entries;
@@ -442,12 +437,16 @@ export function useRosterWeek(offset: number, options: UseRosterWeekOptions = {}
    }, [offset]);
 
    useEffect(() => {
-      if (!clearCache) {
+      const resetKeyChanged = previousResetKeyRef.current !== resetKey;
+      previousResetKeyRef.current = resetKey;
+      if (!clearCache && !resetKeyChanged) {
          return;
       }
 
       clearRosterBrowserCache();
+      requestGenerationRef.current += 1;
       entriesRef.current = {};
+      requestsRef.current.forEach(({ controller }) => controller.abort());
       requestsRef.current.clear();
       queuedRefetchesRef.current.clear();
       latestRawWeeksRef.current.clear();
@@ -458,18 +457,16 @@ export function useRosterWeek(offset: number, options: UseRosterWeekOptions = {}
 
       const resetTimerId = window.setTimeout(() => setEntries({}), 0);
       return () => window.clearTimeout(resetTimerId);
-   }, [clearCache, sessionLessonDiffs]);
-
-   useEffect(() => {
-      const intervalId = window.setInterval(() => setNow(Date.now()), 1_000);
-      return () => window.clearInterval(intervalId);
-   }, []);
+   }, [clearCache, resetKey, sessionLessonDiffs]);
 
    useEffect(() => {
       const retryTimers = retryTimersRef.current;
+      const requests = requestsRef.current;
       return () => {
          retryTimers.forEach((timerId) => window.clearTimeout(timerId));
          retryTimers.clear();
+         requests.forEach(({ controller }) => controller.abort());
+         requests.clear();
       };
    }, []);
 
@@ -478,7 +475,10 @@ export function useRosterWeek(offset: number, options: UseRosterWeekOptions = {}
          return;
       }
 
-      const loadBatch = (startOffset: number, force = false) => {
+      const loadBatch = (startOffset: number, options: BatchLoadOptions = {}) => {
+         const force = options.force ?? false;
+         const passive = options.passive ?? false;
+
          if (startOffset < MIN_WEEK_OFFSET || startOffset > MAX_WEEK_OFFSET) {
             return;
          }
@@ -515,6 +515,10 @@ export function useRosterWeek(offset: number, options: UseRosterWeekOptions = {}
             const next = { ...current };
             offsets.forEach((targetOffset) => {
                const currentEntry = current[targetOffset];
+               if (passive && !currentEntry?.data) {
+                  return;
+               }
+
                if (force || !currentEntry?.data) {
                   next[targetOffset] = createEntry(currentEntry?.data ?? null, {
                      error: currentEntry?.data ? null : (currentEntry?.error ?? null),
@@ -529,8 +533,14 @@ export function useRosterWeek(offset: number, options: UseRosterWeekOptions = {}
             return next;
          });
 
-         const request = fetchRosterWeeks(startOffset, limit)
+         const controller = new AbortController();
+         const generation = requestGenerationRef.current;
+         const request = fetchRosterWeeks(startOffset, limit, controller.signal)
             .then((payload) => {
+               if (generation !== requestGenerationRef.current) {
+                  return;
+               }
+
                hasShownLoadErrorToastRef.current = false;
                const displayWeeks = getDisplayWeeksFromPayload(payload, entriesRef.current, latestRawWeeksRef.current, sessionLessonDiffs);
                setEntries((current) => {
@@ -555,13 +565,36 @@ export function useRosterWeek(offset: number, options: UseRosterWeekOptions = {}
                });
             })
             .catch((error: unknown) => {
+               if (controller.signal.aborted || generation !== requestGenerationRef.current) {
+                  return;
+               }
+
                const loadError = toRosterLoadError(error);
                const activeBatchAtFailure = getBatchStart(activeOffsetRef.current);
-               const shouldNotify = startOffset === activeBatchAtFailure && !hasShownLoadErrorToastRef.current;
+               const shouldNotify = !passive && startOffset === activeBatchAtFailure && !hasShownLoadErrorToastRef.current;
                if (shouldNotify) {
                   hasShownLoadErrorToastRef.current = true;
                   notifyError(LOAD_ERROR_TOAST_MESSAGE, LOAD_ERROR_TOAST_MESSAGE, true, error);
                }
+
+               if (passive) {
+                  setEntries((current) => {
+                     const next = { ...current };
+                     offsets.forEach((targetOffset) => {
+                        const currentEntry = current[targetOffset];
+                        if (currentEntry?.data) {
+                           next[targetOffset] = createEntry(currentEntry.data, {
+                              error: loadError,
+                              isFetching: false,
+                              updatedAt: currentEntry.updatedAt,
+                           });
+                        }
+                     });
+                     return next;
+                  });
+                  return;
+               }
+
                const retryDelayMs = getNextRetryDelay(Math.max(...offsets.map((targetOffset) => entriesRef.current[targetOffset]?.retryDelayMs ?? 0)));
                const retryAt = Date.now() + retryDelayMs;
                setEntries((current) => {
@@ -604,26 +637,30 @@ export function useRosterWeek(offset: number, options: UseRosterWeekOptions = {}
 
                const timerId = window.setTimeout(() => {
                   retryTimersRef.current.delete(requestKey);
-                  loadBatch(startOffset, true);
+                  loadBatchRef.current(startOffset, { force: true });
                }, retryDelayMs);
                retryTimersRef.current.set(requestKey, timerId);
             })
             .finally(() => {
-               requestsRef.current.delete(requestKey);
+               const activeRequest = requestsRef.current.get(requestKey);
+               if (activeRequest?.promise === request) {
+                  requestsRef.current.delete(requestKey);
+               }
             });
 
-         requestsRef.current.set(requestKey, request);
+         requestsRef.current.set(requestKey, { controller, promise: request });
       };
 
+      loadBatchRef.current = loadBatch;
       const activeEntry = entriesRef.current[offset];
       const activeBatchStart = getBatchStart(offset);
       const activeBatchQueued = queuedRefetchesRef.current.has(activeBatchStart);
-      loadBatch(activeBatchStart, activeBatchQueued || (activeBatchStart === 0 && Boolean(activeEntry?.isHydrated)));
+      loadBatch(activeBatchStart, { force: activeBatchQueued || (activeBatchStart === 0 && Boolean(activeEntry?.isHydrated)) });
 
       getAdjacentBatchStarts(activeBatchStart).forEach((prefetchBatchStart) => {
-         loadBatch(prefetchBatchStart, queuedRefetchesRef.current.has(prefetchBatchStart));
+         loadBatch(prefetchBatchStart, { force: queuedRefetchesRef.current.has(prefetchBatchStart) });
       });
-   }, [enabled, offset, sessionLessonDiffs]);
+   }, [enabled, offset, resetKey, sessionLessonDiffs]);
 
    useEffect(() => {
       if (!enabled) {
@@ -651,85 +688,7 @@ export function useRosterWeek(offset: number, options: UseRosterWeekOptions = {}
                return;
             }
 
-            queuedRefetchesRef.current.delete(batchStart);
-            const offsets = getBatchOffsets(batchStart);
-            const requestKey = getBatchRequestKey(batchStart);
-            if (requestsRef.current.has(requestKey)) {
-               return;
-            }
-
-            setEntries((current) => {
-               const next = { ...current };
-               offsets.forEach((targetOffset) => {
-                  const currentEntry = current[targetOffset];
-                  if (!currentEntry?.data) {
-                     return;
-                  }
-
-                  next[targetOffset] = createEntry(currentEntry.data, {
-                     error: null,
-                     retryAt: 0,
-                     retryDelayMs: 0,
-                     isFetching: true,
-                     isHydrated: false,
-                     updatedAt: currentEntry.updatedAt,
-                  });
-               });
-               return next;
-            });
-
-            const request = fetchRosterWeeks(batchStart, offsets.length)
-               .then((payload) => {
-                  const displayWeeks = getDisplayWeeksFromPayload(payload, entriesRef.current, latestRawWeeksRef.current, sessionLessonDiffs);
-                  setEntries((current) => {
-                     const next = { ...current };
-                     displayWeeks.forEach((weekData) => {
-                        const currentEntry = current[weekData.week.offset];
-                        if (isSameRosterData(currentEntry?.data, weekData)) {
-                           next[weekData.week.offset] = createEntry(currentEntry?.data ?? weekData, {
-                              error: null,
-                              retryAt: 0,
-                              retryDelayMs: 0,
-                              isFetching: false,
-                              isHydrated: false,
-                              updatedAt: currentEntry?.updatedAt ?? Date.now(),
-                           });
-                           return;
-                        }
-
-                        next[weekData.week.offset] = createEntry(weekData);
-                     });
-                     return next;
-                  });
-               })
-               .catch((error: unknown) => {
-                  const loadError = toRosterLoadError(error);
-                  console.error(LOAD_ERROR_MESSAGE, error);
-                  setEntries((current) => {
-                     const next = { ...current };
-                     offsets.forEach((targetOffset) => {
-                        const currentEntry = current[targetOffset];
-                        if (!currentEntry?.data) {
-                           return;
-                        }
-
-                        next[targetOffset] = createEntry(currentEntry.data, {
-                           error: loadError,
-                           isFetching: false,
-                           isHydrated: false,
-                           retryAt: 0,
-                           retryDelayMs: 0,
-                           updatedAt: currentEntry.updatedAt,
-                        });
-                     });
-                     return next;
-                  });
-               })
-               .finally(() => {
-                  requestsRef.current.delete(requestKey);
-               });
-
-            requestsRef.current.set(requestKey, request);
+            loadBatchRef.current(batchStart, { force: true, passive: true });
          });
       };
 
@@ -738,6 +697,20 @@ export function useRosterWeek(offset: number, options: UseRosterWeekOptions = {}
    }, [enabled, offset, sessionLessonDiffs]);
 
    const activeEntry = entries[offset];
+   const activeRetryAt = activeEntry?.retryAt ?? 0;
+
+   useEffect(() => {
+      if (activeRetryAt <= Date.now()) {
+         const resetTimerId = window.setTimeout(() => setNow(null), 0);
+         return () => window.clearTimeout(resetTimerId);
+      }
+
+      const updateNow = () => setNow(Date.now());
+      updateNow();
+      const intervalId = window.setInterval(updateNow, 1_000);
+      return () => window.clearInterval(intervalId);
+   }, [activeRetryAt]);
+
    const shouldSuppressCachedData = clearCache;
    const data = shouldSuppressCachedData ? null : (activeEntry?.data ?? null);
    const error = shouldSuppressCachedData ? null : (activeEntry?.error ?? null);

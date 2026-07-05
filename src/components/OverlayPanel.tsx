@@ -1,5 +1,28 @@
-import { useEffect, useRef, type HTMLAttributes, type ReactNode, type TouchEvent } from "react";
+import {
+   useEffect,
+   useId,
+   useRef,
+   type HTMLAttributes,
+   type KeyboardEvent as ReactKeyboardEvent,
+   type ReactNode,
+   type RefObject,
+   type TouchEvent,
+} from "react";
 import "./OverlayPanel.css";
+
+const overlayStack: string[] = [];
+let bodyLockCount = 0;
+let originalBodyOverflow = "";
+let originalBodyOverscrollBehavior = "";
+
+const FOCUSABLE_SELECTOR = [
+   "a[href]",
+   "button:not([disabled])",
+   "input:not([disabled])",
+   "select:not([disabled])",
+   "textarea:not([disabled])",
+   '[tabindex]:not([tabindex="-1"])',
+].join(",");
 
 interface OverlayPanelProps {
    children: ReactNode;
@@ -36,9 +59,11 @@ export function OverlayPanel({
    rootProps,
    surfaceProps,
 }: OverlayPanelProps) {
-   useLockedBodyScroll(true);
-   useCloseOnEscape(closeOnEscape, onClose);
+   const overlayId = useId();
+   const surfaceRef = useRef<HTMLElement | null>(null);
    const touchStartYRef = useRef<number | null>(null);
+   useOverlayLifecycle(overlayId, surfaceRef, closeOnEscape, onClose);
+   useLockedBodyScroll();
 
    const rootClassName = ["overlay-panel", `overlay-panel--${placement}`, className, rootProps?.className].filter(Boolean).join(" ");
    const backdropClassNames = ["overlay-panel__backdrop", backdropClassName].filter(Boolean).join(" ");
@@ -84,6 +109,15 @@ export function OverlayPanel({
       }
    };
 
+   const handleSurfaceKeyDown = (event: ReactKeyboardEvent<HTMLElement>) => {
+      surfaceProps?.onKeyDown?.(event);
+      if (event.defaultPrevented || event.key !== "Tab") {
+         return;
+      }
+
+      trapTabFocus(event, event.currentTarget);
+   };
+
    return (
       <div
          {...rootProps}
@@ -101,10 +135,13 @@ export function OverlayPanel({
             aria-modal="true"
             aria-labelledby={labelledBy}
             aria-label={label}
+            ref={surfaceRef}
+            tabIndex={-1}
             onClick={(event) => {
                event.stopPropagation();
                surfaceProps?.onClick?.(event);
             }}
+            onKeyDown={handleSurfaceKeyDown}
          >
             {children}
          </section>
@@ -112,44 +149,84 @@ export function OverlayPanel({
    );
 }
 
-function useCloseOnEscape(enabled: boolean, onClose: () => void) {
+function useOverlayLifecycle(overlayId: string, surfaceRef: RefObject<HTMLElement | null>, closeOnEscape: boolean, onClose: () => void) {
    useEffect(() => {
-      if (!enabled) {
-         return undefined;
-      }
+      const previouslyFocused = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+      overlayStack.push(overlayId);
+      const focusFrame = window.requestAnimationFrame(() => {
+         const surface = surfaceRef.current;
+         const firstFocusable = surface?.querySelector<HTMLElement>(FOCUSABLE_SELECTOR);
+         (firstFocusable ?? surface)?.focus();
+      });
 
       const handleKeyDown = (event: KeyboardEvent) => {
-         if (event.key !== "Escape" || event.defaultPrevented || event.isComposing) {
+         const isTopmost = overlayStack.at(-1) === overlayId;
+         if (!isTopmost || !closeOnEscape || event.key !== "Escape" || event.defaultPrevented || event.isComposing) {
             return;
          }
 
          event.preventDefault();
+         event.stopImmediatePropagation();
          onClose();
       };
 
       document.addEventListener("keydown", handleKeyDown);
-      return () => document.removeEventListener("keydown", handleKeyDown);
-   }, [enabled, onClose]);
+      return () => {
+         window.cancelAnimationFrame(focusFrame);
+         document.removeEventListener("keydown", handleKeyDown);
+         const stackIndex = overlayStack.lastIndexOf(overlayId);
+         if (stackIndex >= 0) {
+            overlayStack.splice(stackIndex, 1);
+         }
+         if (previouslyFocused?.isConnected) {
+            window.requestAnimationFrame(() => previouslyFocused.focus());
+         }
+      };
+   }, [closeOnEscape, onClose, overlayId, surfaceRef]);
 }
 
-function useLockedBodyScroll(enabled: boolean) {
+function useLockedBodyScroll() {
    useEffect(() => {
-      if (!enabled) {
-         return undefined;
+      if (bodyLockCount === 0) {
+         originalBodyOverflow = document.body.style.overflow;
+         originalBodyOverscrollBehavior = document.body.style.overscrollBehavior;
+         document.body.style.overflow = "hidden";
+         document.body.style.overscrollBehavior = "contain";
       }
-
-      const previousOverflow = document.body.style.overflow;
-      const previousOverscrollBehavior = document.body.style.overscrollBehavior;
-      document.body.style.overflow = "hidden";
-      document.body.style.overscrollBehavior = "contain";
+      bodyLockCount += 1;
 
       return () => {
-         document.body.style.overflow = previousOverflow;
-         document.body.style.overscrollBehavior = previousOverscrollBehavior;
+         bodyLockCount = Math.max(0, bodyLockCount - 1);
+         if (bodyLockCount === 0) {
+            document.body.style.overflow = originalBodyOverflow;
+            document.body.style.overscrollBehavior = originalBodyOverscrollBehavior;
+         }
       };
-   }, [enabled]);
+   }, []);
 }
 
 function isSwipeIgnored(target: EventTarget, selector: string | undefined) {
    return Boolean(selector && target instanceof Element && target.closest(selector));
+}
+
+function trapTabFocus(event: ReactKeyboardEvent<HTMLElement>, surface: HTMLElement) {
+   const focusableElements = [...surface.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR)].filter(
+      (element) => element.getClientRects().length > 0 && element.getAttribute("aria-hidden") !== "true"
+   );
+   const first = focusableElements[0];
+   const last = focusableElements.at(-1);
+
+   if (!first || !last) {
+      event.preventDefault();
+      surface.focus();
+      return;
+   }
+
+   if (event.shiftKey && document.activeElement === first) {
+      event.preventDefault();
+      last.focus();
+   } else if (!event.shiftKey && document.activeElement === last) {
+      event.preventDefault();
+      first.focus();
+   }
 }

@@ -60,7 +60,7 @@ const EMPTY_TODAY_MESSAGES = [
       icon: "fa-regular fa-clock",
       title: "All set for today.",
       detail: "You can clock out already. You have no classes scheduled right now.",
-   }
+   },
 ] as const satisfies readonly EmptyDayMessage[];
 
 const EMPTY_DAY_MESSAGE = "No classes scheduled.";

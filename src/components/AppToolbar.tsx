@@ -1,3 +1,4 @@
+import { memo } from "react";
 import { APP_SHORTCUT_LABELS } from "../lib/appShortcuts";
 import type { GridZoom, ViewMode } from "../types/roster";
 import { IconButton } from "./IconButton";
@@ -21,7 +22,7 @@ const zoomOptions: ToolbarActionOption<GridZoom>[] = [
    { id: "quarter", label: "15m", tooltip: "Use 15 minute grid rows", shortcut: "Ctrl + 3", activationId: "zoom-quarter" },
 ];
 
-export function AppToolbar({
+export const AppToolbar = memo(function AppToolbar({
    viewMode,
    gridZoom,
    isRefreshing = false,
@@ -113,4 +114,4 @@ export function AppToolbar({
          </div>
       </header>
    );
-}
+});

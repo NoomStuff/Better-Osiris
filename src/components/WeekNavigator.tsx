@@ -1,4 +1,4 @@
-import { useId, type FocusEvent, type MouseEvent } from "react";
+import { memo, useId, type FocusEvent, type MouseEvent } from "react";
 import { useDelayedTooltip } from "../hooks/useDelayedTooltip";
 import { useShortcutActivation } from "../hooks/useShortcutActivation";
 import { APP_SHORTCUT_LABELS } from "../lib/appShortcuts";
@@ -39,7 +39,15 @@ function formatWeekLabel(weekOffset: number) {
    return `${absoluteWeeks} ${suffix} ago`;
 }
 
-export function WeekNavigator({ title, weekOffset, onPreviousWeek, onNextWeek, onCurrentWeek, canGoPrevious, canGoNext }: WeekNavigatorProps) {
+export const WeekNavigator = memo(function WeekNavigator({
+   title,
+   weekOffset,
+   onPreviousWeek,
+   onNextWeek,
+   onCurrentWeek,
+   canGoPrevious,
+   canGoNext,
+}: WeekNavigatorProps) {
    const label = formatWeekLabel(weekOffset);
    const isCurrentWeek = weekOffset === 0;
    const weekPosition = weekOffset < 0 ? "past" : weekOffset > 0 ? "future" : "current";
@@ -117,4 +125,4 @@ export function WeekNavigator({ title, weekOffset, onPreviousWeek, onNextWeek, o
          />
       </section>
    );
-}
+});

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { SyntheticEvent } from "react";
 import { clearOsirisToken, fetchOsirisTokenSettings, saveOsirisToken } from "../api/settings";
+import type { OsirisTokenSettings } from "../api/settings";
 import { DEV_LESSON_STATUS_PREVIEW_MODES, type DevLessonStatusPreviewMode } from "../lib/devRosterStatusPreview";
 import { notifyError, notifySuccess, notifyWarning } from "../lib/notyf";
 import { OSIRIS_BEARER_TOKEN_VIDEO_URL } from "../lib/osirisTokenHelp";
@@ -17,6 +18,7 @@ interface SettingsDialogProps {
    timeOverride: Date | null;
    statusPreviewMode: DevLessonStatusPreviewMode;
    onClose: () => void;
+   onTokenSettingsChange: (settings: OsirisTokenSettings) => void;
    onToggleDevTools: (enabled: boolean) => void;
    onChangeTimeOverride: (date: Date | null) => void;
    onChangeStatusPreviewMode: (mode: DevLessonStatusPreviewMode) => void;
@@ -33,6 +35,7 @@ export function SettingsDialog({
    timeOverride,
    statusPreviewMode,
    onClose,
+   onTokenSettingsChange,
    onToggleDevTools,
    onChangeTimeOverride,
    onChangeStatusPreviewMode,
@@ -129,27 +132,40 @@ export function SettingsDialog({
       setIsLoading(true);
 
       try {
-         await saveOsirisToken(nextToken);
+         const settings = await saveOsirisToken(nextToken);
+         clearRosterBrowserCache();
+         setHasCustomToken(settings.hasCustomToken);
+         setHasBearerToken(settings.hasBearerToken);
+         setToken("");
+         setIsLoading(false);
+         onTokenSettingsChange(settings);
          notifySuccess("Osiris token saved successfully.");
-         reloadRosterData();
       } catch (requestError) {
          notifyError(requestError, "Failed to save Osiris token.");
          setIsLoading(false);
       }
    };
 
-   const handleClear = async () => {
+   const handleClear = useCallback(async () => {
       setIsLoading(true);
 
       try {
-         await clearOsirisToken();
+         const settings = await clearOsirisToken();
+         clearRosterBrowserCache();
+         setHasCustomToken(settings.hasCustomToken);
+         setHasBearerToken(settings.hasBearerToken);
+         setIsResetConfirmOpen(false);
+         setIsLoading(false);
+         onTokenSettingsChange(settings);
          notifySuccess("Osiris token removed successfully.");
-         reloadRosterData();
       } catch (requestError) {
          notifyError(requestError, "Failed to remove Osiris token.");
          setIsLoading(false);
       }
-   };
+   }, [onTokenSettingsChange]);
+
+   const closeResetConfirm = useCallback(() => setIsResetConfirmOpen(false), []);
+   const confirmClear = useCallback(() => void handleClear(), [handleClear]);
 
    if (!isOpen && !isClosing) {
       return null;
@@ -317,8 +333,8 @@ export function SettingsDialog({
             confirmLabel="Reset token"
             variant="danger"
             isConfirming={isLoading}
-            onCancel={() => setIsResetConfirmOpen(false)}
-            onConfirm={() => void handleClear()}
+            onCancel={closeResetConfirm}
+            onConfirm={confirmClear}
          />
       </>
    );
@@ -344,9 +360,4 @@ function formatDateLabel(date: Date) {
    const month = String(date.getMonth() + 1).padStart(2, "0");
 
    return `${day}-${month}`;
-}
-
-function reloadRosterData() {
-   clearRosterBrowserCache();
-   window.location.reload();
 }
