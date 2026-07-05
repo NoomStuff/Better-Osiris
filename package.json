@@ -7,6 +7,7 @@
       "dev": "concurrently \"bun --watch server.ts\" \"bunx vite\"",
       "server": "bun server.ts",
       "build": "bunx tsc -p tsconfig.json && bunx tsc -p tsconfig.server.json && bunx vite build",
+      "desktop:build": "bun run build && deno task desktop:package",
       "lint": "eslint . --max-warnings 0",
       "test": "concurrently \"bun run test:unit\" \"bun run test:e2e\"",
       "test:unit": "bun test",

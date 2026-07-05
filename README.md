@@ -53,6 +53,22 @@ The frontend runs at `http://localhost:5173` and proxies API requests to the loc
 
 ---
 
+## Desktop Build
+
+The experimental desktop build uses [Deno Desktop](https://docs.deno.com/runtime/desktop/) instead of Electron. It currently uses Deno's CEF backend because the Deno 2.9.1 native-WebView backend crashes on the tested Windows environment.
+
+Install Deno 2.9 or newer, then run:
+
+```sh
+bun run desktop:build
+```
+
+The platform-specific app is written to `desktop-dist`. On Windows, launch `desktop-dist/Better-Osiris/Better-Osiris.bat`. The CEF test build is large (roughly 500 MB) because it includes Chromium.
+
+The desktop app stores its generated cookie-encryption secret in the current user's application-data directory. It uses the MBORijnland roster URL by default; `OSIRIS_ROSTER_URL`, `COOKIE_SECRET`, and `BEARER_TOKEN` environment variables can still override the desktop defaults.
+
+---
+
 ## Configuration
 
 | Variable            | Required | Description                                                                                                           |
@@ -66,17 +82,18 @@ The frontend runs at `http://localhost:5173` and proxies API requests to the loc
 
 ## Commands
 
-| Command                | Description                              |
-| ---------------------- | ---------------------------------------- |
-| `bun run dev`          | Start the frontend and API in watch mode |
-| `bun run build`        | Type-check and build the production app  |
-| `bun run start`        | Serve the built app                      |
-| `bun run test`         | Run all tests                            |
-| `bun run test:unit`    | Run unit and API tests                   |
-| `bun run test:e2e`     | Run Playwright end-to-end tests          |
-| `bun run lint`         | Run ESLint                               |
-| `bun run format`       | Format code with Prettier                |
-| `bun run format:check` | Check formatting                         |
-| `bun run verify`       | Run all pre commit checks                |
+| Command                 | Description                              |
+| ----------------------- | ---------------------------------------- |
+| `bun run dev`           | Start the frontend and API in watch mode |
+| `bun run build`         | Type-check and build the production app  |
+| `bun run desktop:build` | Build the native Deno Desktop app        |
+| `bun run start`         | Serve the built app                      |
+| `bun run test`          | Run all tests                            |
+| `bun run test:unit`     | Run unit and API tests                   |
+| `bun run test:e2e`      | Run Playwright end-to-end tests          |
+| `bun run lint`          | Run ESLint                               |
+| `bun run format`        | Format code with Prettier                |
+| `bun run format:check`  | Check formatting                         |
+| `bun run verify`        | Run all pre commit checks                |
 
 For a production deployment, set the same environment variables in your hosting provider, run `bun run build`, then start the app with `bun run start`. The included `vercel.json` also supports deployment to Vercel.

@@ -1,0 +1,25 @@
+{
+   "name": "better-osiris",
+   "version": "1.2.0",
+   "exports": "./desktop.ts",
+   "lock": false,
+   "nodeModulesDir": "none",
+   "tasks": {
+      "desktop:package": "deno desktop --unstable-sloppy-imports --backend=cef --allow-env --allow-read --allow-write --allow-net --include=dist desktop.ts"
+   },
+   "desktop": {
+      "app": {
+         "name": "Better Osiris",
+         "identifier": "nl.nooms.better-osiris",
+         "icons": {
+            "windows": "./public/favicon.ico"
+         }
+      },
+      "backend": "cef",
+      "output": {
+         "windows": "./desktop-dist/Better-Osiris",
+         "macos": "./desktop-dist/Better-Osiris.app",
+         "linux": "./desktop-dist/Better-Osiris.AppImage"
+      }
+   }
+}
