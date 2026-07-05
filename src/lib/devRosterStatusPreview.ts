@@ -1,4 +1,4 @@
-import type { Lesson, RosterResponse } from "../types/roster";
+import type { Lesson, LessonSnapshot, RosterResponse } from "../types/roster";
 
 export type DevLessonStatusPreviewMode = "none" | "changed" | "cancelled" | "mixed";
 
@@ -26,7 +26,7 @@ export function applyDevLessonStatusPreview(data: RosterResponse | null, mode: D
 
 function applyPreviewStatus(lesson: Lesson, index: number, mode: DevLessonStatusPreviewMode): Lesson {
    if (mode === "changed" && index === 0) {
-      return { ...lesson, status: "changed" };
+      return createChangedPreview(lesson);
    }
 
    if (mode === "cancelled" && index === 0) {
@@ -35,7 +35,7 @@ function applyPreviewStatus(lesson: Lesson, index: number, mode: DevLessonStatus
 
    if (mode === "mixed") {
       if (index === 0) {
-         return { ...lesson, status: "changed" };
+         return createChangedPreview(lesson);
       }
 
       if (index === 1) {
@@ -44,4 +44,27 @@ function applyPreviewStatus(lesson: Lesson, index: number, mode: DevLessonStatus
    }
 
    return lesson;
+}
+
+function createChangedPreview(lesson: Lesson): Lesson {
+   return {
+      ...lesson,
+      status: "changed",
+      previous: lesson.previous ?? createOriginalPreview(lesson),
+   };
+}
+
+function createOriginalPreview(lesson: Lesson): LessonSnapshot {
+   return {
+      id: lesson.id,
+      title: lesson.title,
+      subject: lesson.subject,
+      start: lesson.start,
+      end: lesson.end,
+      teacher: lesson.teacher,
+      room: lesson.room === "A101" ? "B12" : "A101",
+      location: lesson.location,
+      description: lesson.description,
+      status: "scheduled",
+   };
 }

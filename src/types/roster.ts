@@ -2,6 +2,19 @@ export type ViewMode = "agenda" | "grid";
 export type GridZoom = "hour" | "half" | "quarter";
 export type LessonStatus = "scheduled" | "changed" | "cancelled";
 
+export interface LessonSnapshot {
+   id: string;
+   title: string;
+   subject: string;
+   start: string;
+   end: string;
+   teacher: string;
+   room: string;
+   location: string;
+   description: string;
+   status: LessonStatus;
+}
+
 export interface Lesson {
    id: string;
    title: string;
@@ -13,6 +26,7 @@ export interface Lesson {
    location: string;
    description: string;
    status: LessonStatus;
+   previous?: LessonSnapshot;
 }
 
 export interface RosterWeek {

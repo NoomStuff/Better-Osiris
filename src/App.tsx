@@ -16,6 +16,7 @@ import { getEmptyWeekMessage } from "./lib/rosterFlavor";
 import { clearRosterBrowserCache } from "./lib/rosterCache";
 import { notifyError, notifySuccess } from "./lib/notyf";
 import { getDayGroups, getPositionedLessons } from "./lib/rosterLayout";
+import { requestRosterNotificationPermission } from "./lib/rosterNotifications";
 import type { GridZoom, Lesson, RosterWeek, ViewMode } from "./types/roster";
 import "./styles/App.css";
 
@@ -250,6 +251,10 @@ export default function App() {
 
       const interval = window.setInterval(updateNow, 1_000);
       return () => window.clearInterval(interval);
+   }, []);
+
+   useEffect(() => {
+      requestRosterNotificationPermission();
    }, []);
 
    useEffect(() => {

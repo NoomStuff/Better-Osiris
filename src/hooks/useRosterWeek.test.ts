@@ -14,9 +14,13 @@ void describe("session roster diff states", () => {
 
       const displayNext = applySessionLessonDiffs(next, diffs);
       const displayLater = applySessionLessonDiffs(later, diffs);
+      const displayedNextLesson = displayNext.lessons[0];
+      const displayedLaterLesson = displayLater.lessons[0];
 
-      assert.equal(displayNext.lessons[0]?.status, "changed");
-      assert.equal(displayLater.lessons[0]?.status, "changed");
+      assert.equal(displayedNextLesson?.status, "changed");
+      assert.equal(displayedNextLesson.previous?.room, "A101");
+      assert.equal(displayedLaterLesson?.status, "changed");
+      assert.equal(displayedLaterLesson.previous?.room, "A101");
    });
 
    void it("keeps removed lessons visible as cancelled", () => {
@@ -42,8 +46,37 @@ void describe("session roster diff states", () => {
 
       const display = applySessionLessonDiffs(next, diffs);
 
-      assert.equal(display.lessons.find((lesson) => lesson.id === "old-id")?.status, "cancelled");
+      assert.equal(display.lessons.find((lesson) => lesson.id === "old-id"), undefined);
       assert.equal(display.lessons.find((lesson) => lesson.id === "new-id")?.status, "changed");
+      assert.equal(display.lessons.find((lesson) => lesson.id === "new-id")?.previous?.start, "2026-06-16T09:00:00");
+   });
+
+   void it("preserves the first original snapshot across multiple edits", () => {
+      const first = createWeek([createLesson({ room: "A101" })]);
+      const second = createWeek([createLesson({ room: "B202" })]);
+      const third = createWeek([createLesson({ room: "C303" })]);
+      const diffs: SessionLessonDiffsByWeek = new Map();
+
+      recordSessionLessonDiffs(first, second, diffs);
+      recordSessionLessonDiffs(second, third, diffs);
+
+      const display = applySessionLessonDiffs(third, diffs);
+      const displayedLesson = display.lessons[0];
+
+      assert.equal(displayedLesson?.previous?.room, "A101");
+      assert.equal(displayedLesson.room, "C303");
+   });
+
+   void it("records a native OSIRIS cancellation on a lesson that remains in the payload", () => {
+      const previous = createWeek([createLesson()]);
+      const next = createWeek([createLesson({ status: "cancelled" })]);
+      const diffs: SessionLessonDiffsByWeek = new Map();
+
+      const recorded = recordSessionLessonDiffs(previous, next, diffs);
+      const display = applySessionLessonDiffs(next, diffs);
+
+      assert.equal(recorded[0]?.status, "cancelled");
+      assert.equal(display.lessons[0]?.status, "cancelled");
    });
 });
 

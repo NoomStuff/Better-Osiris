@@ -4,6 +4,7 @@ import { formatWeekTitle, getIsoWeekNumber, getLocalWeekStartIso, shiftIsoDateBy
 import { notifyError } from "../lib/notyf";
 import { clearRosterBrowserCache, CURRENT_WEEK_CACHE_KEY, LAST_WEEK_CACHE_KEY, SESSION_LESSON_DIFFS_KEY } from "../lib/rosterCache";
 import { toRosterLoadError, type RosterLoadError } from "../lib/rosterLoadError";
+import { notifyRosterDiffs } from "../lib/rosterNotifications";
 import { applySessionLessonDiffs, recordSessionLessonDiffs, type SessionLessonDiff, type SessionLessonDiffsByWeek } from "../lib/rosterSessionDiffs";
 import { MAX_WEEK_OFFSET, MIN_WEEK_OFFSET } from "../../shared/rosterTime";
 import type { RosterBatchResponse, RosterResponse } from "../types/roster";
@@ -386,13 +387,19 @@ function getDisplayWeeksFromPayload(
    sessionLessonDiffs: SessionLessonDiffsByWeek
 ) {
    let recordedNewDiff = false;
+   const currentWeekDiffs: SessionLessonDiff[] = [];
    const weeks: RosterResponse[] = [];
 
    for (const weekData of payload.weeks) {
       const comparisonBase = latestRawWeeks.get(weekData.week.offset) ?? entries[weekData.week.offset]?.data ?? null;
       if (comparisonBase && !isSameRosterData(comparisonBase, weekData)) {
-         recordSessionLessonDiffs(comparisonBase, weekData, sessionLessonDiffs);
-         recordedNewDiff = true;
+         const recordedDiffs = recordSessionLessonDiffs(comparisonBase, weekData, sessionLessonDiffs);
+         if (recordedDiffs.length > 0) {
+            recordedNewDiff = true;
+            if (weekData.week.offset === 0) {
+               currentWeekDiffs.push(...recordedDiffs);
+            }
+         }
       }
 
       latestRawWeeks.set(weekData.week.offset, weekData);
@@ -406,6 +413,7 @@ function getDisplayWeeksFromPayload(
    if (recordedNewDiff) {
       storeSessionLessonDiffs(sessionLessonDiffs);
    }
+   notifyRosterDiffs(currentWeekDiffs);
 
    return weeks;
 }

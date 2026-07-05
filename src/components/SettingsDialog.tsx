@@ -304,8 +304,8 @@ export function SettingsDialog({
                            </div>
 
                            <div className="devtools-option">
-                              <span className="devtools-option__label">Lesson status preview</span>
-                              <div className="settings-segmented-control" role="group" aria-label="Lesson status preview">
+                              <span className="devtools-option__label">Lesson diff preview</span>
+                              <div className="settings-segmented-control" role="group" aria-label="Lesson diff preview">
                                  {DEV_LESSON_STATUS_PREVIEW_MODES.map((mode) => (
                                     <button
                                        type="button"

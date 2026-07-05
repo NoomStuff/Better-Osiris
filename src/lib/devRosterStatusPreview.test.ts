@@ -25,6 +25,7 @@ void describe("dev roster status preview", () => {
          applyDevLessonStatusPreview(week, "mixed")?.lessons.map((lesson) => lesson.status),
          ["changed", "cancelled"]
       );
+      assert.equal(applyDevLessonStatusPreview(week, "changed")?.lessons[0]?.previous?.room, "B12");
    });
 });
 
