@@ -1,6 +1,6 @@
-import type { OsirisTokenSettings } from "../../shared/osirisTokenSettings";
+import type { OsirisTokenSettings } from "../../shared/roster";
 
-export type { OsirisTokenSettings } from "../../shared/osirisTokenSettings";
+export type { OsirisTokenSettings } from "../../shared/roster";
 
 export async function fetchOsirisTokenSettings(): Promise<OsirisTokenSettings> {
    const response = await fetch("/api/settings/osiris-token");

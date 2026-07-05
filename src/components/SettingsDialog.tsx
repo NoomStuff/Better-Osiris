@@ -1,11 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { SyntheticEvent } from "react";
-import { clearOsirisToken, fetchOsirisTokenSettings, saveOsirisToken } from "../api/settings";
 import type { OsirisTokenSettings } from "../api/settings";
 import { DEV_LESSON_STATUS_PREVIEW_MODES, type DevLessonStatusPreviewMode } from "../lib/devRosterStatusPreview";
 import { notifyError, notifySuccess, notifyWarning } from "../lib/notyf";
 import { OSIRIS_BEARER_TOKEN_HELP_URL } from "../lib/osirisTokenHelp";
-import { clearRosterBrowserCache } from "../lib/rosterCache";
 import { ConfirmDialog } from "./ConfirmDialog";
 import { IconButton } from "./IconButton";
 import { OverlayPanel } from "./OverlayPanel";
@@ -17,8 +15,11 @@ interface SettingsDialogProps {
    perceivedNow: Date;
    timeOverride: Date | null;
    statusPreviewMode: DevLessonStatusPreviewMode;
+   tokenSettings: OsirisTokenSettings | null;
+   isTokenLoading: boolean;
    onClose: () => void;
-   onTokenSettingsChange: (settings: OsirisTokenSettings) => void;
+   onSaveToken: (token: string) => Promise<OsirisTokenSettings>;
+   onClearToken: () => Promise<OsirisTokenSettings>;
    onToggleDevTools: (enabled: boolean) => void;
    onChangeTimeOverride: (date: Date | null) => void;
    onChangeStatusPreviewMode: (mode: DevLessonStatusPreviewMode) => void;
@@ -34,21 +35,23 @@ export function SettingsDialog({
    perceivedNow,
    timeOverride,
    statusPreviewMode,
+   tokenSettings,
+   isTokenLoading,
    onClose,
-   onTokenSettingsChange,
+   onSaveToken,
+   onClearToken,
    onToggleDevTools,
    onChangeTimeOverride,
    onChangeStatusPreviewMode,
 }: SettingsDialogProps) {
    const [token, setToken] = useState("");
-   const [hasCustomToken, setHasCustomToken] = useState(false);
-   const [hasBearerToken, setHasBearerToken] = useState(false);
-   const [isLoading, setIsLoading] = useState(false);
    const [isClosing, setIsClosing] = useState(false);
    const [isResetConfirmOpen, setIsResetConfirmOpen] = useState(false);
    const closeTimerRef = useRef<number | null>(null);
    const perceivedMinutes = perceivedNow.getHours() * 60 + perceivedNow.getMinutes();
-   const canSaveToken = token.trim().length > 0 && !isLoading;
+   const hasCustomToken = tokenSettings?.hasCustomToken === true;
+   const hasBearerToken = tokenSettings?.hasBearerToken === true;
+   const canSaveToken = token.trim().length > 0 && !isTokenLoading;
 
    const closeSettings = useCallback(() => {
       if (isClosing) {
@@ -62,29 +65,6 @@ export function SettingsDialog({
          onClose();
       }, 240);
    }, [isClosing, onClose]);
-
-   useEffect(() => {
-      if (!isOpen) {
-         return;
-      }
-
-      let isActive = true;
-
-      fetchOsirisTokenSettings()
-         .then((settings) => {
-            if (isActive) {
-               setHasCustomToken(settings.hasCustomToken);
-               setHasBearerToken(settings.hasBearerToken);
-            }
-         })
-         .catch((requestError: unknown) => {
-            notifyError(requestError, "Failed to load settings.");
-         });
-
-      return () => {
-         isActive = false;
-      };
-   }, [isOpen]);
 
    useEffect(() => {
       return () => {
@@ -129,40 +109,24 @@ export function SettingsDialog({
          return;
       }
 
-      setIsLoading(true);
-
       try {
-         const settings = await saveOsirisToken(nextToken);
-         clearRosterBrowserCache();
-         setHasCustomToken(settings.hasCustomToken);
-         setHasBearerToken(settings.hasBearerToken);
+         await onSaveToken(nextToken);
          setToken("");
-         setIsLoading(false);
-         onTokenSettingsChange(settings);
          notifySuccess("Osiris token saved successfully.");
       } catch (requestError) {
          notifyError(requestError, "Failed to save Osiris token.");
-         setIsLoading(false);
       }
    };
 
    const handleClear = useCallback(async () => {
-      setIsLoading(true);
-
       try {
-         const settings = await clearOsirisToken();
-         clearRosterBrowserCache();
-         setHasCustomToken(settings.hasCustomToken);
-         setHasBearerToken(settings.hasBearerToken);
+         await onClearToken();
          setIsResetConfirmOpen(false);
-         setIsLoading(false);
-         onTokenSettingsChange(settings);
          notifySuccess("Osiris token removed successfully.");
       } catch (requestError) {
          notifyError(requestError, "Failed to remove Osiris token.");
-         setIsLoading(false);
       }
-   }, [onTokenSettingsChange]);
+   }, [onClearToken]);
 
    const closeResetConfirm = useCallback(() => setIsResetConfirmOpen(false), []);
    const confirmClear = useCallback(() => void handleClear(), [handleClear]);
@@ -221,7 +185,7 @@ export function SettingsDialog({
                            placeholder={hasCustomToken ? "Replace custom token" : "Bearer XXXXXXXXXXXXXXXXXXXXXXXXXXX"}
                            autoComplete="off"
                            spellCheck={false}
-                           disabled={isLoading}
+                           disabled={isTokenLoading}
                            onChange={(event) => setToken(event.target.value)}
                         />
                      </label>
@@ -233,7 +197,7 @@ export function SettingsDialog({
                         <button
                            className="settings-dialog__button settings-dialog__button--danger"
                            type="button"
-                           disabled={isLoading || !hasCustomToken}
+                           disabled={isTokenLoading || !hasCustomToken}
                            onClick={() => setIsResetConfirmOpen(true)}
                         >
                            Reset
@@ -332,7 +296,7 @@ export function SettingsDialog({
             detail="This will remove the saved bearer token and reload the roster."
             confirmLabel="Reset token"
             variant="danger"
-            isConfirming={isLoading}
+            isConfirming={isTokenLoading}
             onCancel={closeResetConfirm}
             onConfirm={confirmClear}
          />

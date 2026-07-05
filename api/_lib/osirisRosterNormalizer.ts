@@ -1,5 +1,4 @@
-import type { Lesson, LessonStatus, RosterResponse } from "../../src/types/roster";
-import { toDayKey } from "./date.js";
+import type { Lesson, LessonStatus, RosterResponse } from "../../shared/roster.js";
 import type { OsirisRosterEntry, OsirisRosterResponse, OsirisWeek } from "./osirisClient.js";
 
 function splitSubject(rawSubject: string) {
@@ -81,7 +80,7 @@ function toLocalDateTime(dayIso: string, timeValue: string) {
 
 function toLocalDateOnly(dayIso: string) {
    const day = parseLocalDate(getDatePart(dayIso));
-   return toDayKey(day);
+   return AMSTERDAM_DATE_FORMATTER.format(day);
 }
 
 function normalizeLesson(item: OsirisRosterEntry): Lesson {

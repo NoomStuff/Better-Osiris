@@ -1,58 +1,9 @@
+import type { Lesson } from "../../shared/roster";
+
+export type { Lesson, LessonSnapshot, LessonStatus, RosterBatchResponse, RosterResponse, RosterSource, RosterWeek } from "../../shared/roster";
+
 export type ViewMode = "agenda" | "grid";
 export type GridZoom = "hour" | "half" | "quarter";
-export type LessonStatus = "scheduled" | "changed" | "cancelled";
-
-export interface LessonSnapshot {
-   id: string;
-   title: string;
-   subject: string;
-   start: string;
-   end: string;
-   teacher: string;
-   room: string;
-   location: string;
-   description: string;
-   status: LessonStatus;
-}
-
-export interface Lesson {
-   id: string;
-   title: string;
-   subject: string;
-   start: string;
-   end: string;
-   teacher: string;
-   room: string;
-   location: string;
-   description: string;
-   status: LessonStatus;
-   previous?: LessonSnapshot;
-}
-
-export interface RosterWeek {
-   offset: number;
-   number: number;
-   start: string;
-   end: string;
-}
-
-export interface RosterSource {
-   mode: string;
-   note: string;
-}
-
-export interface RosterResponse {
-   week: RosterWeek;
-   lessons: Lesson[];
-   source: RosterSource;
-}
-
-export interface RosterBatchResponse {
-   weeks: RosterResponse[];
-   offset: number;
-   limit: number;
-   hasMore: boolean;
-}
 
 export interface PositionedLesson extends Lesson {
    startDate: Date;

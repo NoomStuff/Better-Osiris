@@ -1,5 +1,4 @@
-import { MAX_WEEK_LIMIT, MAX_WEEK_OFFSET, MIN_OSIRIS_WEEK_OFFSET } from "../../shared/rosterTime.js";
-import type { RosterBatchResponse } from "../../src/types/roster.js";
+import { MAX_WEEK_LIMIT, MAX_WEEK_OFFSET, MIN_OSIRIS_WEEK_OFFSET, type RosterBatchResponse } from "../../shared/roster.js";
 import { fetchOsirisRosterWeeks } from "./osirisClient.js";
 import { normalizeRosterWeeksResponse } from "./osirisRosterNormalizer.js";
 import { resolveOsirisBearerToken } from "./osirisTokenSettingsService.js";

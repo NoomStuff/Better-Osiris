@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState, type AnimationEvent } from "react";
+import { useCallback, useEffect, useMemo, useState, type AnimationEvent } from "react";
 import { AgendaView } from "./components/AgendaView";
 import { AppToolbar } from "./components/AppToolbar";
 import { GridView } from "./components/GridView";
@@ -6,14 +6,16 @@ import { LessonDrawer } from "./components/LessonDrawer";
 import { BearerTokenState, ErrorState, LoadingState, RosterOverlayState } from "./components/LoadingState";
 import { SettingsDialog } from "./components/SettingsDialog";
 import { WeekNavigator } from "./components/WeekNavigator";
-import { fetchOsirisTokenSettings, saveOsirisToken, type OsirisTokenSettings } from "./api/settings";
+import { useDevRosterPreview } from "./hooks/useDevRosterPreview";
 import { useKeyboardShortcuts, type KeyboardShortcut } from "./hooks/useKeyboardShortcuts";
+import { useOsirisTokenSettings } from "./hooks/useOsirisTokenSettings";
+import { useViewportMetrics } from "./hooks/useViewportMetrics";
+import { useWeekSwipeNavigation } from "./hooks/useWeekSwipeNavigation";
 import { APP_SHORTCUTS } from "./lib/appShortcuts";
-import { applyDevLessonStatusPreview, isDevLessonStatusPreviewMode, type DevLessonStatusPreviewMode } from "./lib/devRosterStatusPreview";
+import { applyDevLessonStatusPreview } from "./lib/devRosterStatusPreview";
 import { useRosterWeek } from "./hooks/useRosterWeek";
 import { formatLocalIsoDate, getIsoWeekNumber, toDayKey } from "./lib/date";
 import { getEmptyWeekMessage } from "./lib/rosterFlavor";
-import { clearRosterBrowserCache } from "./lib/rosterCache";
 import { notifyError, notifySuccess } from "./lib/notyf";
 import { getDayGroups, getPositionedLessons } from "./lib/rosterLayout";
 import { requestRosterNotificationPermission } from "./lib/rosterNotifications";
@@ -21,22 +23,12 @@ import type { GridZoom, Lesson, RosterWeek, ViewMode } from "./types/roster";
 import "./styles/App.css";
 
 const STORAGE_KEY = "roster-view-mode";
-const DEVTOOLS_STORAGE_KEY = "roster-devtools-enabled";
-const DEVTOOLS_TIME_STORAGE_KEY = "roster-devtools-time-override";
-const DEVTOOLS_STATUS_PREVIEW_STORAGE_KEY = "roster-devtools-status-preview";
 const GRID_ZOOM_ORDER = ["hour", "half", "quarter"] as const satisfies readonly GridZoom[];
 const FUTURE_WEEK_KEYS = ["1", "2", "3", "4", "5", "6", "7", "8", "9"] as const;
 const IS_DEV_SERVER = import.meta.env.DEV;
-const WEEK_SWIPE_MIN_DISTANCE_PX = 56;
-const WEEK_SWIPE_MAX_VERTICAL_DRIFT_PX = 72;
 const MOBILE_VIEW_MODE_MEDIA_QUERY = "(max-width: 640px)";
 
 type WeekTransitionDirection = "default" | "previous" | "next" | "settled";
-
-interface WeekSwipeStart {
-   x: number;
-   y: number;
-}
 
 function getInitialViewMode(): ViewMode {
    if (typeof window === "undefined") {
@@ -49,60 +41,6 @@ function getInitialViewMode(): ViewMode {
    }
 
    return window.matchMedia(MOBILE_VIEW_MODE_MEDIA_QUERY).matches ? "agenda" : "grid";
-}
-
-function getInitialDevToolsEnabled() {
-   if (!IS_DEV_SERVER || typeof window === "undefined") {
-      return false;
-   }
-
-   return window.localStorage.getItem(DEVTOOLS_STORAGE_KEY) === "true";
-}
-
-function getInitialTimeOverride(): Date | null {
-   if (!IS_DEV_SERVER || typeof window === "undefined") {
-      return null;
-   }
-
-   const stored = window.localStorage.getItem(DEVTOOLS_TIME_STORAGE_KEY);
-   if (!stored) {
-      return null;
-   }
-
-   const date = new Date(stored);
-   return Number.isNaN(date.getTime()) ? null : date;
-}
-
-function getInitialStatusPreviewMode(): DevLessonStatusPreviewMode {
-   if (!IS_DEV_SERVER || typeof window === "undefined") {
-      return "none";
-   }
-
-   const stored = window.localStorage.getItem(DEVTOOLS_STATUS_PREVIEW_STORAGE_KEY);
-   return isDevLessonStatusPreviewMode(stored) ? stored : "none";
-}
-
-function setStableViewportHeight() {
-   if (typeof window === "undefined" || typeof document === "undefined") {
-      return;
-   }
-
-   const height = window.visualViewport?.height ?? window.innerHeight;
-   document.documentElement.style.setProperty("--stable-vh", `${height}px`);
-   document.documentElement.style.setProperty("--stable-vh-double", `${height * 2}px`);
-   document.documentElement.style.setProperty("--stable-vh-quad", `${height * 4}px`);
-}
-
-function setPageScrollability() {
-   if (typeof window === "undefined" || typeof document === "undefined") {
-      return;
-   }
-
-   const viewportHeight = window.visualViewport?.height ?? window.innerHeight;
-   const scrollHeight = Math.max(document.documentElement.scrollHeight, document.body.scrollHeight);
-   const isScrollable = scrollHeight - viewportHeight > 1;
-
-   document.documentElement.dataset["pageScrollable"] = isScrollable ? "true" : "false";
 }
 
 function getAdjacentZoom(currentZoom: GridZoom, direction: -1 | 1) {
@@ -180,28 +118,30 @@ export default function App() {
    const [expandedOverrides, setExpandedOverrides] = useState<Set<string>>(new Set());
    const [animateAgenda, setAnimateAgenda] = useState(false);
    const [isSettingsOpen, setIsSettingsOpen] = useState(false);
-   const [tokenSettings, setTokenSettings] = useState<OsirisTokenSettings | null>(null);
-   const [isTokenSettingsLoading, setIsTokenSettingsLoading] = useState(true);
    const [bearerTokenInput, setBearerTokenInput] = useState("");
-   const [isSavingBearerToken, setIsSavingBearerToken] = useState(false);
-   const [rosterResetKey, setRosterResetKey] = useState(0);
-   const [clockNow, setClockNow] = useState(() => new Date());
-   const [isDevToolsEnabled, setIsDevToolsEnabled] = useState(getInitialDevToolsEnabled);
-   const [timeOverride, setTimeOverride] = useState<Date | null>(getInitialTimeOverride);
-   const [devStatusPreviewMode, setDevStatusPreviewMode] = useState<DevLessonStatusPreviewMode>(getInitialStatusPreviewMode);
-   const weekSwipeStartRef = useRef<WeekSwipeStart | null>(null);
-   const hasBearerToken = tokenSettings?.hasBearerToken === true;
+   const devPreview = useDevRosterPreview();
+   const {
+      settings: tokenSettings,
+      hasBearerToken,
+      isInitialLoading: isTokenSettingsLoading,
+      isMutating: isTokenMutating,
+      rosterResetKey,
+      saveToken,
+      clearToken,
+      refreshAfterAuthError,
+   } = useOsirisTokenSettings();
+   useViewportMetrics();
    const { canGoNext, canGoPrevious, data, error, isWeekNavigable, loading, retryCountdownMs, retrying, refreshing, title } = useRosterWeek(weekOffset, {
       enabled: !isTokenSettingsLoading && hasBearerToken,
       clearCache: !isTokenSettingsLoading && !hasBearerToken,
       resetKey: rosterResetKey,
    });
-   const perceivedNow = isDevToolsEnabled && timeOverride ? timeOverride : clockNow;
+   const perceivedNow = devPreview.perceivedNow;
    const perceivedDayKey = toDayKey(perceivedNow);
    const perceivedDay = useMemo(() => new Date(`${perceivedDayKey}T12:00:00`), [perceivedDayKey]);
    const displayedData = useMemo(
-      () => applyDevLessonStatusPreview(data, IS_DEV_SERVER && isDevToolsEnabled ? devStatusPreviewMode : "none"),
-      [data, devStatusPreviewMode, isDevToolsEnabled]
+      () => applyDevLessonStatusPreview(data, IS_DEV_SERVER && devPreview.isEnabled ? devPreview.statusPreviewMode : "none"),
+      [data, devPreview.isEnabled, devPreview.statusPreviewMode]
    );
    const errorDetail = useMemo(() => {
       if (!error) {
@@ -216,169 +156,16 @@ export default function App() {
    }, [error, tokenSettings?.hasCustomToken]);
 
    useEffect(() => {
-      let isStale = false;
-
-      fetchOsirisTokenSettings()
-         .then((settings) => {
-            if (!isStale) {
-               if (!settings.hasBearerToken) {
-                  clearRosterBrowserCache();
-               }
-               setTokenSettings(settings);
-            }
-         })
-         .catch((requestError: unknown) => {
-            if (!isStale) {
-               clearRosterBrowserCache();
-               setTokenSettings({ hasCustomToken: false, hasBearerToken: false });
-               notifyError(requestError, "Failed to load bearer token settings.");
-            }
-         })
-         .finally(() => {
-            if (!isStale) {
-               setIsTokenSettingsLoading(false);
-            }
-         });
-
-      return () => {
-         isStale = true;
-      };
-   }, []);
-
-   useEffect(() => {
-      const updateNow = () => setClockNow(new Date());
-      updateNow();
-
-      const interval = window.setInterval(updateNow, 1_000);
-      return () => window.clearInterval(interval);
-   }, []);
-
-   useEffect(() => {
       requestRosterNotificationPermission();
    }, []);
-
-   useEffect(() => {
-      if (!IS_DEV_SERVER) {
-         return;
-      }
-
-      window.localStorage.setItem(DEVTOOLS_STORAGE_KEY, String(isDevToolsEnabled));
-   }, [isDevToolsEnabled]);
-
-   useEffect(() => {
-      if (!IS_DEV_SERVER) {
-         return;
-      }
-
-      if (timeOverride) {
-         window.localStorage.setItem(DEVTOOLS_TIME_STORAGE_KEY, timeOverride.toISOString());
-      } else {
-         window.localStorage.removeItem(DEVTOOLS_TIME_STORAGE_KEY);
-      }
-   }, [timeOverride]);
-
-   useEffect(() => {
-      if (!IS_DEV_SERVER) {
-         return;
-      }
-
-      window.localStorage.setItem(DEVTOOLS_STATUS_PREVIEW_STORAGE_KEY, devStatusPreviewMode);
-   }, [devStatusPreviewMode]);
 
    useEffect(() => {
       if (!error?.isAuthRelated) {
          return;
       }
 
-      let isStale = false;
-      fetchOsirisTokenSettings()
-         .then((settings) => {
-            if (!isStale) {
-               setTokenSettings(settings);
-            }
-         })
-         .catch(() => {
-            if (!isStale) {
-               setTokenSettings((current) => {
-                  const next = current ? { ...current, hasCustomToken: false } : current;
-                  if (next && !next.hasBearerToken) {
-                     clearRosterBrowserCache();
-                  }
-                  return next;
-               });
-            }
-         });
-
-      return () => {
-         isStale = true;
-      };
-   }, [error?.isAuthRelated]);
-
-   useEffect(() => {
-      if (typeof window === "undefined") {
-         return;
-      }
-
-      let viewportWidth = window.innerWidth;
-
-      setStableViewportHeight();
-
-      const updateForStableViewportChange = () => {
-         const nextWidth = window.innerWidth;
-         const widthChanged = Math.abs(nextWidth - viewportWidth) > 24;
-
-         if (widthChanged) {
-            viewportWidth = nextWidth;
-            setStableViewportHeight();
-         }
-      };
-
-      const updateAfterOrientationChange = () => {
-         window.setTimeout(() => {
-            viewportWidth = window.innerWidth;
-            setStableViewportHeight();
-         }, 250);
-      };
-
-      window.addEventListener("resize", updateForStableViewportChange);
-      window.addEventListener("orientationchange", updateAfterOrientationChange);
-
-      return () => {
-         window.removeEventListener("resize", updateForStableViewportChange);
-         window.removeEventListener("orientationchange", updateAfterOrientationChange);
-      };
-   }, []);
-
-   useEffect(() => {
-      if (typeof window === "undefined" || typeof document === "undefined") {
-         return;
-      }
-
-      let animationFrame = 0;
-
-      const updatePageScrollability = () => {
-         window.cancelAnimationFrame(animationFrame);
-         animationFrame = window.requestAnimationFrame(setPageScrollability);
-      };
-
-      updatePageScrollability();
-
-      const resizeObserver = new ResizeObserver(updatePageScrollability);
-      resizeObserver.observe(document.documentElement);
-      resizeObserver.observe(document.body);
-
-      window.addEventListener("resize", updatePageScrollability);
-      window.visualViewport?.addEventListener("resize", updatePageScrollability);
-      window.addEventListener("orientationchange", updatePageScrollability);
-
-      return () => {
-         window.cancelAnimationFrame(animationFrame);
-         resizeObserver.disconnect();
-         window.removeEventListener("resize", updatePageScrollability);
-         window.visualViewport?.removeEventListener("resize", updatePageScrollability);
-         window.removeEventListener("orientationchange", updatePageScrollability);
-      };
-   }, []);
+      void refreshAfterAuthError();
+   }, [error?.isAuthRelated, refreshAfterAuthError]);
 
    useEffect(() => {
       window.localStorage.setItem(STORAGE_KEY, viewMode);
@@ -531,76 +318,7 @@ export default function App() {
       updateWeekOffset(0);
    }, [isWeekNavigable, updateWeekOffset, weekOffset]);
 
-   const handleWeekSwipeStart = useCallback((event: TouchEvent) => {
-      if (event.touches.length !== 1) {
-         weekSwipeStartRef.current = null;
-         return;
-      }
-
-      const touch = event.touches[0];
-      if (!touch) {
-         return;
-      }
-
-      weekSwipeStartRef.current = {
-         x: touch.clientX,
-         y: touch.clientY,
-      };
-   }, []);
-
-   const handleWeekSwipeEnd = useCallback(
-      (event: TouchEvent) => {
-         const swipeStart = weekSwipeStartRef.current;
-         weekSwipeStartRef.current = null;
-
-         if (!swipeStart || event.changedTouches.length !== 1) {
-            return;
-         }
-
-         const touch = event.changedTouches[0];
-         if (!touch) {
-            return;
-         }
-
-         const deltaX = touch.clientX - swipeStart.x;
-         const deltaY = touch.clientY - swipeStart.y;
-         const absX = Math.abs(deltaX);
-         const absY = Math.abs(deltaY);
-
-         if (absX < WEEK_SWIPE_MIN_DISTANCE_PX || absY > WEEK_SWIPE_MAX_VERTICAL_DRIFT_PX || absX < absY * 1.2) {
-            return;
-         }
-
-         if (deltaX < 0) {
-            goNextWeek();
-            return;
-         }
-
-         goPreviousWeek();
-      },
-      [goNextWeek, goPreviousWeek]
-   );
-
-   const handleWeekSwipeCancel = useCallback(() => {
-      weekSwipeStartRef.current = null;
-   }, []);
-
-   useEffect(() => {
-      if (isSettingsOpen || selectedLesson !== null) {
-         weekSwipeStartRef.current = null;
-         return;
-      }
-
-      window.addEventListener("touchstart", handleWeekSwipeStart, { passive: true });
-      window.addEventListener("touchend", handleWeekSwipeEnd, { passive: true });
-      window.addEventListener("touchcancel", handleWeekSwipeCancel, { passive: true });
-
-      return () => {
-         window.removeEventListener("touchstart", handleWeekSwipeStart);
-         window.removeEventListener("touchend", handleWeekSwipeEnd);
-         window.removeEventListener("touchcancel", handleWeekSwipeCancel);
-      };
-   }, [handleWeekSwipeCancel, handleWeekSwipeEnd, handleWeekSwipeStart, isSettingsOpen, selectedLesson]);
+   useWeekSwipeNavigation(!isSettingsOpen && selectedLesson === null, goPreviousWeek, goNextWeek);
 
    const handleWeekTransitionEnd = useCallback((event: AnimationEvent<HTMLElement>) => {
       if (event.currentTarget !== event.target) {
@@ -630,47 +348,14 @@ export default function App() {
          return;
       }
 
-      setIsSavingBearerToken(true);
-
       try {
-         const settings = await saveOsirisToken(nextToken);
-         clearRosterBrowserCache();
-         setTokenSettings(settings);
-         setRosterResetKey((current) => current + 1);
+         await saveToken(nextToken);
          setBearerTokenInput("");
          notifySuccess("Osiris token saved successfully.");
       } catch (requestError) {
          notifyError(requestError, "Failed to save Osiris token.");
-      } finally {
-         setIsSavingBearerToken(false);
       }
-   }, [bearerTokenInput]);
-
-   const handleTokenSettingsChange = useCallback((settings: OsirisTokenSettings) => {
-      clearRosterBrowserCache();
-      setTokenSettings(settings);
-      setRosterResetKey((current) => current + 1);
-   }, []);
-
-   const toggleDevTools = useCallback((enabled: boolean) => {
-      if (!IS_DEV_SERVER) {
-         return;
-      }
-
-      setIsDevToolsEnabled(enabled);
-      if (!enabled) {
-         setTimeOverride(null);
-      }
-   }, []);
-
-   const changeTimeOverride = useCallback((date: Date | null) => {
-      if (!IS_DEV_SERVER) {
-         return;
-      }
-
-      setTimeOverride(date);
-      setIsDevToolsEnabled(true);
-   }, []);
+   }, [bearerTokenInput, saveToken]);
 
    const moveToolbarAction = useCallback(
       (direction: -1 | 1) => {
@@ -817,12 +502,7 @@ export default function App() {
       isTokenSettingsLoading && !hasDisplayedData ? (
          <LoadingState message="Checking bearer token." />
       ) : !isTokenSettingsLoading && !hasBearerToken ? (
-         <BearerTokenState
-            token={bearerTokenInput}
-            isSaving={isSavingBearerToken}
-            onTokenChange={setBearerTokenInput}
-            onSubmit={() => void submitBearerToken()}
-         />
+         <BearerTokenState token={bearerTokenInput} isSaving={isTokenMutating} onTokenChange={setBearerTokenInput} onSubmit={() => void submitBearerToken()} />
       ) : loading ? (
          <LoadingState message="Fetching week data." />
       ) : error && !data ? (
@@ -889,15 +569,18 @@ export default function App() {
          <LessonDrawer lesson={selectedLesson} onClose={closeLesson} />
          <SettingsDialog
             isOpen={isSettingsOpen}
-            isDevToolsEnabled={isDevToolsEnabled}
+            isDevToolsEnabled={devPreview.isEnabled}
             perceivedNow={perceivedNow}
-            timeOverride={timeOverride}
-            statusPreviewMode={devStatusPreviewMode}
-            onTokenSettingsChange={handleTokenSettingsChange}
+            timeOverride={devPreview.timeOverride}
+            statusPreviewMode={devPreview.statusPreviewMode}
+            tokenSettings={tokenSettings}
+            isTokenLoading={isTokenMutating}
+            onSaveToken={saveToken}
+            onClearToken={clearToken}
             onClose={closeSettings}
-            onToggleDevTools={toggleDevTools}
-            onChangeTimeOverride={changeTimeOverride}
-            onChangeStatusPreviewMode={setDevStatusPreviewMode}
+            onToggleDevTools={devPreview.toggle}
+            onChangeTimeOverride={devPreview.changeTimeOverride}
+            onChangeStatusPreviewMode={devPreview.setStatusPreviewMode}
          />
       </div>
    );

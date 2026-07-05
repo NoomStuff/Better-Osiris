@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { applySessionLessonDiffs, recordSessionLessonDiffs, type SessionLessonDiffsByWeek } from "../lib/rosterSessionDiffs.js";
+import { applySessionLessonDiffs, recordSessionLessonDiffs, type SessionLessonDiffsByWeek } from "./rosterSessionDiffs.js";
 import type { Lesson, RosterResponse } from "../types/roster";
 
 void describe("session roster diff states", () => {

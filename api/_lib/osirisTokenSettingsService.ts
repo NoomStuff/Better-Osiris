@@ -1,8 +1,7 @@
 import { buildClearOsirisTokenCookieHeader, buildOsirisTokenCookieHeader } from "./auth.js";
 import { getEnvValue } from "./env.js";
-import { getDefaultOsirisToken } from "./osirisToken.js";
 import { createEncryptedOsirisTokenCookieValue, hasOsirisTokenCookie, readOsirisTokenFromCookie } from "./osirisTokenCookie.js";
-import type { OsirisTokenSettings } from "../../shared/osirisTokenSettings.js";
+import type { OsirisTokenSettings } from "../../shared/roster.js";
 
 export interface OsirisTokenSettingsResult {
    settings: OsirisTokenSettings;
@@ -95,4 +94,13 @@ function hasValidOsirisTokenOverride(cookieHeader: string | undefined, secret: s
 
 function isProduction() {
    return process.env["NODE_ENV"] === "production";
+}
+
+function getDefaultOsirisToken(): string | null {
+   const token = getEnvValue("BEARER_TOKEN")?.trim();
+   if (!token) {
+      return null;
+   }
+
+   return token;
 }
