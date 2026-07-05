@@ -30,11 +30,13 @@ class MockResponse {
 }
 
 const originalFetch = globalThis.fetch;
+const TEST_OSIRIS_ROSTER_URL = "https://example-school.osiris-student.nl/student/osiris/student/rooster/per_week";
 
 afterEach(() => {
    globalThis.fetch = originalFetch;
    delete process.env["COOKIE_SECRET"];
    delete process.env["BEARER_TOKEN"];
+   delete process.env["OSIRIS_ROSTER_URL"];
 });
 
 void describe("GET /api/roster/weeks", () => {
@@ -42,6 +44,7 @@ void describe("GET /api/roster/weeks", () => {
       const requests: OsirisRequest[] = [];
       mockOsirisFetch(requests, createOsirisRosterResponse());
       process.env["COOKIE_SECRET"] = "api-secret";
+      process.env["OSIRIS_ROSTER_URL"] = TEST_OSIRIS_ROSTER_URL;
       const token = "Bearer cookie-token";
 
       const response = await callWeeksHandler({
@@ -82,6 +85,7 @@ void describe("GET /api/roster/weeks", () => {
       mockOsirisFetch(requests, createOsirisRosterResponse());
       process.env["COOKIE_SECRET"] = "custom-token-secret";
       process.env["BEARER_TOKEN"] = "Bearer server-token";
+      process.env["OSIRIS_ROSTER_URL"] = TEST_OSIRIS_ROSTER_URL;
 
       const response = await callWeeksHandler({ url: "/api/roster/weeks?offset=4&limit=0" });
 
@@ -96,6 +100,7 @@ void describe("GET /api/roster/weeks", () => {
       mockOsirisFetch(requests, createOsirisRosterResponse());
       process.env["COOKIE_SECRET"] = "custom-token-secret";
       process.env["BEARER_TOKEN"] = "Bearer server-token";
+      process.env["OSIRIS_ROSTER_URL"] = TEST_OSIRIS_ROSTER_URL;
 
       const customToken = "Bearer custom-token";
 
@@ -116,6 +121,7 @@ void describe("GET /api/roster/weeks", () => {
       const requests: OsirisRequest[] = [];
       mockOsirisFetch(requests, createOsirisRosterResponse());
       process.env["COOKIE_SECRET"] = "api-secret";
+      process.env["OSIRIS_ROSTER_URL"] = TEST_OSIRIS_ROSTER_URL;
 
       const response = await callWeeksHandler({
          url: "/api/roster/weeks?offset=-1&limit=1",

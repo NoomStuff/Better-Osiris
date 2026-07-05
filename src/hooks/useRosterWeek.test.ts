@@ -46,7 +46,10 @@ void describe("session roster diff states", () => {
 
       const display = applySessionLessonDiffs(next, diffs);
 
-      assert.equal(display.lessons.find((lesson) => lesson.id === "old-id"), undefined);
+      assert.equal(
+         display.lessons.find((lesson) => lesson.id === "old-id"),
+         undefined
+      );
       assert.equal(display.lessons.find((lesson) => lesson.id === "new-id")?.status, "changed");
       assert.equal(display.lessons.find((lesson) => lesson.id === "new-id")?.previous?.start, "2026-06-16T09:00:00");
    });

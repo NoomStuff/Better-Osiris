@@ -15,6 +15,10 @@ export default defineConfig({
       reuseExistingServer: !process.env["CI"],
       stdout: "ignore",
       stderr: "pipe",
+      env: {
+         ...process.env,
+         SCHOOL_NAME: "",
+      },
    },
    projects: [
       {

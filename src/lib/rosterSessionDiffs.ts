@@ -79,13 +79,7 @@ function getWeekDiffs(weekDiffs: SessionLessonDiffsByWeek, weekOffset: number) {
    return diffs;
 }
 
-function rememberLessonDiff(
-   weekDiffs: SessionLessonDiffsByWeek,
-   weekOffset: number,
-   lesson: Lesson,
-   previousLesson: Lesson,
-   status: DiffLessonStatus
-) {
+function rememberLessonDiff(weekDiffs: SessionLessonDiffsByWeek, weekOffset: number, lesson: Lesson, previousLesson: Lesson, status: DiffLessonStatus) {
    const diffs = getWeekDiffs(weekDiffs, weekOffset);
    const existingDiff = diffs.get(lesson.id);
    const originalLesson = existingDiff?.previousLesson ?? toLessonSnapshot(previousLesson);

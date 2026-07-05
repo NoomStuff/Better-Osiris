@@ -22,6 +22,8 @@ const zoomOptions: ToolbarActionOption<GridZoom>[] = [
    { id: "quarter", label: "15m", tooltip: "Use 15 minute grid rows", shortcut: "Ctrl + 3", activationId: "zoom-quarter" },
 ];
 
+const SCHOOL_NAME = import.meta.env.VITE_SCHOOL_NAME.trim();
+
 export const AppToolbar = memo(function AppToolbar({
    viewMode,
    gridZoom,
@@ -35,7 +37,7 @@ export const AppToolbar = memo(function AppToolbar({
    return (
       <header className="app-toolbar">
          <div className="app-toolbar__identity">
-            <p className="eyebrow">MBORijnland</p>
+            {SCHOOL_NAME ? <p className="eyebrow">{SCHOOL_NAME}</p> : null}
             <h1>Better Osiris</h1>
          </div>
 

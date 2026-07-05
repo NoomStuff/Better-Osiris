@@ -118,22 +118,12 @@ export function LessonDrawer({ lesson, onClose }: LessonDrawerProps) {
          </div>
 
          <dl className="lesson-panel__details">
-            {previous && previous.title !== activeLesson.title ? (
-               <LessonDetail label="Title" current={activeLesson.title} previous={previous.title} />
-            ) : null}
+            {previous && previous.title !== activeLesson.title ? <LessonDetail label="Title" current={activeLesson.title} previous={previous.title} /> : null}
             {previous && previous.subject !== activeLesson.subject ? (
                <LessonDetail label="Subject" current={activeLesson.subject} previous={previous.subject} />
             ) : null}
-            <LessonDetail
-               label="Date"
-               current={dateValue}
-               previous={previousDateValue !== dateValue ? previousDateValue : null}
-            />
-            <LessonDetail
-               label="Time"
-               current={timeValue}
-               previous={previousTimeValue !== timeValue ? previousTimeValue : null}
-            />
+            <LessonDetail label="Date" current={dateValue} previous={previousDateValue !== dateValue ? previousDateValue : null} />
+            <LessonDetail label="Time" current={timeValue} previous={previousTimeValue !== timeValue ? previousTimeValue : null} />
             <LessonDetail
                label="Teacher"
                current={activeLesson.teacher}

@@ -1,6 +1,5 @@
 import crypto from "node:crypto";
-
-const OSIRIS_ROSTER_URL = "https://mborijnland.osiris-student.nl/student/osiris/student/rooster/per_week";
+import { getOsirisRosterUrl } from "./osirisConfig.js";
 
 export interface OsirisTeacher {
    naam: string;
@@ -50,8 +49,8 @@ export function clearOsirisRosterCache() {
    inFlightRequests.clear();
 }
 
-function getCacheKey(offset: number, limit: number, bearerToken: string) {
-   return `${hashToken(bearerToken)}:${offset}:${limit}`;
+function getCacheKey(rosterUrl: string, offset: number, limit: number, bearerToken: string) {
+   return `${rosterUrl}:${hashToken(bearerToken)}:${offset}:${limit}`;
 }
 
 export async function fetchOsirisRosterWeeks(offset: number, limit = 1, tokenOverride?: string | null): Promise<OsirisRosterResponse> {
@@ -63,7 +62,8 @@ export async function fetchOsirisRosterWeeks(offset: number, limit = 1, tokenOve
    }
 
    const safeLimit = Math.max(1, limit);
-   const cacheKey = getCacheKey(offset, safeLimit, bearerToken);
+   const rosterUrl = getOsirisRosterUrl();
+   const cacheKey = getCacheKey(rosterUrl, offset, safeLimit, bearerToken);
 
    const cachedWeek = weekCache.get(cacheKey);
    if (cachedWeek && cachedWeek.expiresAt > Date.now()) {
@@ -75,7 +75,7 @@ export async function fetchOsirisRosterWeeks(offset: number, limit = 1, tokenOve
       return inFlight;
    }
 
-   const request = fetchOsirisRosterRange(offset, safeLimit, bearerToken)
+   const request = fetchOsirisRosterRange(rosterUrl, offset, safeLimit, bearerToken)
       .then((data) => {
          weekCache.set(cacheKey, {
             data,
@@ -91,21 +91,21 @@ export async function fetchOsirisRosterWeeks(offset: number, limit = 1, tokenOve
    return request;
 }
 
-async function fetchOsirisRosterRange(offset: number, limit: number, bearerToken: string): Promise<OsirisRosterResponse> {
+async function fetchOsirisRosterRange(rosterUrl: string, offset: number, limit: number, bearerToken: string): Promise<OsirisRosterResponse> {
    if (offset < 0) {
       throw new Error("OSIRIS does not expose previous roster weeks.");
    }
 
-   return fetchOsirisRosterWeeksFromEndpoint(offset, limit, bearerToken);
+   return fetchOsirisRosterWeeksFromEndpoint(rosterUrl, offset, limit, bearerToken);
 }
 
-async function fetchOsirisRosterWeeksFromEndpoint(offset: number, limit: number, bearerToken: string): Promise<OsirisRosterResponse> {
+async function fetchOsirisRosterWeeksFromEndpoint(rosterUrl: string, offset: number, limit: number, bearerToken: string): Promise<OsirisRosterResponse> {
    const searchParams = new URLSearchParams({
       limit: String(limit),
       offset: String(offset),
    });
 
-   const response = await fetch(`${OSIRIS_ROSTER_URL}?${searchParams.toString()}`, {
+   const response = await fetch(`${rosterUrl}?${searchParams.toString()}`, {
       headers: {
          Authorization: bearerToken,
          Accept: "application/json",

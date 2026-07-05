@@ -2,6 +2,8 @@ import React from "react";
 import ReactDOM from "react-dom/client";
 import App from "./App";
 import { notifyError } from "./lib/notyf";
+import "@fortawesome/fontawesome-free/css/all.min.css";
+import "@fontsource-variable/quicksand/index.css";
 import "./styles/global.css";
 
 window.addEventListener("error", (event) => {

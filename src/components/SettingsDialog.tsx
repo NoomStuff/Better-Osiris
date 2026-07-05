@@ -4,7 +4,7 @@ import { clearOsirisToken, fetchOsirisTokenSettings, saveOsirisToken } from "../
 import type { OsirisTokenSettings } from "../api/settings";
 import { DEV_LESSON_STATUS_PREVIEW_MODES, type DevLessonStatusPreviewMode } from "../lib/devRosterStatusPreview";
 import { notifyError, notifySuccess, notifyWarning } from "../lib/notyf";
-import { OSIRIS_BEARER_TOKEN_VIDEO_URL } from "../lib/osirisTokenHelp";
+import { OSIRIS_BEARER_TOKEN_HELP_URL } from "../lib/osirisTokenHelp";
 import { clearRosterBrowserCache } from "../lib/rosterCache";
 import { ConfirmDialog } from "./ConfirmDialog";
 import { IconButton } from "./IconButton";
@@ -211,7 +211,7 @@ export function SettingsDialog({
                      <label className="settings-dialog__field">
                         <span className="settings-dialog__field-header">
                            <span>Bearer token</span>
-                           <a href={OSIRIS_BEARER_TOKEN_VIDEO_URL} target="_blank" rel="noreferrer">
+                           <a href={OSIRIS_BEARER_TOKEN_HELP_URL} target="_blank" rel="noreferrer">
                               How to get one
                            </a>
                         </span>

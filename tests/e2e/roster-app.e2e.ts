@@ -3,7 +3,7 @@ import { expect, test, type Page } from "@playwright/test";
 const FIXED_NOW_ISO = "2026-06-16T09:45:00+02:00";
 const WEEK_START_ISO = "2026-06-15";
 const MS_PER_DAY = 24 * 60 * 60 * 1000;
-const OSIRIS_BEARER_TOKEN_VIDEO_URL = "https://youtu.be/MbcI61KIQbI";
+const OSIRIS_BEARER_TOKEN_HELP_URL = "https://youtu.be/MbcI61KIQbI";
 
 test.beforeEach(async ({ page }) => {
    await installFixedClock(page);
@@ -15,6 +15,7 @@ test("week navigation and view controls work with mocked roster data", async ({ 
    await page.goto("/");
 
    await expect(page.getByRole("heading", { name: /Week 25:/ })).toBeVisible();
+   await expect(page.locator(".app-toolbar__identity .eyebrow")).toHaveCount(0);
    await expect(page.getByRole("button", { name: "Previous week" })).toBeEnabled();
    await expect(page.getByRole("button", { name: "Next week" })).toBeEnabled();
    await expect(page.getByRole("button", { name: "SOURCE_TITLE_0_1" })).toBeVisible();
@@ -119,6 +120,7 @@ test("next week and future shortcuts are disabled when a preloaded future week i
    });
 
    await page.goto("/");
+   await expect(page.getByRole("heading", { name: /Week 25:/ })).toBeVisible();
 
    await page.keyboard.press("4");
    await expect(page.locator(".weekbar__label")).toHaveText("In 4 weeks");
@@ -139,7 +141,7 @@ test("settings dialog opens, resets token state, and closes", async ({ page }) =
    await page.getByRole("button", { name: "Open settings" }).click();
    await expect(page.getByRole("dialog", { name: "Preferences" })).toBeVisible();
    await expect(page.getByText("Roster requests are using your saved bearer token.")).toBeVisible();
-   await expect(page.getByRole("link", { name: "How to get one" })).toHaveAttribute("href", OSIRIS_BEARER_TOKEN_VIDEO_URL);
+   await expect(page.getByRole("link", { name: "How to get one" })).toHaveAttribute("href", OSIRIS_BEARER_TOKEN_HELP_URL);
    await expect(page.getByRole("button", { name: "Save token" })).toBeDisabled();
 
    await page.getByRole("button", { name: "Reset" }).click();
@@ -305,7 +307,7 @@ test("missing bearer token shows an entry overlay without requesting roster data
    await page.goto("/");
 
    await expect(page.getByRole("heading", { name: "Bearer token required" })).toBeVisible();
-   await expect(page.getByRole("link", { name: "Learn how to get your bearer token" })).toHaveAttribute("href", OSIRIS_BEARER_TOKEN_VIDEO_URL);
+   await expect(page.getByRole("link", { name: "Learn how to get your bearer token" })).toHaveAttribute("href", OSIRIS_BEARER_TOKEN_HELP_URL);
    const tokenInput = page.getByLabel("Bearer token");
    const saveTokenButton = page.getByRole("button", { name: "Save token" });
    await expect(tokenInput).toBeVisible();
@@ -419,10 +421,6 @@ async function installCachedLastWeek(page: Page) {
 
 async function mockAppApis(page: Page) {
    let hasCustomToken = true;
-
-   await page.route("https://kit.fontawesome.com/**", async (route) => {
-      await route.fulfill({ status: 200, contentType: "application/javascript", body: "" });
-   });
 
    await page.route("**/api/settings/osiris-token", async (route) => {
       const method = route.request().method();
