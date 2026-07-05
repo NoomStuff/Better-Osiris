@@ -15,7 +15,7 @@
       "start": "bun server.ts",
       "format": "prettier --write .",
       "format:check": "prettier --check .",
-      "pre-commit": "concurrently \"bun run lint\" \"bun run test\" \"bun run format\""
+      "verify": "concurrently \"bun run lint\" \"bun run test\" \"bun run format\" \"bun run build\""
    },
    "devDependencies": {
       "@eslint/js": "^10.0.1",

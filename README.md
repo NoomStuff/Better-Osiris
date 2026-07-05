@@ -77,6 +77,6 @@ The frontend runs at `http://localhost:5173` and proxies API requests to the loc
 | `bun run lint`         | Run ESLint                               |
 | `bun run format`       | Format code with Prettier                |
 | `bun run format:check` | Check formatting                         |
-| `bun run pre-commit`   | Run all pre commit checks                |
+| `bun run verify`       | Run all pre commit checks                |
 
 For a production deployment, set the same environment variables in your hosting provider, run `bun run build`, then start the app with `bun run start`. The included `vercel.json` also supports deployment to Vercel.
