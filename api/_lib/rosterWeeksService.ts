@@ -2,6 +2,7 @@ import { MAX_WEEK_LIMIT, MAX_WEEK_OFFSET, MIN_OSIRIS_WEEK_OFFSET, type RosterBat
 import { fetchOsirisRosterWeeks } from "./osirisClient.js";
 import { normalizeRosterWeeksResponse } from "./osirisRosterNormalizer.js";
 import { resolveOsirisBearerToken } from "./osirisTokenSettingsService.js";
+import { ApiError } from "./errors.js";
 
 export interface RosterWeeksRequest {
    offset: string | null | undefined;
@@ -27,26 +28,29 @@ export async function loadRosterWeeks(request: RosterWeeksRequest): Promise<Rost
       weeks: normalizeRosterWeeksResponse(rawResponse, offset),
       offset,
       limit,
-      hasMore: rawResponse.hasMore && offset + limit - 1 < MAX_WEEK_OFFSET,
    };
 }
 
-export function getRosterErrorStatus(error: unknown) {
-   const message = getRosterErrorMessage(error);
-   if (message.startsWith("Bearer token is missing.")) {
-      return 401;
+function parseBoundedInt(value: string | null | undefined, fallback: number, min: number, max: number) {
+   if (value == null) {
+      return fallback;
    }
 
-   const upstreamStatusMatch = /OSIRIS request failed with (\d{3})\./.exec(message);
-   const upstreamStatus = Number(upstreamStatusMatch?.[1]);
-   return upstreamStatus === 401 || upstreamStatus === 403 ? upstreamStatus : 502;
+   if (!/^\d+$/.test(value)) {
+      throw invalidRangeError();
+   }
+
+   const parsed = Number(value);
+   if (!Number.isSafeInteger(parsed) || parsed < min || parsed > max) {
+      throw invalidRangeError();
+   }
+
+   return parsed;
 }
 
-export function getRosterErrorMessage(error: unknown) {
-   return error instanceof Error ? error.message : "Unknown roster fetch error.";
-}
-
-function parseBoundedInt(value: string | null | undefined, fallback: number, min: number, max: number) {
-   const parsed = value == null ? Number.NaN : Number.parseInt(value, 10);
-   return Number.isNaN(parsed) ? fallback : Math.min(Math.max(parsed, min), max);
+function invalidRangeError() {
+   return new ApiError("Roster offset or limit is outside the supported range.", {
+      code: "INVALID_REQUEST",
+      status: 400,
+   });
 }

@@ -7,7 +7,8 @@ export function clearRosterBrowserCache() {
       return;
    }
 
-   window.localStorage.removeItem(CURRENT_WEEK_CACHE_KEY);
-   window.localStorage.removeItem(LAST_WEEK_CACHE_KEY);
-   window.sessionStorage.removeItem(SESSION_LESSON_DIFFS_KEY);
+   removeBrowserStorage("localStorage", CURRENT_WEEK_CACHE_KEY);
+   removeBrowserStorage("localStorage", LAST_WEEK_CACHE_KEY);
+   removeBrowserStorage("sessionStorage", SESSION_LESSON_DIFFS_KEY);
 }
+import { removeBrowserStorage } from "./browserStorage";

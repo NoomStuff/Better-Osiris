@@ -4,9 +4,9 @@ A faster, cleaner, more useful timetable for schools using OSIRIS Student.
 
 Made because I got so absolutely sick of the official one. Like do you have to lose my session every 5 minutes? Or log me out randomly? Or take ages to load because I need to be redirected through a million different pages?
 
-Anyway, this is heavily vibe coded, but I vibe code with class so every detail is maticiously refined. I don't think anyone except me and some friends will find a use for this, but hey, it't here now.
+Anyway, this is heavily vibe coded, but I vibe code with class, so every detail is meticulously refined. I don't think anyone except me and some friends will find a use for this, but hey, it's here now.
 
-> Note: This is an unofficial client and is not affiliated with OSIRIS, no clue if you'll get in trouble for using it.
+> Note: This is an unofficial client and is not affiliated with OSIRIS. Make sure your use complies with your institution's policies.
 
 ---
 
@@ -41,7 +41,7 @@ You need [Bun](https://bun.sh/) and access to an OSIRIS Student environment.
    bun install
    ```
 
-2. Copy `.env.example` to `.env` and update the values for your school.
+2. Copy `.env.example` to `.env` and update the values for your school. The development command automatically replaces the public `COOKIE_SECRET` placeholder with a secure local value.
 
 3. Start the app:
 
@@ -55,12 +55,13 @@ The frontend runs at `http://localhost:5173` and proxies API requests to the loc
 
 ## Configuration
 
-| Variable            | Required | Description                                                                                                           |
-| ------------------- | -------- | --------------------------------------------------------------------------------------------------------------------- |
-| `COOKIE_SECRET`     | Yes      | Long random value used to encrypt bearer tokens in browser cookies.                                                   |
-| `OSIRIS_ROSTER_URL` | Yes      | Full weekly roster endpoint, such as `https://mborijnland.osiris-student.nl/student/osiris/student/rooster/per_week`. |
-| `SCHOOL_NAME`       | No       | Optional label shown above “Better Osiris”.                                                                           |
-| `BEARER_TOKEN`      | No       | Shared fallback token. Leave this unset on a public deployment so every user supplies their own token.                |
+| Variable                    | Required | Description                                                                                                           |
+| --------------------------- | -------- | --------------------------------------------------------------------------------------------------------------------- |
+| `COOKIE_SECRET`             | Yes      | Long random value used to encrypt bearer tokens in browser cookies.                                                   |
+| `OSIRIS_ROSTER_URL`         | Yes      | Full weekly roster endpoint, such as `https://mborijnland.osiris-student.nl/student/osiris/student/rooster/per_week`. |
+| `SCHOOL_NAME`               | No       | Optional label shown above “Better Osiris”.                                                                           |
+| `BEARER_TOKEN`              | No       | Shared fallback token. Leave this unset on a public deployment so every user supplies their own token.                |
+| `ALLOW_SHARED_BEARER_TOKEN` | No       | Must be `true` to acknowledge use of `BEARER_TOKEN` in production.                                                    |
 
 ---
 

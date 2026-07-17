@@ -37,7 +37,7 @@ function getLessonDayKey(lesson: Lesson) {
    return lesson.start.split("T")[0] ?? lesson.start;
 }
 
-function lessonsHaveSameVisibleDetails(left: Lesson, right: Lesson) {
+function lessonsHaveSameVisibleDetails(left: LessonSnapshot, right: LessonSnapshot) {
    return (
       left.title === right.title &&
       left.subject === right.subject &&
@@ -81,8 +81,11 @@ function getWeekDiffs(weekDiffs: SessionLessonDiffsByWeek, weekOffset: number) {
 
 function rememberLessonDiff(weekDiffs: SessionLessonDiffsByWeek, weekOffset: number, lesson: Lesson, previousLesson: Lesson, status: DiffLessonStatus) {
    const diffs = getWeekDiffs(weekDiffs, weekOffset);
-   const existingDiff = diffs.get(lesson.id);
+   const existingDiff = diffs.get(lesson.id) ?? diffs.get(previousLesson.id);
    const originalLesson = existingDiff?.previousLesson ?? toLessonSnapshot(previousLesson);
+   if (lesson.id !== previousLesson.id) {
+      diffs.delete(previousLesson.id);
+   }
    const diff: SessionLessonDiff = {
       lesson: cloneLessonWithStatus(lesson, status, originalLesson),
       previousLesson: originalLesson,
@@ -111,6 +114,10 @@ export function recordSessionLessonDiffs(previousWeek: RosterResponse, nextWeek:
          return;
       }
 
+      if (clearRevertedDiff(weekDiffs, previousWeek.week.offset, nextLesson).length) {
+         return;
+      }
+
       if (nextLesson.status === "cancelled" && previousLesson.status !== "cancelled") {
          recordedDiffs.push(rememberLessonDiff(weekDiffs, previousWeek.week.offset, nextLesson, previousLesson, "cancelled"));
       } else if (!lessonsHaveSameVisibleDetails(previousLesson, nextLesson) || previousLesson.status !== nextLesson.status) {
@@ -119,6 +126,16 @@ export function recordSessionLessonDiffs(previousWeek: RosterResponse, nextWeek:
    });
 
    addedLessons.forEach((addedLesson) => {
+      const revertedDiffIds = clearRevertedDiff(weekDiffs, previousWeek.week.offset, addedLesson);
+      if (revertedDiffIds.length) {
+         revertedDiffIds.forEach((lessonId) => {
+            if (removedLessons.some((lesson) => lesson.id === lessonId)) {
+               matchedRemovedLessonIds.add(lessonId);
+            }
+         });
+         return;
+      }
+
       const candidates = removedLessons
          .filter((removedLesson) => !matchedRemovedLessonIds.has(removedLesson.id))
          .map((removedLesson) => ({ lesson: removedLesson, score: getLessonMatchScore(removedLesson, addedLesson) }))
@@ -126,7 +143,7 @@ export function recordSessionLessonDiffs(previousWeek: RosterResponse, nextWeek:
          .sort((left, right) => right.score - left.score);
       const likelyPreviousLesson = candidates[0]?.lesson;
 
-      if (!likelyPreviousLesson) {
+      if (!likelyPreviousLesson || candidates[0]?.score === candidates[1]?.score) {
          return;
       }
 
@@ -141,6 +158,28 @@ export function recordSessionLessonDiffs(previousWeek: RosterResponse, nextWeek:
    });
 
    return recordedDiffs;
+}
+
+function clearRevertedDiff(weekDiffs: SessionLessonDiffsByWeek, weekOffset: number, lesson: Lesson) {
+   const diffs = weekDiffs.get(weekOffset);
+   if (!diffs) {
+      return [];
+   }
+
+   const revertedDiffIds = [...diffs.entries()]
+      .filter(
+         ([currentLessonId, diff]) =>
+            (currentLessonId === lesson.id || diff.previousLesson.id === lesson.id) &&
+            lessonsHaveSameVisibleDetails(diff.previousLesson, lesson) &&
+            diff.previousLesson.status === lesson.status
+      )
+      .map(([currentLessonId]) => currentLessonId);
+
+   revertedDiffIds.forEach((lessonId) => diffs.delete(lessonId));
+   if (diffs.size === 0) {
+      weekDiffs.delete(weekOffset);
+   }
+   return revertedDiffIds;
 }
 
 export function applySessionLessonDiffs(weekData: RosterResponse, weekDiffs: SessionLessonDiffsByWeek): RosterResponse {

@@ -1,6 +1,8 @@
 import type { RosterResponse } from "../../shared/roster";
-import { getIsoWeekNumber, getLocalWeekStartIso } from "./date";
+import { parseLesson, parseRosterResponse } from "../../shared/rosterValidation";
+import { getIsoWeekNumber, getLocalWeekStartIso, shiftIsoDateByDays } from "./date";
 import { notifyError } from "./notyf";
+import { readBrowserStorage, removeBrowserStorage, writeBrowserStorage } from "./browserStorage";
 import { CURRENT_WEEK_CACHE_KEY, LAST_WEEK_CACHE_KEY, SESSION_LESSON_DIFFS_KEY } from "./rosterCache";
 import type { SessionLessonDiff, SessionLessonDiffsByWeek } from "./rosterSessionDiffs";
 
@@ -11,20 +13,11 @@ interface CachedRosterWeek {
 }
 
 function getRosterReferenceDate() {
-   const date = new Date();
-   const day = date.getDay();
-
-   if (day === 6) {
-      date.setDate(date.getDate() + 2);
-   } else if (day === 0) {
-      date.setDate(date.getDate() + 1);
-   }
-
-   return date;
+   return new Date();
 }
 
 function getCurrentWeekNumber() {
-   return getIsoWeekNumber(getRosterReferenceDate().toISOString());
+   return getIsoWeekNumber(getCurrentWeekStartIso());
 }
 
 function getCurrentWeekStartIso() {
@@ -32,29 +25,28 @@ function getCurrentWeekStartIso() {
 }
 
 function getLastWeekStartIso() {
-   const date = getRosterReferenceDate();
-   date.setDate(date.getDate() - 7);
-   return getLocalWeekStartIso(date);
+   return shiftIsoDateByDays(getCurrentWeekStartIso(), -7);
 }
 
-function normalizeCachedWeek(data: RosterResponse, offset: number, note?: string): RosterResponse {
+function normalizeCachedWeek(data: RosterResponse, offset: number): RosterResponse {
    return {
       ...data,
       week: { ...data.week, offset },
-      source: note ? { ...data.source, note } : data.source,
    };
 }
 
 function parseCachedRosterWeek(cacheKey: string) {
-   const cached = window.localStorage.getItem(cacheKey);
+   const cached = readBrowserStorage("localStorage", cacheKey);
    if (!cached) {
       return null;
    }
 
-   const parsed = JSON.parse(cached) as CachedRosterWeek | RosterResponse;
-   const data = "data" in parsed ? parsed.data : parsed;
-   const weekNumber = "weekNumber" in parsed ? parsed.weekNumber : data.week.number;
-   const weekStart = "weekStart" in parsed ? parsed.weekStart : data.week.start;
+   const parsed = JSON.parse(cached) as unknown;
+   const record = readRecord(parsed, "cached roster");
+   const hasWrapper = "data" in record;
+   const data = parseRosterResponse(hasWrapper ? record["data"] : record);
+   const weekNumber = hasWrapper ? readNumber(record["weekNumber"], "cached roster week number") : data.week.number;
+   const weekStart = hasWrapper ? readString(record["weekStart"], "cached roster week start") : data.week.start;
    return { data, weekNumber, weekStart };
 }
 
@@ -70,12 +62,13 @@ export function readCachedCurrentWeek() {
       }
 
       if (cached.weekNumber !== getCurrentWeekNumber() || cached.weekStart !== getCurrentWeekStartIso()) {
-         window.localStorage.removeItem(CURRENT_WEEK_CACHE_KEY);
+         removeBrowserStorage("localStorage", CURRENT_WEEK_CACHE_KEY);
          return null;
       }
 
       return normalizeCachedWeek(cached.data, 0);
    } catch (error) {
+      removeBrowserStorage("localStorage", CURRENT_WEEK_CACHE_KEY);
       notifyError(error, "Failed to parse cached current week.");
       return null;
    }
@@ -91,11 +84,11 @@ export function readCachedLastWeek() {
    try {
       const cachedLastWeek = parseCachedRosterWeek(LAST_WEEK_CACHE_KEY);
       if (cachedLastWeek?.weekStart === lastWeekStart) {
-         return normalizeCachedWeek(cachedLastWeek.data, -1, "Using locally cached OSIRIS roster data from last week.");
+         return normalizeCachedWeek(cachedLastWeek.data, -1);
       }
 
       if (cachedLastWeek) {
-         window.localStorage.removeItem(LAST_WEEK_CACHE_KEY);
+         removeBrowserStorage("localStorage", LAST_WEEK_CACHE_KEY);
       }
 
       const cachedCurrentWeek = parseCachedRosterWeek(CURRENT_WEEK_CACHE_KEY);
@@ -103,11 +96,13 @@ export function readCachedLastWeek() {
          return null;
       }
 
-      const lastWeek = normalizeCachedWeek(cachedCurrentWeek.data, -1, "Using locally cached OSIRIS roster data from last week.");
+      const lastWeek = normalizeCachedWeek(cachedCurrentWeek.data, -1);
       storeCachedLastWeek(lastWeek);
-      window.localStorage.removeItem(CURRENT_WEEK_CACHE_KEY);
+      removeBrowserStorage("localStorage", CURRENT_WEEK_CACHE_KEY);
       return lastWeek;
    } catch (error) {
+      removeBrowserStorage("localStorage", LAST_WEEK_CACHE_KEY);
+      removeBrowserStorage("localStorage", CURRENT_WEEK_CACHE_KEY);
       notifyError(error, "Failed to parse cached last week.");
       return null;
    }
@@ -118,7 +113,8 @@ function storeCachedLastWeek(data: RosterResponse) {
       return;
    }
 
-   window.localStorage.setItem(
+   writeBrowserStorage(
+      "localStorage",
       LAST_WEEK_CACHE_KEY,
       JSON.stringify({
          data: normalizeCachedWeek(data, -1),
@@ -142,7 +138,8 @@ export function storeCachedCurrentWeek(data: RosterResponse) {
       notifyError(error, "Failed to update cached last week.");
    }
 
-   window.localStorage.setItem(
+   writeBrowserStorage(
+      "localStorage",
       CURRENT_WEEK_CACHE_KEY,
       JSON.stringify({
          data,
@@ -158,14 +155,23 @@ export function readSessionLessonDiffs(): SessionLessonDiffsByWeek {
    }
 
    try {
-      const stored = window.sessionStorage.getItem(SESSION_LESSON_DIFFS_KEY);
+      const stored = readBrowserStorage("sessionStorage", SESSION_LESSON_DIFFS_KEY);
       if (!stored) {
          return new Map();
       }
 
-      const parsed = JSON.parse(stored) as Record<string, SessionLessonDiff[]>;
-      return new Map(Object.entries(parsed).map(([weekOffset, diffs]) => [Number(weekOffset), new Map(diffs.map((diff) => [diff.lesson.id, diff]))]));
+      const parsed = readRecord(JSON.parse(stored) as unknown, "session roster changes");
+      return new Map(
+         Object.entries(parsed).map(([weekOffset, value]) => {
+            if (!Array.isArray(value) || !Number.isSafeInteger(Number(weekOffset))) {
+               throw new Error("Stored session roster changes have an invalid shape.");
+            }
+            const diffs = value.map((diff, index) => parseSessionLessonDiff(diff, `session roster changes ${weekOffset}[${index}]`));
+            return [Number(weekOffset), new Map(diffs.map((diff) => [diff.lesson.id, diff]))];
+         })
+      );
    } catch (error) {
+      removeBrowserStorage("sessionStorage", SESSION_LESSON_DIFFS_KEY);
       notifyError(error, "Failed to parse session roster changes.");
       return new Map();
    }
@@ -180,5 +186,39 @@ export function storeSessionLessonDiffs(weekDiffs: SessionLessonDiffsByWeek) {
       [...weekDiffs.entries()].filter(([, diffs]) => diffs.size > 0).map(([weekOffset, diffs]) => [String(weekOffset), [...diffs.values()]])
    );
 
-   window.sessionStorage.setItem(SESSION_LESSON_DIFFS_KEY, JSON.stringify(serialized));
+   writeBrowserStorage("sessionStorage", SESSION_LESSON_DIFFS_KEY, JSON.stringify(serialized));
+}
+
+function parseSessionLessonDiff(value: unknown, path: string): SessionLessonDiff {
+   const record = readRecord(value, path);
+   const status = record["status"];
+   if (status !== "changed" && status !== "cancelled") {
+      throw new Error(`${path} has an invalid status.`);
+   }
+   return {
+      lesson: parseLesson(record["lesson"], `${path}.lesson`),
+      previousLesson: parseLesson(record["previousLesson"], `${path}.previousLesson`),
+      status,
+   };
+}
+
+function readRecord(value: unknown, label: string): Record<string, unknown> {
+   if (!value || typeof value !== "object" || Array.isArray(value)) {
+      throw new Error(`${label} must be an object.`);
+   }
+   return value as Record<string, unknown>;
+}
+
+function readNumber(value: unknown, label: string) {
+   if (typeof value !== "number" || !Number.isSafeInteger(value)) {
+      throw new Error(`${label} must be an integer.`);
+   }
+   return value;
+}
+
+function readString(value: unknown, label: string) {
+   if (typeof value !== "string") {
+      throw new Error(`${label} must be a string.`);
+   }
+   return value;
 }

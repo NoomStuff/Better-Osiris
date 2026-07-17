@@ -12,7 +12,7 @@ const typedTypeCheckedConfigs = [...tseslint.configs.strictTypeChecked, ...tsesl
 
 export default tseslint.config(
    {
-      ignores: ["dist", "node_modules"],
+      ignores: ["coverage", "dist", "node_modules", "playwright-report", "test-results"],
    },
    js.configs.recommended,
    ...typedTypeCheckedConfigs,
@@ -79,7 +79,7 @@ export default tseslint.config(
       },
    },
    {
-      files: ["server.ts", "server/**/*.ts"],
+      files: ["server.ts", "server/**/*.ts", "scripts/**/*.ts"],
       languageOptions: {
          globals: globals.node,
       },

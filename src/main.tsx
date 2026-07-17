@@ -1,8 +1,11 @@
 import React from "react";
 import ReactDOM from "react-dom/client";
 import App from "./App";
+import { ErrorBoundary } from "./components/ErrorBoundary";
 import { notifyError } from "./lib/notyf";
-import "@fortawesome/fontawesome-free/css/all.min.css";
+import "@fortawesome/fontawesome-free/css/fontawesome.min.css";
+import "@fortawesome/fontawesome-free/css/solid.min.css";
+import "@fortawesome/fontawesome-free/css/regular.min.css";
 import "@fontsource-variable/quicksand/index.css";
 import "./styles/global.css";
 
@@ -22,6 +25,8 @@ if (!rootElement) {
 
 ReactDOM.createRoot(rootElement).render(
    <React.StrictMode>
-      <App />
+      <ErrorBoundary>
+         <App />
+      </ErrorBoundary>
    </React.StrictMode>
 );

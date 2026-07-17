@@ -1,6 +1,7 @@
 type SameSiteMode = "lax" | "strict" | "none";
 
 interface CookieOptions {
+   expires?: Date;
    httpOnly?: boolean;
    secure?: boolean;
    sameSite?: SameSiteMode;
@@ -42,8 +43,12 @@ export function parseCookie(header: string | undefined, name: string): string | 
 export function serializeCookie(name: string, value: string, options: CookieOptions = {}): string {
    const segments = [`${name}=${encodeURIComponent(value)}`];
 
-   if (options.maxAge) {
+   if (options.maxAge !== undefined) {
       segments.push(`Max-Age=${Math.floor(options.maxAge)}`);
+   }
+
+   if (options.expires) {
+      segments.push(`Expires=${options.expires.toUTCString()}`);
    }
 
    if (options.path) {
@@ -81,6 +86,7 @@ export function buildClearOsirisTokenCookieHeader(isProduction: boolean): string
       secure: isProduction,
       sameSite: "lax",
       path: "/",
-      maxAge: 1,
+      maxAge: 0,
+      expires: new Date(0),
    });
 }

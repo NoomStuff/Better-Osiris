@@ -1,6 +1,7 @@
 import { buildClearOsirisTokenCookieHeader, buildOsirisTokenCookieHeader } from "./auth.js";
-import { getEnvValue } from "./env.js";
 import { createEncryptedOsirisTokenCookieValue, hasOsirisTokenCookie, readOsirisTokenFromCookie } from "./osirisTokenCookie.js";
+import { ApiError } from "./errors.js";
+import { getCookieSecret, getDefaultOsirisToken, isProduction, normalizeBearerToken } from "./osirisConfig.js";
 import type { OsirisTokenSettings } from "../../shared/roster.js";
 
 export interface OsirisTokenSettingsResult {
@@ -8,32 +9,14 @@ export interface OsirisTokenSettingsResult {
    cookieHeader: string | null;
 }
 
-export class OsirisTokenSettingsError extends Error {
-   readonly status: number;
-
-   constructor(message: string, status: number) {
-      super(message);
-      this.name = "OsirisTokenSettingsError";
-      this.status = status;
-   }
-}
-
 export function getOsirisTokenSettings(cookieHeader: string | undefined): OsirisTokenSettingsResult {
-   const cookieSecret = getEnvValue("COOKIE_SECRET");
-   const hasCustomToken = cookieSecret ? hasValidOsirisTokenOverride(cookieHeader, cookieSecret) : false;
+   const cookieSecret = getCookieSecret();
+   const hasCustomToken = hasValidOsirisTokenOverride(cookieHeader, cookieSecret);
 
    if (hasCustomToken) {
       return {
          settings: { hasCustomToken: true, hasBearerToken: true },
          cookieHeader: null,
-      };
-   }
-
-   const defaultTokenCookie = createDefaultTokenCookieHeader();
-   if (defaultTokenCookie) {
-      return {
-         settings: { hasCustomToken: false, hasBearerToken: true },
-         cookieHeader: defaultTokenCookie,
       };
    }
 
@@ -44,15 +27,8 @@ export function getOsirisTokenSettings(cookieHeader: string | undefined): Osiris
 }
 
 export function saveOsirisTokenSetting(rawToken: unknown): OsirisTokenSettingsResult {
-   const cookieSecret = getEnvValue("COOKIE_SECRET");
-   if (!cookieSecret) {
-      throw new OsirisTokenSettingsError("COOKIE_SECRET is required before a browser bearer token can be saved.", 500);
-   }
-
-   const token = typeof rawToken === "string" ? rawToken.trim() : "";
-   if (!token) {
-      throw new OsirisTokenSettingsError("Token is required.", 400);
-   }
+   const cookieSecret = getCookieSecret();
+   const token = normalizeBearerToken(rawToken);
 
    return {
       settings: { hasCustomToken: true, hasBearerToken: true },
@@ -61,46 +37,32 @@ export function saveOsirisTokenSetting(rawToken: unknown): OsirisTokenSettingsRe
 }
 
 export function clearOsirisTokenSetting(): OsirisTokenSettingsResult {
-   const defaultTokenCookie = createDefaultTokenCookieHeader();
-
    return {
       settings: {
          hasCustomToken: false,
          hasBearerToken: Boolean(getDefaultOsirisToken()),
       },
-      cookieHeader: defaultTokenCookie ?? buildClearOsirisTokenCookieHeader(isProduction()),
+      cookieHeader: buildClearOsirisTokenCookieHeader(isProduction()),
    };
 }
 
 export function resolveOsirisBearerToken(cookieHeader: string | undefined): string | null {
-   const cookieSecret = getEnvValue("COOKIE_SECRET");
-   return (cookieSecret ? readOsirisTokenFromCookie(cookieHeader, cookieSecret) : null) ?? getDefaultOsirisToken();
-}
-
-function createDefaultTokenCookieHeader(): string | null {
-   const cookieSecret = getEnvValue("COOKIE_SECRET");
-   const defaultToken = getDefaultOsirisToken();
-
-   if (!cookieSecret || !defaultToken) {
-      return null;
+   const cookieSecret = getCookieSecret();
+   const cookieToken = readOsirisTokenFromCookie(cookieHeader, cookieSecret);
+   if (cookieToken) {
+      try {
+         return normalizeBearerToken(cookieToken);
+      } catch {
+         throw new ApiError("The saved bearer token is invalid.", {
+            code: "AUTH_REQUIRED",
+            status: 401,
+         });
+      }
    }
 
-   return buildOsirisTokenCookieHeader(createEncryptedOsirisTokenCookieValue(defaultToken, cookieSecret), isProduction());
+   return getDefaultOsirisToken();
 }
 
 function hasValidOsirisTokenOverride(cookieHeader: string | undefined, secret: string): boolean {
    return hasOsirisTokenCookie(cookieHeader) && Boolean(readOsirisTokenFromCookie(cookieHeader, secret));
-}
-
-function isProduction() {
-   return process.env["NODE_ENV"] === "production";
-}
-
-function getDefaultOsirisToken(): string | null {
-   const token = getEnvValue("BEARER_TOKEN")?.trim();
-   if (!token) {
-      return null;
-   }
-
-   return token;
 }

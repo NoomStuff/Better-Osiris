@@ -37,7 +37,7 @@ void describe("roster week reducer", () => {
    });
 
    void it("keeps cached data available when a passive fetch fails", () => {
-      const error = { title: "Unavailable", detail: "Try later", log: "502", isAuthRelated: false };
+      const error = { title: "Unavailable", detail: "Try later", log: "502", isAuthRelated: false, retryable: true };
       const next = rosterWeekReducer({ 0: createWeekEntry(week, { isFetching: true }) }, { type: "passive-fetch-failed", offsets: [0], error });
       const nextEntry = next[0];
       assert.ok(nextEntry);
@@ -65,7 +65,6 @@ function createWeek(overrides: Partial<RosterResponse> = {}): RosterResponse {
             status: "scheduled",
          },
       ],
-      source: { mode: "osiris", note: "Fixture" },
       ...overrides,
    };
 }

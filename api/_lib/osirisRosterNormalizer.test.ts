@@ -68,4 +68,87 @@ void describe("OSIRIS roster normalizer", () => {
       assert.equal(firstLesson.start, "2026-06-16T09:00:00");
       assert.equal(firstLesson.teacher, sourceTeacher);
    });
+
+   void it("does not treat the actueel flag as a cancellation status", () => {
+      const rawResponse = {
+         hasMore: false,
+         limit: 1,
+         offset: 0,
+         count: 1,
+         items: [
+            {
+               jaar: 2026,
+               week: 25,
+               startdatum: "2026-06-15",
+               einddatum: "2026-06-21",
+               dagen: [
+                  {
+                     datum: "2026-06-16",
+                     rooster: [
+                        {
+                           id_rooster: "scheduled",
+                           datum: "2026-06-16",
+                           onderwerp: "Title - Subject - Description - Extra detail",
+                           subonderwerp: "   ",
+                           tijd_vanaf: "9:00",
+                           tijd_tm: "10:00",
+                           locatie: "A1",
+                           locatie_adres: "Campus",
+                           docenten: [],
+                           actueel: "N" as const,
+                        },
+                     ],
+                  },
+               ],
+            },
+         ],
+      } satisfies OsirisRosterResponse;
+
+      const lesson = normalizeRosterWeeksResponse(rawResponse, 0)[0]?.lessons[0];
+      assert.ok(lesson);
+      assert.equal(lesson.status, "scheduled");
+      assert.equal(lesson.description, "Description - Extra detail");
+   });
+
+   void it("uses cancellation text from any explicit status field", () => {
+      const rawResponse = {
+         hasMore: false,
+         limit: 1,
+         offset: 0,
+         count: 1,
+         items: [
+            {
+               jaar: 2026,
+               week: 25,
+               startdatum: "2026-06-15",
+               einddatum: "2026-06-19",
+               dagen: [
+                  {
+                     datum: "2026-06-16",
+                     rooster: [
+                        {
+                           id_rooster: "cancelled",
+                           datum: "2026-06-16",
+                           onderwerp: "Title",
+                           subonderwerp: "",
+                           tijd_vanaf: "09:00",
+                           tijd_tm: "10:00",
+                           locatie: "A1",
+                           locatie_adres: "Campus",
+                           docenten: [],
+                           actueel: "N" as const,
+                           status: "",
+                           status_omschrijving: "Geannuleerd",
+                        },
+                     ],
+                  },
+               ],
+            },
+         ],
+      } satisfies OsirisRosterResponse;
+
+      const lesson = normalizeRosterWeeksResponse(rawResponse, 0)[0]?.lessons[0];
+      assert.ok(lesson);
+      assert.equal(lesson.status, "cancelled");
+   });
 });

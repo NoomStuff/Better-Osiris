@@ -12,7 +12,7 @@ interface AppToolbarProps {
    onChangeView: (view: ViewMode) => void;
    onChangeGridZoom: (zoom: GridZoom) => void;
    onExpandAllAgenda: () => void;
-   onCloseAllAgenda: () => void;
+   onCollapseAllAgenda: () => void;
    onOpenSettings: () => void;
 }
 
@@ -31,7 +31,7 @@ export const AppToolbar = memo(function AppToolbar({
    onChangeView,
    onChangeGridZoom,
    onExpandAllAgenda,
-   onCloseAllAgenda,
+   onCollapseAllAgenda,
    onOpenSettings,
 }: AppToolbarProps) {
    return (
@@ -59,12 +59,12 @@ export const AppToolbar = memo(function AppToolbar({
                         onPress: onExpandAllAgenda,
                      },
                      {
-                        id: "close",
-                        label: "Close",
-                        tooltip: "Close all agenda days",
+                        id: "collapse",
+                        label: "Collapse",
+                        tooltip: "Collapse all agenda days",
                         shortcut: "Ctrl + Right / Ctrl + 2",
                         activationId: "agenda-close",
-                        onPress: onCloseAllAgenda,
+                        onPress: onCollapseAllAgenda,
                      },
                   ]}
                   key="view-agenda"
@@ -73,7 +73,7 @@ export const AppToolbar = memo(function AppToolbar({
 
             <span className="app-toolbar__divider" aria-hidden="true" />
 
-            <div className="view-toggle" role="tablist" aria-label="View mode">
+            <div className="view-toggle" role="group" aria-label="View mode">
                <IconButton
                   className="view-toggle__button"
                   icon="fa-solid fa-list"
@@ -83,8 +83,7 @@ export const AppToolbar = memo(function AppToolbar({
                   activationId="agenda-view"
                   selected={viewMode === "agenda"}
                   onClick={() => onChangeView("agenda")}
-                  role="tab"
-                  aria-selected={viewMode === "agenda"}
+                  aria-pressed={viewMode === "agenda"}
                />
                <IconButton
                   className="view-toggle__button"
@@ -95,8 +94,7 @@ export const AppToolbar = memo(function AppToolbar({
                   activationId="grid-view"
                   selected={viewMode === "grid"}
                   onClick={() => onChangeView("grid")}
-                  role="tab"
-                  aria-selected={viewMode === "grid"}
+                  aria-pressed={viewMode === "grid"}
                />
             </div>
 

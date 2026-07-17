@@ -1,8 +1,7 @@
-@import url("https://fonts.googleapis.com/css2?family=Quicksand:wght@300..700&display=swap");
-
 :root {
    color-scheme: dark;
    font-family:
+      "Quicksand Variable",
       "Quicksand",
       "Roboto",
       Helvetica,
@@ -86,6 +85,11 @@ button {
    color: inherit;
 }
 
+:where(button, a, input, select, textarea, [tabindex]):focus-visible {
+   outline: 3px solid rgba(124, 199, 255, 0.72);
+   outline-offset: 3px;
+}
+
 .spinner {
    width: 48px;
    height: 48px;
@@ -123,5 +127,50 @@ button {
    html[data-page-scrollable="true"] body {
       overflow-y: auto;
       overscroll-behavior-y: auto;
+   }
+}
+
+.fatal-error-boundary {
+   min-height: 100vh;
+   display: grid;
+   place-content: center;
+   justify-items: center;
+   gap: 14px;
+   padding: 24px;
+   text-align: center;
+   color: var(--text-dim);
+}
+
+.fatal-error-boundary i {
+   color: var(--warning);
+   font-size: 3rem;
+}
+
+.fatal-error-boundary h1,
+.fatal-error-boundary p {
+   margin: 0;
+}
+
+.fatal-error-boundary h1 {
+   color: var(--text-strong);
+}
+
+.fatal-error-boundary button {
+   min-height: 42px;
+   padding: 0 16px;
+   border: 2px solid var(--line-strong);
+   border-radius: 10px;
+   background: rgba(124, 199, 255, 0.14);
+   cursor: pointer;
+}
+
+@media (prefers-reduced-motion: reduce) {
+   *,
+   *::before,
+   *::after {
+      scroll-behavior: auto !important;
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
    }
 }

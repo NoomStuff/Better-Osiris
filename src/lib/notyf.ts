@@ -1,5 +1,6 @@
 import { Notyf } from "notyf";
 import "notyf/notyf.min.css";
+import { escapeHtml } from "./html";
 
 const notyf = new Notyf({
    position: {
@@ -57,7 +58,7 @@ function getMessage(value: unknown, fallback: string) {
 export function notifySuccess(message = "Success") {
    notyf.open({
       type: "success",
-      message,
+      message: escapeHtml(message),
    });
 }
 
@@ -66,7 +67,7 @@ export function notifyWarning(message: string, log = false, ...args: unknown[]) 
 
    notyf.open({
       type: "warning",
-      message,
+      message: escapeHtml(message),
    });
 }
 
@@ -76,6 +77,6 @@ export function notifyError(error: unknown, fallback = "Application error", log 
    const message = getMessage(error, fallback);
    notyf.open({
       type: "error",
-      message,
+      message: escapeHtml(message),
    });
 }

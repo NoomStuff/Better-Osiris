@@ -1,4 +1,14 @@
 const AMSTERDAM_TIME_ZONE = "Europe/Amsterdam";
+const AMSTERDAM_DATE_TIME_PARTS = new Intl.DateTimeFormat("en-CA", {
+   timeZone: AMSTERDAM_TIME_ZONE,
+   year: "numeric",
+   month: "2-digit",
+   day: "2-digit",
+   hour: "2-digit",
+   minute: "2-digit",
+   second: "2-digit",
+   hourCycle: "h23",
+});
 
 export const dayLabel = new Intl.DateTimeFormat("en-GB", { weekday: "long", timeZone: AMSTERDAM_TIME_ZONE });
 export const dayShortLabel = new Intl.DateTimeFormat("en-GB", { weekday: "short", timeZone: AMSTERDAM_TIME_ZONE });
@@ -27,11 +37,7 @@ export function parseIsoDateToLocal(isoDate: string) {
       return new Date(isoDate);
    }
 
-   const [yearText, monthText, dayText] = datePart.split("-");
-   const year = Number(yearText);
-   const month = Number(monthText);
-   const day = Number(dayText);
-   return new Date(year, month - 1, day);
+   return parseAmsterdamDateTime(`${datePart}T12:00:00`);
 }
 
 export function parseLocalDateTime(isoDateTime: string) {
@@ -64,7 +70,7 @@ export function parseLocalDateTime(isoDateTime: string) {
       return new Date(isoDateTime);
    }
 
-   return new Date(year, month - 1, day, hours, minutes, seconds, 0);
+   return createDateInAmsterdam(year, month, day, hours, minutes, seconds);
 }
 
 const AMSTERDAM_DATE_FORMATTER = new Intl.DateTimeFormat("en-CA", {
@@ -79,17 +85,13 @@ export function toDayKey(date: Date) {
 }
 
 export function formatLocalIsoDate(date: Date) {
-   const year = date.getFullYear();
-   const month = String(date.getMonth() + 1).padStart(2, "0");
-   const day = String(date.getDate()).padStart(2, "0");
-   return `${year}-${month}-${day}`;
+   return toDayKey(date);
 }
 
 export function getLocalWeekStartIso(date: Date) {
-   const monday = new Date(date);
-   const day = monday.getDay();
-   monday.setDate(monday.getDate() + (day === 0 ? -6 : 1 - day));
-   return formatLocalIsoDate(monday);
+   const dayKey = toDayKey(date);
+   const day = getIsoWeekday(dayKey);
+   return shiftIsoDateByDays(dayKey, 1 - day);
 }
 
 export function formatWeekTitle(startIso: string, endIso: string, weekNumber: number) {
@@ -99,9 +101,10 @@ export function formatWeekTitle(startIso: string, endIso: string, weekNumber: nu
 }
 
 export function shiftIsoDateByDays(isoDate: string, days: number) {
-   const date = new Date(isoDate);
+   const datePart = isoDate.split("T")[0] ?? isoDate;
+   const date = new Date(`${datePart}T00:00:00Z`);
    date.setUTCDate(date.getUTCDate() + days);
-   return date.toISOString();
+   return date.toISOString().slice(0, 10);
 }
 
 export function getIsoWeekNumber(isoDate: string) {
@@ -114,5 +117,50 @@ export function getIsoWeekNumber(isoDate: string) {
 }
 
 export function getMinutesFromMidnight(date: Date) {
-   return date.getHours() * 60 + date.getMinutes();
+   const parts = getAmsterdamParts(date);
+   return parts.hour * 60 + parts.minute;
+}
+
+export function getAmsterdamWeekBounds(date: Date, offset: number) {
+   const start = shiftIsoDateByDays(getLocalWeekStartIso(date), offset * 7);
+   return { start, end: shiftIsoDateByDays(start, 4) };
+}
+
+function parseAmsterdamDateTime(value: string) {
+   return parseLocalDateTime(value);
+}
+
+function createDateInAmsterdam(year: number, month: number, day: number, hour: number, minute: number, second: number) {
+   const utcGuess = Date.UTC(year, month - 1, day, hour, minute, second);
+   const firstOffset = getAmsterdamOffsetMilliseconds(new Date(utcGuess));
+   const firstCandidate = new Date(utcGuess - firstOffset);
+   const correctedOffset = getAmsterdamOffsetMilliseconds(firstCandidate);
+   return new Date(utcGuess - correctedOffset);
+}
+
+function getAmsterdamOffsetMilliseconds(date: Date) {
+   const parts = getAmsterdamParts(date);
+   const representedAsUtc = Date.UTC(parts.year, parts.month - 1, parts.day, parts.hour, parts.minute, parts.second);
+   return representedAsUtc - date.getTime();
+}
+
+function getAmsterdamParts(date: Date) {
+   const values = Object.fromEntries(
+      AMSTERDAM_DATE_TIME_PARTS.formatToParts(date)
+         .filter((part) => part.type !== "literal")
+         .map((part) => [part.type, Number(part.value)])
+   );
+   return {
+      year: values["year"] ?? 0,
+      month: values["month"] ?? 0,
+      day: values["day"] ?? 0,
+      hour: values["hour"] ?? 0,
+      minute: values["minute"] ?? 0,
+      second: values["second"] ?? 0,
+   };
+}
+
+function getIsoWeekday(isoDate: string) {
+   const day = new Date(`${isoDate}T00:00:00Z`).getUTCDay();
+   return day === 0 ? 7 : day;
 }

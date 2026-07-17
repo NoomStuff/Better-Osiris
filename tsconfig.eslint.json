@@ -34,5 +34,17 @@
       "noUnusedParameters": true,
       "erasableSyntaxOnly": true
    },
-   "include": ["src", "server.ts", "server/**/*.ts", "vite.config.ts", "api/**/*.ts", "middleware.ts", "*.test.ts", "playwright.config.ts", "tests/**/*.ts"]
+   "include": [
+      "src",
+      "shared/**/*.ts",
+      "server.ts",
+      "server/**/*.ts",
+      "vite.config.ts",
+      "api/**/*.ts",
+      "scripts/**/*.ts",
+      "middleware.ts",
+      "*.test.ts",
+      "playwright.config.ts",
+      "tests/**/*.ts"
+   ]
 }

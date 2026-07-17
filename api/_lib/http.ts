@@ -1,4 +1,8 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
+import { ApiError } from "./errors.js";
+import { applyPrivateResponseHeaders } from "./security.js";
+
+const DEFAULT_MAX_JSON_BODY_BYTES = 8 * 1024;
 
 export interface JsonResponseOptions {
    headers?: Record<string, string | string[]>;
@@ -6,6 +10,7 @@ export interface JsonResponseOptions {
 
 export function sendJson(res: ServerResponse, statusCode: number, payload: unknown, options: JsonResponseOptions = {}) {
    res.statusCode = statusCode;
+   applyPrivateResponseHeaders(res);
    Object.entries(options.headers ?? {}).forEach(([name, value]) => {
       res.setHeader(name, value);
    });
@@ -15,15 +20,25 @@ export function sendJson(res: ServerResponse, statusCode: number, payload: unkno
 
 export function sendMethodNotAllowed(res: ServerResponse, allowedMethods: readonly string[]) {
    res.statusCode = 405;
+   applyPrivateResponseHeaders(res);
    res.setHeader("Allow", allowedMethods.join(", "));
    res.end("Method Not Allowed");
 }
 
-export async function readJsonBody<TPayload>(req: IncomingMessage): Promise<TPayload | null> {
+export async function readJsonBody(req: IncomingMessage, maxBytes = DEFAULT_MAX_JSON_BODY_BYTES): Promise<unknown> {
    const chunks: Uint8Array[] = [];
+   let byteLength = 0;
 
    for await (const chunk of req) {
-      chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
+      const buffer = Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk);
+      byteLength += buffer.byteLength;
+      if (byteLength > maxBytes) {
+         throw new ApiError("The request body is too large.", {
+            code: "PAYLOAD_TOO_LARGE",
+            status: 413,
+         });
+      }
+      chunks.push(buffer);
    }
 
    if (chunks.length === 0) {
@@ -31,9 +46,12 @@ export async function readJsonBody<TPayload>(req: IncomingMessage): Promise<TPay
    }
 
    try {
-      return JSON.parse(Buffer.concat(chunks).toString("utf8")) as TPayload;
+      return JSON.parse(Buffer.concat(chunks).toString("utf8")) as unknown;
    } catch {
-      return null;
+      throw new ApiError("The request body must be valid JSON.", {
+         code: "INVALID_REQUEST",
+         status: 400,
+      });
    }
 }
 

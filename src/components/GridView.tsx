@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type MouseEvent } from "react";
-import { dayShortLabel, getMinutesFromMidnight, timeLabel, toDayKey } from "../lib/date";
+import { dayShortLabel, fullDayLabel, getMinutesFromMidnight, timeLabel, toDayKey } from "../lib/date";
 import { DETAILS_SEPARATOR, getLessonLocationLabel } from "../lib/lessonFormat";
 import { WORKDAY_END, WORKDAY_START } from "../lib/rosterLayout";
 import type { DayGroup, GridZoom, Lesson } from "../types/roster";
@@ -103,14 +103,20 @@ export function GridView({ groups, zoom: zoomId, now, onSelectLesson }: GridView
    };
 
    return (
-      <div className="grid-shell">
+      <div className="grid-shell" role="region" aria-label="Weekly timetable grid">
          <div className="grid-header">
             <div className="grid-header__time" />
             {groups.map((group) => (
-               <div className="grid-header__day" data-today={group.key === todayKey} data-empty={group.lessons.length === 0} key={group.key}>
+               <div
+                  className="grid-header__day"
+                  data-today={group.key === todayKey}
+                  data-empty={group.lessons.length === 0}
+                  id={`grid-day-${group.key}`}
+                  key={group.key}
+               >
                   <span className="grid-header__day-pill">
                      <span>{dayShortLabel.format(group.date)}</span>
-                     <strong>{String(group.date.getDate()).padStart(2, "0")}</strong>
+                     <strong>{group.key.slice(-2)}</strong>
                   </span>
                </div>
             ))}
@@ -130,7 +136,7 @@ export function GridView({ groups, zoom: zoomId, now, onSelectLesson }: GridView
                   </div>
                ) : null}
 
-               <div className="grid-time-column">
+               <div className="grid-time-column" aria-hidden="true">
                   {TIME_LABELS.map((minutes) => (
                      <div
                         className="grid-time-slot"
@@ -156,7 +162,7 @@ export function GridView({ groups, zoom: zoomId, now, onSelectLesson }: GridView
                   ) : null}
 
                   {groups.map((group) => (
-                     <div className="grid-day-column" key={group.key}>
+                     <div className="grid-day-column" key={group.key} role="group" aria-labelledby={`grid-day-${group.key}`}>
                         {TIME_MARKS.map((minutes) => (
                            <div
                               className="grid-line"
@@ -164,6 +170,7 @@ export function GridView({ groups, zoom: zoomId, now, onSelectLesson }: GridView
                               data-major={minutes % 60 === 0}
                               data-visible={minutes % zoom.interval === 0}
                               style={{ top: `${getOffsetPercent(minutes)}%` }}
+                              aria-hidden="true"
                            />
                         ))}
 
@@ -196,6 +203,18 @@ export function GridView({ groups, zoom: zoomId, now, onSelectLesson }: GridView
                               compactParts.push(locationLabel);
                            }
 
+                           const lessonLabel = [
+                              classLabel,
+                              subtitleLabel,
+                              fullDayLabel.format(lesson.startDate),
+                              timeRange,
+                              lesson.teacher,
+                              roomLocationLabel,
+                              lesson.status === "scheduled" ? "" : lesson.status,
+                           ]
+                              .filter(Boolean)
+                              .join(", ");
+
                            return (
                               <button
                                  className={`grid-lesson ${densityClass} ${isCompact ? "is-compact" : ""} ${isTiny ? "is-tiny" : ""} status-${lesson.status}`}
@@ -209,6 +228,7 @@ export function GridView({ groups, zoom: zoomId, now, onSelectLesson }: GridView
                                     left,
                                  }}
                                  title={lesson.title}
+                                 aria-label={lessonLabel}
                               >
                                  <strong>{classLabel}</strong>
                                  {subtitleLabel ? <span className="grid-lesson__title">{subtitleLabel}</span> : null}

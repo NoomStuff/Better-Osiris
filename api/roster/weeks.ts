@@ -1,6 +1,8 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
 import { getRequestUrl, sendJson, sendMethodNotAllowed } from "../_lib/http.js";
-import { getRosterErrorMessage, getRosterErrorStatus, loadRosterWeeks } from "../_lib/rosterWeeksService.js";
+import { getRosterWeeksRoute } from "../_lib/apiRoutes.js";
+import { enforceRateLimit } from "../_lib/rateLimit.js";
+import { toApiError, toApiErrorPayload } from "../_lib/errors.js";
 
 export default async function handler(req: IncomingMessage, res: ServerResponse) {
    if (req.method !== "GET") {
@@ -8,16 +10,17 @@ export default async function handler(req: IncomingMessage, res: ServerResponse)
       return;
    }
 
-   const url = getRequestUrl(req);
-
    try {
-      const payload = await loadRosterWeeks({
+      const url = getRequestUrl(req);
+      enforceRateLimit(req, "roster", 120, 60_000);
+      const response = await getRosterWeeksRoute({
          offset: url.searchParams.get("offset"),
          limit: url.searchParams.get("limit"),
          cookieHeader: req.headers.cookie,
       });
-      sendJson(res, 200, payload);
+      sendJson(res, response.statusCode, response.payload, response.headers ? { headers: response.headers } : undefined);
    } catch (error) {
-      sendJson(res, getRosterErrorStatus(error), { error: getRosterErrorMessage(error) });
+      const apiError = toApiError(error, "The roster request could not be completed.");
+      sendJson(res, apiError.status, toApiErrorPayload(apiError));
    }
 }

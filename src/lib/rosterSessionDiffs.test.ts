@@ -81,6 +81,48 @@ void describe("session roster diff states", () => {
       assert.equal(recorded[0]?.status, "cancelled");
       assert.equal(display.lessons[0]?.status, "cancelled");
    });
+
+   void it("removes a session change when the lesson returns to its original state", () => {
+      const original = createWeek([createLesson({ id: "lesson-1" })]);
+      const changed = createWeek([createLesson({ id: "lesson-1", room: "B202" })]);
+      const diffs: SessionLessonDiffsByWeek = new Map();
+
+      recordSessionLessonDiffs(original, changed, diffs);
+      assert.equal(diffs.get(0)?.size, 1);
+      recordSessionLessonDiffs(changed, original, diffs);
+      assert.equal(diffs.size, 0);
+      assert.equal(applySessionLessonDiffs(original, diffs).lessons[0]?.status, "scheduled");
+   });
+
+   void it("clears an ID-changing move when the original lesson returns", () => {
+      const original = createWeek([createLesson({ id: "old-id", start: "2026-06-16T09:00:00", end: "2026-06-16T10:30:00" })]);
+      const moved = createWeek([createLesson({ id: "new-id", start: "2026-06-16T13:00:00", end: "2026-06-16T14:30:00" })]);
+      const diffs: SessionLessonDiffsByWeek = new Map();
+
+      recordSessionLessonDiffs(original, moved, diffs);
+      recordSessionLessonDiffs(moved, original, diffs);
+
+      const display = applySessionLessonDiffs(original, diffs);
+      assert.equal(diffs.size, 0);
+      assert.equal(display.lessons.length, 1);
+      const revertedLesson = display.lessons[0];
+      assert.ok(revertedLesson);
+      assert.equal(revertedLesson.id, "old-id");
+      assert.equal(revertedLesson.status, "scheduled");
+   });
+
+   void it("does not guess when multiple removed lessons are equally plausible", () => {
+      const first = createLesson({ id: "first", title: "Math", subject: "Math", teacher: "Teacher" });
+      const second = createLesson({ id: "second", title: "Math", subject: "Math", teacher: "Teacher" });
+      const replacement = createLesson({ id: "replacement", title: "Math", subject: "Math", teacher: "Teacher" });
+      const diffs: SessionLessonDiffsByWeek = new Map();
+
+      const recorded = recordSessionLessonDiffs(createWeek([first, second]), createWeek([replacement]), diffs);
+      assert.equal(
+         recorded.some((diff) => diff.lesson.id === "replacement" && diff.status === "changed"),
+         false
+      );
+   });
 });
 
 function createWeek(lessons: Lesson[]): RosterResponse {
@@ -92,10 +134,6 @@ function createWeek(lessons: Lesson[]): RosterResponse {
          end: "2026-06-19",
       },
       lessons,
-      source: {
-         mode: "osiris",
-         note: "Fixture",
-      },
    };
 }
 

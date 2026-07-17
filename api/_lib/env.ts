@@ -1,32 +1,53 @@
 import fs from "node:fs";
 import path from "node:path";
 
+let fileEnvironment: ReadonlyMap<string, string> | null = null;
+
 export function getEnvValue(key: string): string | undefined {
    if (Object.hasOwn(process.env, key)) {
       const existing = process.env[key];
       return existing === "" ? undefined : existing;
    }
 
-   for (const envFile of [".env", ".env.local", ".env.production", ".env.production.local"]) {
-      const envPath = path.resolve(process.cwd(), envFile);
+   fileEnvironment ??= loadEnvironmentFiles();
+   return fileEnvironment.get(key);
+}
+
+export function clearEnvironmentFileCache() {
+   fileEnvironment = null;
+}
+
+export function loadEnvironmentFiles(directory = process.cwd(), mode = process.env["NODE_ENV"]?.trim()) {
+   const values = new Map<string, string>();
+   const envFiles = mode ? [`.env.${mode}.local`, `.env.${mode}`, ".env.local", ".env"] : [".env.local", ".env"];
+
+   for (const envFile of envFiles) {
+      const envPath = path.resolve(directory, envFile);
       if (!fs.existsSync(envPath)) {
          continue;
       }
 
       const envContents = fs.readFileSync(envPath, "utf8");
-      const line = envContents.split(/\r?\n/).find((entry: string) => entry.trim().startsWith(`${key}=`));
+      envContents.split(/\r?\n/).forEach((entry) => {
+         const line = entry.trim();
+         if (!line || line.startsWith("#")) {
+            return;
+         }
 
-      if (!line) {
-         continue;
-      }
+         const separatorIndex = line.indexOf("=");
+         if (separatorIndex <= 0) {
+            return;
+         }
 
-      const rawValue = line.split("=", 2)[1]?.trim();
-      if (!rawValue) {
-         continue;
-      }
+         const key = line.slice(0, separatorIndex).trim();
+         const rawValue = line.slice(separatorIndex + 1).trim();
+         if (!key || !rawValue || values.has(key)) {
+            return;
+         }
 
-      return rawValue.replace(/^"(.*)"$/, "$1").replace(/^'(.*)'$/, "$1");
+         values.set(key, rawValue.replace(/^"(.*)"$/, "$1").replace(/^'(.*)'$/, "$1"));
+      });
    }
 
-   return undefined;
+   return values;
 }

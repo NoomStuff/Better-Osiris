@@ -1,4 +1,5 @@
 import type { Lesson, LessonStatus, RosterResponse } from "../../shared/roster.js";
+import { ApiError } from "./errors.js";
 import type { OsirisRosterEntry, OsirisRosterResponse, OsirisWeek } from "./osirisClient.js";
 
 function splitSubject(rawSubject: string) {
@@ -9,7 +10,7 @@ function splitSubject(rawSubject: string) {
 
    const title = parts[0] ?? rawSubject;
    const subject = parts[1] ?? title;
-   const description = parts[2] ?? subject;
+   const description = parts.slice(2).join(" - ") || subject;
 
    if (parts.length >= 3) {
       return {
@@ -56,20 +57,6 @@ function getDatePart(dateIso: string) {
    return match ? match[0] : dateIso;
 }
 
-function parseLocalDate(dateIso: string) {
-   const datePart = getDatePart(dateIso);
-   const match = /^\d{4}-\d{2}-\d{2}$/.exec(datePart);
-   if (match) {
-      const [yearText, monthText, dayText] = datePart.split("-");
-      const year = Number(yearText);
-      const month = Number(monthText);
-      const day = Number(dayText);
-      return new Date(year, month - 1, day);
-   }
-
-   return new Date(dateIso);
-}
-
 function toLocalDateTime(dayIso: string, timeValue: string) {
    const dateOnly = getDatePart(dayIso);
    const [hoursText = "0", minutesText = "0"] = timeValue.split(":");
@@ -79,24 +66,32 @@ function toLocalDateTime(dayIso: string, timeValue: string) {
 }
 
 function toLocalDateOnly(dayIso: string) {
-   const day = parseLocalDate(getDatePart(dayIso));
-   return AMSTERDAM_DATE_FORMATTER.format(day);
+   return getDatePart(dayIso);
 }
 
 function normalizeLesson(item: OsirisRosterEntry): Lesson {
    const parsed = splitSubject(item.onderwerp);
    const status: LessonStatus = resolveLessonStatus(item);
 
+   const start = toLocalDateTime(item.datum, item.tijd_vanaf);
+   const end = toLocalDateTime(item.datum, item.tijd_tm);
+   if (end <= start) {
+      throw new ApiError(`OSIRIS lesson ${item.id_rooster} has an invalid time range.`, {
+         code: "UPSTREAM_INVALID_RESPONSE",
+         status: 502,
+      });
+   }
+
    return {
       id: item.id_rooster,
       title: parsed.title,
       subject: parsed.subject,
-      start: toLocalDateTime(item.datum, item.tijd_vanaf),
-      end: toLocalDateTime(item.datum, item.tijd_tm),
+      start,
+      end,
       teacher: item.docenten.map((teacher) => teacher.naam).join(", ") || "Unknown",
       room: item.locatie || "Unknown",
       location: item.locatie_adres || item.locatie || "Unknown",
-      description: item.subonderwerp || parsed.description,
+      description: item.subonderwerp.trim() || parsed.description,
       status,
    };
 }
@@ -104,14 +99,16 @@ function normalizeLesson(item: OsirisRosterEntry): Lesson {
 function resolveLessonStatus(item: OsirisRosterEntry): LessonStatus {
    const statusHints = ["status", "roosterstatus", "status_omschrijving", "statusomschrijving"];
    const itemRecord = item as unknown as Record<string, unknown>;
-   const raw = statusHints.map((key) => itemRecord[key]).find((value) => typeof value === "string");
-   const normalized = typeof raw === "string" ? raw.toLowerCase() : "";
+   const normalizedHints = statusHints
+      .map((key) => itemRecord[key])
+      .filter((value): value is string => typeof value === "string")
+      .map((value) => value.toLocaleLowerCase());
 
-   if (normalized.includes("cancel") || normalized.includes("vervallen") || normalized.includes("geannuleerd")) {
+   if (normalizedHints.some((hint) => hint.includes("cancel") || hint.includes("vervallen") || hint.includes("geannuleerd"))) {
       return "cancelled";
    }
 
-   if (normalized.includes("change") || normalized.includes("wijzig")) {
+   if (normalizedHints.some((hint) => hint.includes("change") || hint.includes("wijzig"))) {
       return "changed";
    }
 
@@ -127,10 +124,6 @@ function normalizeRosterWeekItem(week: OsirisWeek, requestedOffset: number): Ros
          end: toLocalDateOnly(week.einddatum),
       },
       lessons: week.dagen.flatMap((day) => day.rooster.map(normalizeLesson)),
-      source: {
-         mode: "osiris",
-         note: "Using live OSIRIS roster data.",
-      },
    };
 }
 

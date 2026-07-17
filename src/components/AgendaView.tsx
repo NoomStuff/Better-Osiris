@@ -1,4 +1,4 @@
-import { Fragment, useEffectEvent, useLayoutEffect, useRef, useState } from "react";
+import { Fragment, useCallback, useLayoutEffect, useRef, useState } from "react";
 import { dayLabel, monthDayLabel, timeLabel, toDayKey } from "../lib/date";
 import { DETAILS_SEPARATOR, getLessonLocationLabel } from "../lib/lessonFormat";
 import { getBreakIcon, getEmptyDayMessage, getEmptyTodayMessage } from "../lib/rosterFlavor";
@@ -151,7 +151,7 @@ export function AgendaView({ groups, expandedDays, animate, now, onToggleDay, on
    const [indicatorPlacement, setIndicatorPlacement] = useState<CurrentIndicatorPlacement | null>(null);
    const todayKey = toDayKey(now);
 
-   const measureIndicator = useEffectEvent(() => {
+   const measureIndicator = useCallback(() => {
       const agendaElement = agendaRef.current;
       if (!agendaElement) {
          return;
@@ -193,7 +193,7 @@ export function AgendaView({ groups, expandedDays, animate, now, onToggleDay, on
       }
 
       setIndicatorPlacement((current) => (current ? { ...current, visible: false, progress: 0 } : null));
-   });
+   }, [expandedDays, groups, now]);
 
    useLayoutEffect(() => {
       const agendaElement = agendaRef.current;
@@ -210,11 +210,7 @@ export function AgendaView({ groups, expandedDays, animate, now, onToggleDay, on
          resizeObserver.disconnect();
          window.removeEventListener("resize", measureIndicator);
       };
-   }, []);
-
-   useLayoutEffect(() => {
-      measureIndicator();
-   }, [expandedDays, groups, now]);
+   }, [measureIndicator]);
 
    return (
       <section className="agenda-view" ref={agendaRef}>

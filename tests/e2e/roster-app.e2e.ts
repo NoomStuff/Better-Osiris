@@ -1,13 +1,22 @@
 import { expect, test, type Page } from "@playwright/test";
+import AxeBuilder from "@axe-core/playwright";
 
 const FIXED_NOW_ISO = "2026-06-16T09:45:00+02:00";
 const WEEK_START_ISO = "2026-06-15";
 const MS_PER_DAY = 24 * 60 * 60 * 1000;
 const OSIRIS_BEARER_TOKEN_HELP_URL = "https://youtu.be/MbcI61KIQbI";
+const pageErrors = new WeakMap<Page, string[]>();
 
 test.beforeEach(async ({ page }) => {
+   const errors: string[] = [];
+   pageErrors.set(page, errors);
+   page.on("pageerror", (error) => errors.push(error.stack ?? error.message));
    await installFixedClock(page);
    await mockAppApis(page);
+});
+
+test.afterEach(({ page }) => {
+   expect(pageErrors.get(page) ?? []).toEqual([]);
 });
 
 test("week navigation and view controls work with mocked roster data", async ({ page }) => {
@@ -18,7 +27,7 @@ test("week navigation and view controls work with mocked roster data", async ({ 
    await expect(page.locator(".app-toolbar__identity .eyebrow")).toHaveCount(0);
    await expect(page.getByRole("button", { name: "Previous week" })).toBeEnabled();
    await expect(page.getByRole("button", { name: "Next week" })).toBeEnabled();
-   await expect(page.getByRole("button", { name: "SOURCE_TITLE_0_1" })).toBeVisible();
+   await expect(page.locator(".grid-lesson", { hasText: "SOURCE_TITLE_0_1" })).toBeVisible();
 
    await page.getByRole("button", { name: "Previous week" }).click();
    await expect(page.locator(".weekbar__label")).toHaveText("Last week");
@@ -39,15 +48,16 @@ test("week navigation and view controls work with mocked roster data", async ({ 
    await expect(page.locator(".weekbar__label")).toHaveText("This week");
    await expect(page.getByRole("heading", { name: /Week 25:/ })).toBeVisible();
 
-   await page.getByRole("tab", { name: "Grid view" }).click();
+   await page.getByRole("button", { name: "Grid view" }).click();
    await expect(page.locator(".grid-shell")).toBeVisible();
    await expect(page.getByRole("radio", { name: "30m" })).toBeVisible();
 
    await page.getByRole("radio", { name: "30m" }).click();
    await expect(page.getByRole("radio", { name: "30m" })).toHaveAttribute("aria-checked", "true");
 
-   await page.getByRole("tab", { name: "Agenda view" }).click();
+   await page.getByRole("button", { name: "Agenda view" }).click();
    await expect(page.locator(".agenda-view")).toBeVisible();
+   await expect(page.getByRole("button", { name: "Collapse" })).toBeVisible();
 });
 
 test("defaults to grid on desktop when no roster view was saved", async ({ page }) => {
@@ -55,7 +65,19 @@ test("defaults to grid on desktop when no roster view was saved", async ({ page 
    await page.goto("/");
 
    await expect(page.locator(".grid-shell")).toBeVisible();
-   await expect(page.getByRole("tab", { name: "Grid view" })).toHaveAttribute("aria-selected", "true");
+   await expect(page.getByRole("button", { name: "Grid view" })).toHaveAttribute("aria-pressed", "true");
+});
+
+test("uses the bundled Quicksand variable font", async ({ page }) => {
+   await page.goto("/");
+   await page.evaluate(() => document.fonts.ready);
+
+   const fontState = await page.evaluate(() => ({
+      computedFamily: getComputedStyle(document.body).fontFamily,
+      loaded: [...document.fonts].some((font) => font.family.includes("Quicksand Variable") && font.status === "loaded"),
+   }));
+   expect(fontState.computedFamily).toContain("Quicksand Variable");
+   expect(fontState.loaded).toBe(true);
 });
 
 test("defaults to agenda on mobile when no roster view was saved", async ({ page }) => {
@@ -63,7 +85,7 @@ test("defaults to agenda on mobile when no roster view was saved", async ({ page
    await page.goto("/");
 
    await expect(page.locator(".agenda-view")).toBeVisible();
-   await expect(page.getByRole("tab", { name: "Agenda view" })).toHaveAttribute("aria-selected", "true");
+   await expect(page.getByRole("button", { name: "Agenda view" })).toHaveAttribute("aria-pressed", "true");
 });
 
 test("keeps a saved roster view over the viewport default", async ({ page }) => {
@@ -74,7 +96,7 @@ test("keeps a saved roster view over the viewport default", async ({ page }) => 
    await page.goto("/");
 
    await expect(page.locator(".grid-shell")).toBeVisible();
-   await expect(page.getByRole("tab", { name: "Grid view" })).toHaveAttribute("aria-selected", "true");
+   await expect(page.getByRole("button", { name: "Grid view" })).toHaveAttribute("aria-pressed", "true");
 });
 
 test("previous week is disabled when no locally cached last week is available", async ({ page }) => {
@@ -191,12 +213,18 @@ test("saving a replacement token refreshes roster data without reloading the pag
 
    await page.getByRole("button", { name: "Open settings" }).click();
    const settings = page.getByRole("dialog", { name: "Preferences" });
-   await settings.getByLabel("Bearer token").fill("Bearer replacement-token");
-   await settings.getByRole("button", { name: "Save token" }).click();
+   const tokenInput = settings.getByLabel("Bearer token");
+   const saveButton = settings.getByRole("button", { name: "Save token" });
+   await tokenInput.fill("Bearer replacement-token");
+   await expect(tokenInput).toHaveValue("Bearer replacement-token");
+   await expect(saveButton).toBeEnabled();
+   const rosterRefresh = page.waitForResponse((response) => response.url().includes("/api/roster/weeks?") && response.request().method() === "GET");
+   await saveButton.click();
+   await rosterRefresh;
 
    await expect.poll(() => rosterRequestCount).toBeGreaterThan(initialRequestCount);
    await expect(settings).toBeVisible();
-   await expect(page.getByRole("button", { name: "SOURCE_TITLE_0_1" })).toBeVisible();
+   await expect(page.locator(".grid-lesson", { hasText: "SOURCE_TITLE_0_1" })).toBeVisible();
 });
 
 test("an aborted credential request cannot restore stale roster data", async ({ page }) => {
@@ -249,8 +277,15 @@ test("an aborted credential request cannot restore stale roster data", async ({ 
    await expect(page.getByRole("button", { name: "TOKEN_1_TITLE" })).toHaveCount(0);
 
    const settings = page.getByRole("dialog", { name: "Preferences" });
-   await settings.getByLabel("Bearer token").fill("Bearer fresh-token");
-   await settings.getByRole("button", { name: "Save token" }).click();
+   const tokenInput = settings.getByLabel("Bearer token");
+   const saveButton = settings.getByRole("button", { name: "Save token" });
+   await tokenInput.fill("Bearer fresh-token");
+   await expect(tokenInput).toHaveValue("Bearer fresh-token");
+   await expect(saveButton).toBeEnabled();
+   const freshRosterResponse = waitForRosterResponseTitle(page, "TOKEN_2_TITLE");
+   await saveButton.click();
+   await freshRosterResponse;
+   await expect(page.locator(".grid-lesson", { hasText: "TOKEN_2_TITLE" })).toBeVisible({ timeout: 10_000 });
    await settings.getByRole("button", { name: "Close settings" }).click();
 
    await expect(page.getByRole("button", { name: "TOKEN_2_TITLE" })).toBeVisible();
@@ -263,10 +298,14 @@ test("week swipe navigation is disabled while an overlay is open", async ({ page
 
    await page.evaluate(() => {
       const target = document.body;
-      const start = new Touch({ identifier: 1, target, clientX: 320, clientY: 300 });
-      const end = new Touch({ identifier: 1, target, clientX: 120, clientY: 300 });
-      window.dispatchEvent(new TouchEvent("touchstart", { touches: [start] }));
-      window.dispatchEvent(new TouchEvent("touchend", { changedTouches: [end] }));
+      const start = { identifier: 1, target, clientX: 320, clientY: 300 };
+      const end = { identifier: 1, target, clientX: 120, clientY: 300 };
+      const startEvent = new Event("touchstart");
+      const endEvent = new Event("touchend");
+      Object.defineProperty(startEvent, "touches", { value: [start] });
+      Object.defineProperty(endEvent, "changedTouches", { value: [end] });
+      window.dispatchEvent(startEvent);
+      window.dispatchEvent(endEvent);
    });
 
    await expect(page.locator(".weekbar__label")).toHaveText("This week");
@@ -274,7 +313,7 @@ test("week swipe navigation is disabled while an overlay is open", async ({ page
 
 test("collapsed agenda days remove hidden lessons from keyboard navigation", async ({ page }) => {
    await page.goto("/");
-   await page.getByRole("tab", { name: "Agenda view" }).click();
+   await page.getByRole("button", { name: "Agenda view" }).click();
    const currentDay = page.locator(".day-group").filter({ hasText: "SOURCE_TITLE_0_1" });
    const currentDayHeader = currentDay.locator(".day-group__header");
    await currentDayHeader.click();
@@ -320,7 +359,7 @@ test("missing bearer token shows an entry overlay without requesting roster data
 test("devtools can preview changed and cancelled lesson states", async ({ page }) => {
    await page.goto("/");
 
-   await page.getByRole("tab", { name: "Agenda view" }).click();
+   await page.getByRole("button", { name: "Agenda view" }).click();
    await page.getByRole("button", { name: "Open settings" }).click();
    await page.getByLabel("Enable devtools").check();
    await page.getByRole("button", { name: "Mixed" }).click();
@@ -347,19 +386,84 @@ test("devtools can preview changed and cancelled lesson states", async ({ page }
 test("time indicators are visible and positioned for the fixed current time", async ({ page }) => {
    await page.goto("/");
 
-   await page.getByRole("tab", { name: "Agenda view" }).click();
+   await page.getByRole("button", { name: "Agenda view" }).click();
    const agendaIndicator = page.locator(".agenda-current-indicator");
    await expect(agendaIndicator).toBeVisible();
    await expect(agendaIndicator).toHaveAttribute("data-visible", "true");
    await expect(agendaIndicator.locator(".agenda-current-indicator__progress")).toHaveCSS("height", /1[0-9]|2[0-9]|3[0-9]|4[0-9]|5[0-9]/);
 
-   await page.getByRole("tab", { name: "Grid view" }).click();
+   await page.getByRole("button", { name: "Grid view" }).click();
    const gridNowLine = page.locator(".grid-now-line");
    await expect(gridNowLine).toBeVisible();
 
    const top = await gridNowLine.evaluate((element) => Number.parseFloat((element as HTMLElement).style.top));
    expect(top).toBeGreaterThan(17);
    expect(top).toBeLessThan(18);
+});
+
+test("timeline zoom supports radio-group arrow navigation", async ({ page }) => {
+   await page.goto("/");
+   const hourZoom = page.getByRole("radio", { name: "1h" });
+   const halfHourZoom = page.getByRole("radio", { name: "30m" });
+   await hourZoom.focus();
+   await page.keyboard.press("ArrowRight");
+
+   await expect(halfHourZoom).toBeFocused();
+   await expect(halfHourZoom).toHaveAttribute("aria-checked", "true");
+   await expect(page.locator(".weekbar__label")).toHaveText("This week");
+});
+
+test("lesson dialogs isolate the app and lock mobile page scrolling", async ({ page }) => {
+   await page.setViewportSize({ width: 390, height: 500 });
+   await page.goto("/");
+   await page.getByRole("button", { name: /SOURCE_TITLE_0_1/ }).click();
+   await expect(page.getByRole("dialog")).toBeVisible();
+   await expect(page.locator("#app")).toHaveAttribute("inert", "");
+   await expect(page.locator("#app")).toHaveAttribute("aria-hidden", "true");
+
+   const initialScrollY = await page.evaluate(() => window.scrollY);
+   await page.mouse.move(380, 250);
+   await page.mouse.wheel(0, 800);
+   await page.waitForTimeout(100);
+   expect(await page.evaluate(() => window.scrollY)).toBe(initialScrollY);
+
+   await page.getByRole("dialog").getByRole("button", { name: "Close", exact: true }).click();
+   await expect(page.getByRole("dialog")).toBeHidden();
+   await expect(page.locator("#app")).not.toHaveAttribute("inert", "");
+   await expect(page.locator("#app")).toHaveAttribute("aria-hidden", "false");
+});
+
+test("grid lessons expose day, time, teacher, and place in their accessible names", async ({ page }) => {
+   await page.goto("/");
+   await expect(page.getByRole("region", { name: "Weekly timetable grid" })).toBeVisible();
+   await expect(
+      page.getByRole("button", {
+         name: /SOURCE_TITLE_0_1, SOURCE_SUBJECT_0_1, Tuesday 16 June, 09:00-10:30, SOURCE_TEACHER, SOURCE_ROOM/,
+      })
+   ).toBeVisible();
+});
+
+test("core timetable and dialog surfaces pass automated accessibility checks", async ({ page }) => {
+   await page.goto("/");
+   const timetableResults = await new AxeBuilder({ page }).withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"]).analyze();
+   expect(timetableResults.violations).toEqual([]);
+
+   await page.getByRole("button", { name: "Open settings" }).click();
+   const dialogResults = await new AxeBuilder({ page }).include(".settings-dialog").withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"]).analyze();
+   expect(dialogResults.violations).toEqual([]);
+});
+
+test("desktop grid and mobile agenda match their visual baselines", async ({ page, browserName }) => {
+   test.skip(browserName !== "chromium", "Visual baselines use Chromium for deterministic rendering.");
+
+   await page.setViewportSize({ width: 1280, height: 720 });
+   await page.goto("/");
+   await page.evaluate(() => document.fonts.ready);
+   await expect(page.locator(".shell")).toHaveScreenshot("desktop-grid.png", { animations: "disabled" });
+
+   await page.setViewportSize({ width: 390, height: 844 });
+   await page.getByRole("button", { name: "Agenda view" }).click();
+   await expect(page.locator(".shell")).toHaveScreenshot("mobile-agenda.png", { animations: "disabled" });
 });
 
 async function installFixedClock(page: Page) {
@@ -509,4 +613,15 @@ function createRosterWeek(offset: number) {
 
 function toIsoDate(date: Date) {
    return date.toISOString().slice(0, 10);
+}
+
+function waitForRosterResponseTitle(page: Page, expectedTitle: string) {
+   return page.waitForResponse(async (response) => {
+      if (!response.url().includes("/api/roster/weeks?") || response.request().method() !== "GET") {
+         return false;
+      }
+
+      const payload = (await response.json()) as { weeks?: { lessons?: { title?: string }[] }[] };
+      return payload.weeks?.[0]?.lessons?.[0]?.title === expectedTitle;
+   });
 }

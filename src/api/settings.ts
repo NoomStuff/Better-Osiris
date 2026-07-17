@@ -1,14 +1,16 @@
 import type { OsirisTokenSettings } from "../../shared/roster";
+import { parseApiErrorPayload, parseOsirisTokenSettings } from "../../shared/rosterValidation";
+import { fetchWithTimeout, readJsonResponse } from "./fetch";
 
 export type { OsirisTokenSettings } from "../../shared/roster";
 
 export async function fetchOsirisTokenSettings(): Promise<OsirisTokenSettings> {
-   const response = await fetch("/api/settings/osiris-token");
+   const response = await fetchWithTimeout("/api/settings/osiris-token");
    return parseSettingsResponse(response);
 }
 
 export async function saveOsirisToken(token: string): Promise<OsirisTokenSettings> {
-   const response = await fetch("/api/settings/osiris-token", {
+   const response = await fetchWithTimeout("/api/settings/osiris-token", {
       method: "PUT",
       headers: {
          "Content-Type": "application/json",
@@ -20,7 +22,7 @@ export async function saveOsirisToken(token: string): Promise<OsirisTokenSetting
 }
 
 export async function clearOsirisToken(): Promise<OsirisTokenSettings> {
-   const response = await fetch("/api/settings/osiris-token", {
+   const response = await fetchWithTimeout("/api/settings/osiris-token", {
       method: "DELETE",
    });
 
@@ -28,14 +30,12 @@ export async function clearOsirisToken(): Promise<OsirisTokenSettings> {
 }
 
 async function parseSettingsResponse(response: Response): Promise<OsirisTokenSettings> {
-   const payload = (await response.json()) as { hasCustomToken?: unknown; hasBearerToken?: unknown; error?: string };
+   const payload = await readJsonResponse(response, "Settings API");
 
    if (!response.ok) {
-      throw new Error(payload.error ?? `Settings request failed with HTTP ${response.status}.`);
+      const errorPayload = parseApiErrorPayload(payload);
+      throw new Error(errorPayload?.error ?? `Settings request failed with HTTP ${response.status}.`);
    }
 
-   return {
-      hasCustomToken: payload.hasCustomToken === true,
-      hasBearerToken: payload.hasBearerToken === true || payload.hasCustomToken === true,
-   };
+   return parseOsirisTokenSettings(payload);
 }

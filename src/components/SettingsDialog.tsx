@@ -198,7 +198,10 @@ export function SettingsDialog({
                            className="settings-dialog__button settings-dialog__button--danger"
                            type="button"
                            disabled={isTokenLoading || !hasCustomToken}
-                           onClick={() => setIsResetConfirmOpen(true)}
+                           onClick={(event) => {
+                              event.currentTarget.focus({ preventScroll: true });
+                              setIsResetConfirmOpen(true);
+                           }}
                         >
                            Reset
                         </button>

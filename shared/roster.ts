@@ -44,20 +44,13 @@ export interface RosterWeek {
    end: string;
 }
 
-export interface RosterSource {
-   mode: string;
-   note: string;
-}
-
 export interface RosterResponse {
    week: RosterWeek;
    lessons: Lesson[];
-   source: RosterSource;
 }
 
 export interface RosterBatchResponse {
    weeks: RosterResponse[];
    offset: number;
    limit: number;
-   hasMore: boolean;
 }

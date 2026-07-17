@@ -8,12 +8,22 @@ import {
    type RefObject,
    type TouchEvent,
 } from "react";
+import { createPortal } from "react-dom";
 import "./OverlayPanel.css";
 
 const overlayStack: string[] = [];
+const overlayRoots = new Map<string, HTMLElement>();
 let bodyLockCount = 0;
 let originalBodyOverflow = "";
 let originalBodyOverscrollBehavior = "";
+let originalHtmlOverflow = "";
+let originalHtmlOverflowPriority = "";
+let originalHtmlOverscrollBehavior = "";
+let originalHtmlOverscrollPriority = "";
+let originalBodyPosition = "";
+let originalBodyTop = "";
+let originalBodyWidth = "";
+let originalScrollY = 0;
 
 const FOCUSABLE_SELECTOR = [
    "a[href]",
@@ -24,14 +34,12 @@ const FOCUSABLE_SELECTOR = [
    '[tabindex]:not([tabindex="-1"])',
 ].join(",");
 
-interface OverlayPanelProps {
+interface OverlayPanelBaseProps {
    children: ReactNode;
    className?: string;
    surfaceClassName?: string;
    backdropClassName?: string;
    closeLabel: string;
-   labelledBy?: string;
-   label?: string;
    placement?: "center" | "bottom";
    isClosing?: boolean;
    closeOnEscape?: boolean;
@@ -41,6 +49,8 @@ interface OverlayPanelProps {
    rootProps?: HTMLAttributes<HTMLDivElement>;
    surfaceProps?: HTMLAttributes<HTMLElement>;
 }
+
+type OverlayPanelProps = OverlayPanelBaseProps & ({ labelledBy: string; label?: never } | { label: string; labelledBy?: never });
 
 export function OverlayPanel({
    children,
@@ -61,8 +71,10 @@ export function OverlayPanel({
 }: OverlayPanelProps) {
    const overlayId = useId();
    const surfaceRef = useRef<HTMLElement | null>(null);
+   const rootRef = useRef<HTMLDivElement | null>(null);
+   const returnFocusRef = useRef<HTMLElement | null>(document.activeElement instanceof HTMLElement ? document.activeElement : null);
    const touchStartYRef = useRef<number | null>(null);
-   useOverlayLifecycle(overlayId, surfaceRef, closeOnEscape, onClose);
+   useOverlayLifecycle(overlayId, rootRef, surfaceRef, returnFocusRef, closeOnEscape, onClose);
    useLockedBodyScroll();
 
    const rootClassName = ["overlay-panel", `overlay-panel--${placement}`, className, rootProps?.className].filter(Boolean).join(" ");
@@ -118,10 +130,12 @@ export function OverlayPanel({
       trapTabFocus(event, event.currentTarget);
    };
 
-   return (
+   return createPortal(
       <div
          {...rootProps}
          className={rootClassName}
+         data-overlay-id={overlayId}
+         ref={rootRef}
          role="presentation"
          data-closing={isClosing ? "true" : undefined}
          onTouchStart={handleTouchStart}
@@ -145,14 +159,27 @@ export function OverlayPanel({
          >
             {children}
          </section>
-      </div>
+      </div>,
+      document.body
    );
 }
 
-function useOverlayLifecycle(overlayId: string, surfaceRef: RefObject<HTMLElement | null>, closeOnEscape: boolean, onClose: () => void) {
+function useOverlayLifecycle(
+   overlayId: string,
+   rootRef: RefObject<HTMLDivElement | null>,
+   surfaceRef: RefObject<HTMLElement | null>,
+   returnFocusRef: RefObject<HTMLElement | null>,
+   closeOnEscape: boolean,
+   onClose: () => void
+) {
    useEffect(() => {
-      const previouslyFocused = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+      const previouslyFocused = returnFocusRef.current;
       overlayStack.push(overlayId);
+      const root = rootRef.current;
+      if (root) {
+         overlayRoots.set(overlayId, root);
+      }
+      syncOverlayInertness();
       const focusFrame = window.requestAnimationFrame(() => {
          const surface = surfaceRef.current;
          const firstFocusable = surface?.querySelector<HTMLElement>(FOCUSABLE_SELECTOR);
@@ -178,20 +205,39 @@ function useOverlayLifecycle(overlayId: string, surfaceRef: RefObject<HTMLElemen
          if (stackIndex >= 0) {
             overlayStack.splice(stackIndex, 1);
          }
+         overlayRoots.delete(overlayId);
+         syncOverlayInertness();
          if (previouslyFocused?.isConnected) {
-            window.requestAnimationFrame(() => previouslyFocused.focus());
+            previouslyFocused.focus({ preventScroll: true });
+            if (document.activeElement !== previouslyFocused) {
+               window.requestAnimationFrame(() => previouslyFocused.focus({ preventScroll: true }));
+            }
          }
       };
-   }, [closeOnEscape, onClose, overlayId, surfaceRef]);
+   }, [closeOnEscape, onClose, overlayId, returnFocusRef, rootRef, surfaceRef]);
 }
 
 function useLockedBodyScroll() {
    useEffect(() => {
       if (bodyLockCount === 0) {
+         const htmlStyle = document.documentElement.style;
          originalBodyOverflow = document.body.style.overflow;
          originalBodyOverscrollBehavior = document.body.style.overscrollBehavior;
+         originalHtmlOverflow = htmlStyle.getPropertyValue("overflow");
+         originalHtmlOverflowPriority = htmlStyle.getPropertyPriority("overflow");
+         originalHtmlOverscrollBehavior = htmlStyle.getPropertyValue("overscroll-behavior");
+         originalHtmlOverscrollPriority = htmlStyle.getPropertyPriority("overscroll-behavior");
+         originalBodyPosition = document.body.style.position;
+         originalBodyTop = document.body.style.top;
+         originalBodyWidth = document.body.style.width;
+         originalScrollY = window.scrollY;
+         htmlStyle.setProperty("overflow", "hidden", "important");
+         htmlStyle.setProperty("overscroll-behavior", "none", "important");
          document.body.style.overflow = "hidden";
-         document.body.style.overscrollBehavior = "contain";
+         document.body.style.overscrollBehavior = "none";
+         document.body.style.position = "fixed";
+         document.body.style.top = `${-originalScrollY}px`;
+         document.body.style.width = "100%";
       }
       bodyLockCount += 1;
 
@@ -200,9 +246,38 @@ function useLockedBodyScroll() {
          if (bodyLockCount === 0) {
             document.body.style.overflow = originalBodyOverflow;
             document.body.style.overscrollBehavior = originalBodyOverscrollBehavior;
+            document.body.style.position = originalBodyPosition;
+            document.body.style.top = originalBodyTop;
+            document.body.style.width = originalBodyWidth;
+            restoreStyleProperty(document.documentElement.style, "overflow", originalHtmlOverflow, originalHtmlOverflowPriority);
+            restoreStyleProperty(document.documentElement.style, "overscroll-behavior", originalHtmlOverscrollBehavior, originalHtmlOverscrollPriority);
+            window.scrollTo(0, originalScrollY);
          }
       };
    }, []);
+}
+
+function syncOverlayInertness() {
+   const topmostId = overlayStack.at(-1);
+   const appRoot = document.getElementById("app");
+   if (appRoot) {
+      appRoot.inert = Boolean(topmostId);
+      appRoot.setAttribute("aria-hidden", topmostId ? "true" : "false");
+   }
+
+   overlayRoots.forEach((root, id) => {
+      const isBackgroundOverlay = id !== topmostId;
+      root.inert = isBackgroundOverlay;
+      root.setAttribute("aria-hidden", isBackgroundOverlay ? "true" : "false");
+   });
+}
+
+function restoreStyleProperty(style: CSSStyleDeclaration, property: string, value: string, priority: string) {
+   if (value) {
+      style.setProperty(property, value, priority);
+   } else {
+      style.removeProperty(property);
+   }
 }
 
 function isSwipeIgnored(target: EventTarget, selector: string | undefined) {

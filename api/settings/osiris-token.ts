@@ -1,6 +1,9 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
 import { readJsonBody, sendJson, sendMethodNotAllowed } from "../_lib/http.js";
-import { clearOsirisTokenSetting, getOsirisTokenSettings, OsirisTokenSettingsError, saveOsirisTokenSetting } from "../_lib/osirisTokenSettingsService.js";
+import { clearTokenSettingsRoute, getTokenSettingsRoute, saveTokenSettingsRoute, type ApiRouteResponse } from "../_lib/apiRoutes.js";
+import { toApiError, toApiErrorPayload } from "../_lib/errors.js";
+import { enforceRateLimit } from "../_lib/rateLimit.js";
+import { assertSameOrigin } from "../_lib/security.js";
 
 export default async function handler(req: IncomingMessage, res: ServerResponse) {
    if (req.method !== "GET" && req.method !== "PUT" && req.method !== "DELETE") {
@@ -9,24 +12,21 @@ export default async function handler(req: IncomingMessage, res: ServerResponse)
    }
 
    if (req.method === "GET") {
-      const { settings, cookieHeader } = getOsirisTokenSettings(req.headers.cookie);
-      sendJson(res, 200, settings, cookieHeader ? { headers: { "Set-Cookie": cookieHeader } } : undefined);
+      sendRouteResponse(res, getTokenSettingsRoute(req.headers.cookie));
       return;
    }
 
-   if (req.method === "DELETE") {
-      const result = clearOsirisTokenSetting();
-      sendJson(res, 200, result.settings, result.cookieHeader ? { headers: { "Set-Cookie": result.cookieHeader } } : undefined);
-      return;
-   }
-
-   const payload = await readJsonBody<{ token?: unknown }>(req);
    try {
-      const result = saveOsirisTokenSetting(payload?.token);
-      sendJson(res, 200, result.settings, result.cookieHeader ? { headers: { "Set-Cookie": result.cookieHeader } } : undefined);
+      assertSameOrigin(req);
+      enforceRateLimit(req, "token-mutation", 20, 15 * 60_000);
+      const response = req.method === "DELETE" ? clearTokenSettingsRoute() : saveTokenSettingsRoute(await readJsonBody(req));
+      sendRouteResponse(res, response);
    } catch (error) {
-      const status = error instanceof OsirisTokenSettingsError ? error.status : 500;
-      const message = error instanceof Error ? error.message : "Failed to save bearer token.";
-      sendJson(res, status, { error: message });
+      const apiError = toApiError(error, "The token setting request could not be completed.");
+      sendJson(res, apiError.status, toApiErrorPayload(apiError));
    }
+}
+
+function sendRouteResponse(res: ServerResponse, response: ApiRouteResponse) {
+   sendJson(res, response.statusCode, response.payload, response.headers ? { headers: response.headers } : undefined);
 }

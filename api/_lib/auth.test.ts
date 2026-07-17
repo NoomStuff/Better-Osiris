@@ -17,7 +17,8 @@ void describe("cookie helpers", () => {
       const header = buildClearOsirisTokenCookieHeader(false);
 
       assert.equal(parseCookie(header, "osiris_bearer"), "");
-      assert.match(header, /Max-Age=1/);
+      assert.match(header, /Max-Age=0/);
+      assert.match(header, /Expires=Thu, 01 Jan 1970/);
       assert.doesNotMatch(header, /Secure/);
    });
 });

@@ -21,6 +21,7 @@ interface ErrorStateProps {
    log: string;
    retryCountdownMs: number;
    isRetrying: boolean;
+   canRetry: boolean;
 }
 
 interface BearerTokenStateProps {
@@ -46,13 +47,13 @@ export function LoadingState({ message }: LoadingStateProps) {
    return <RosterOverlayState title="Loading roster" detail={message} spinning role="status" />;
 }
 
-export function ErrorState({ title, detail, log, retryCountdownMs, isRetrying }: ErrorStateProps) {
+export function ErrorState({ title, detail, log, retryCountdownMs, isRetrying, canRetry }: ErrorStateProps) {
    const secondsUntilRetry = Math.ceil(retryCountdownMs / 1_000);
    const retryText = isRetrying ? "Retrying now..." : secondsUntilRetry > 0 ? `Retrying in ${secondsUntilRetry}s.` : "Retrying soon.";
 
    return (
       <RosterOverlayState title={title} detail={detail} icon="fa-solid fa-triangle-exclamation" role="alert">
-         <strong className="roster-overlay-state__retry">{retryText}</strong>
+         {canRetry ? <strong className="roster-overlay-state__retry">{retryText}</strong> : null}
          <p className="roster-overlay-state__log">Error: {log}</p>
       </RosterOverlayState>
    );
@@ -75,7 +76,6 @@ export function BearerTokenState({ token, isSaving, onTokenChange, onSubmit }: B
          title="Bearer token required"
          detail="Paste your OSIRIS bearer token to load the roster. You can change this any time from settings."
          icon="fa-solid fa-key"
-         role="alert"
       >
          <form className="roster-overlay-state__form" onSubmit={handleSubmit}>
             <a className="roster-overlay-state__help-link" href={OSIRIS_BEARER_TOKEN_HELP_URL} target="_blank" rel="noreferrer">

@@ -3,22 +3,12 @@ import { fetchRosterWeeks } from "../api/roster";
 import { notifyError } from "../lib/notyf";
 import { clearRosterBrowserCache } from "../lib/rosterCache";
 import { toRosterLoadError } from "../lib/rosterLoadError";
-import { notifyRosterDiffs } from "../lib/rosterNotifications";
-import { readCachedCurrentWeek, readCachedLastWeek, readSessionLessonDiffs, storeCachedCurrentWeek, storeSessionLessonDiffs } from "../lib/rosterPersistence";
-import { applySessionLessonDiffs, recordSessionLessonDiffs, type SessionLessonDiff, type SessionLessonDiffsByWeek } from "../lib/rosterSessionDiffs";
-import {
-   canNavigateToWeek,
-   createWeekEntry,
-   getAdjacentBatchStarts,
-   getBatchOffsets,
-   getBatchStart,
-   getDerivedWeekTitle,
-   isSameRosterData,
-   type WeekEntries,
-} from "../lib/rosterWeekPolicy";
+import { getDisplayWeeksFromPayload, getInitialRosterEntries } from "../lib/rosterPayload";
+import { readSessionLessonDiffs } from "../lib/rosterPersistence";
+import { canNavigateToWeek, getAdjacentBatchStarts, getBatchOffsets, getBatchStart, getDerivedWeekTitle } from "../lib/rosterWeekPolicy";
 import { rosterWeekReducer } from "../lib/rosterWeekReducer";
 import { MAX_WEEK_OFFSET, MIN_WEEK_OFFSET } from "../../shared/roster";
-import type { RosterBatchResponse, RosterResponse } from "../types/roster";
+import type { RosterResponse } from "../types/roster";
 
 interface UseRosterWeekOptions {
    enabled?: boolean;
@@ -49,69 +39,11 @@ function getNextRetryDelay(previousDelayMs: number) {
    return Math.min(previousDelayMs * 2, MAX_RETRY_DELAY_MS);
 }
 
-function getInitialEntries(): WeekEntries {
-   const cachedLastWeek = readCachedLastWeek();
-   const cachedCurrentWeek = readCachedCurrentWeek();
-   const entries: WeekEntries = {};
-
-   if (cachedLastWeek) {
-      entries[-1] = createWeekEntry(cachedLastWeek, {
-         isHydrated: true,
-      });
-   }
-
-   if (cachedCurrentWeek) {
-      entries[0] = createWeekEntry(cachedCurrentWeek, {
-         isHydrated: true,
-      });
-   }
-
-   return entries;
-}
-
-function getDisplayWeeksFromPayload(
-   payload: RosterBatchResponse,
-   entries: WeekEntries,
-   latestRawWeeks: Map<number, RosterResponse>,
-   sessionLessonDiffs: SessionLessonDiffsByWeek
-) {
-   let recordedNewDiff = false;
-   const currentWeekDiffs: SessionLessonDiff[] = [];
-   const weeks: RosterResponse[] = [];
-
-   for (const weekData of payload.weeks) {
-      const comparisonBase = latestRawWeeks.get(weekData.week.offset) ?? entries[weekData.week.offset]?.data ?? null;
-      if (comparisonBase && !isSameRosterData(comparisonBase, weekData)) {
-         const recordedDiffs = recordSessionLessonDiffs(comparisonBase, weekData, sessionLessonDiffs);
-         if (recordedDiffs.length > 0) {
-            recordedNewDiff = true;
-            if (weekData.week.offset === 0) {
-               currentWeekDiffs.push(...recordedDiffs);
-            }
-         }
-      }
-
-      latestRawWeeks.set(weekData.week.offset, weekData);
-      if (weekData.week.offset === 0) {
-         storeCachedCurrentWeek(weekData);
-      }
-
-      weeks.push(applySessionLessonDiffs(weekData, sessionLessonDiffs));
-   }
-
-   if (recordedNewDiff) {
-      storeSessionLessonDiffs(sessionLessonDiffs);
-   }
-   notifyRosterDiffs(currentWeekDiffs);
-
-   return weeks;
-}
-
 export function useRosterWeek(offset: number, options: UseRosterWeekOptions = {}) {
    const enabled = options.enabled ?? true;
    const clearCache = options.clearCache ?? false;
    const resetKey = options.resetKey ?? 0;
-   const [entries, dispatch] = useReducer(rosterWeekReducer, undefined, getInitialEntries);
+   const [entries, dispatch] = useReducer(rosterWeekReducer, undefined, getInitialRosterEntries);
    const [now, setNow] = useState<number | null>(null);
    const [sessionLessonDiffs] = useState(readSessionLessonDiffs);
    const entriesRef = useRef(entries);
@@ -240,6 +172,11 @@ export function useRosterWeek(offset: number, options: UseRosterWeekOptions = {}
                   return;
                }
 
+               if (!loadError.retryable) {
+                  dispatch({ type: "fetch-failed", offsets, error: loadError, force, retryAt: 0, retryDelayMs: 0 });
+                  return;
+               }
+
                const retryDelayMs = getNextRetryDelay(Math.max(...offsets.map((targetOffset) => entriesRef.current[targetOffset]?.retryDelayMs ?? 0)));
                const retryAt = Date.now() + retryDelayMs;
                dispatch({ type: "fetch-failed", offsets, error: loadError, force, retryAt, retryDelayMs });
@@ -266,9 +203,14 @@ export function useRosterWeek(offset: number, options: UseRosterWeekOptions = {}
       const activeBatchQueued = queuedRefetchesRef.current.has(activeBatchStart);
       loadBatch(activeBatchStart, { force: activeBatchQueued || (activeBatchStart === 0 && Boolean(activeEntry?.isHydrated)) });
 
-      getAdjacentBatchStarts(activeBatchStart).forEach((prefetchBatchStart) => {
-         loadBatch(prefetchBatchStart, { force: queuedRefetchesRef.current.has(prefetchBatchStart) });
-      });
+      const activeBatchEnd = getBatchOffsets(activeBatchStart).at(-1) ?? activeBatchStart;
+      if (activeBatchEnd - offset <= 1) {
+         getAdjacentBatchStarts(activeBatchStart)
+            .filter((prefetchBatchStart) => prefetchBatchStart > activeBatchStart)
+            .forEach((prefetchBatchStart) => {
+               loadBatch(prefetchBatchStart, { force: queuedRefetchesRef.current.has(prefetchBatchStart) });
+            });
+      }
    }, [enabled, offset, resetKey, sessionLessonDiffs]);
 
    useEffect(() => {

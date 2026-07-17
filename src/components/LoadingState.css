@@ -98,6 +98,11 @@
    background: rgba(255, 255, 255, 0.075);
 }
 
+.roster-overlay-state__token-row input:focus-visible {
+   outline: 3px solid rgba(124, 199, 255, 0.72);
+   outline-offset: 2px;
+}
+
 .roster-overlay-state__button {
    width: 44px;
    height: 44px;

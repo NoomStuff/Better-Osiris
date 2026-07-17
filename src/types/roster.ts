@@ -1,6 +1,6 @@
 import type { Lesson } from "../../shared/roster";
 
-export type { Lesson, LessonSnapshot, LessonStatus, RosterBatchResponse, RosterResponse, RosterSource, RosterWeek } from "../../shared/roster";
+export type { Lesson, LessonSnapshot, LessonStatus, RosterBatchResponse, RosterResponse, RosterWeek } from "../../shared/roster";
 
 export type ViewMode = "agenda" | "grid";
 export type GridZoom = "hour" | "half" | "quarter";

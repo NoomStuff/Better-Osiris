@@ -38,10 +38,6 @@ function createWeek(): RosterResponse {
          end: "2026-06-19",
       },
       lessons: [createLesson("one"), createLesson("two")],
-      source: {
-         mode: "test",
-         note: "Fixture",
-      },
    };
 }
 
