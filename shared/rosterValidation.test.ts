@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { parseWeek } from "./rosterValidation.js";
+import { parseRosterConfig, parseWeek, parseWeekBatch } from "./rosterValidation.js";
 
 const validRoster = {
    week: { offset: 0, number: 29, start: "2026-07-13", end: "2026-07-17" },
@@ -43,5 +43,33 @@ void describe("roster response validation", () => {
             }),
          /end after its start/
       );
+   });
+});
+
+void describe("roster batch validation", () => {
+   const validBatch = {
+      offset: 0,
+      limit: 1,
+      timeZone: "Europe/Amsterdam",
+      weeks: [validRoster],
+   };
+
+   void it("accepts a batch that declares its time zone", () => {
+      assert.deepEqual(parseWeekBatch(validBatch), validBatch);
+   });
+
+   void it("rejects a batch without a declared time zone", () => {
+      assert.throws(() => parseWeekBatch({ ...validBatch, timeZone: undefined }), /timeZone/);
+      assert.throws(() => parseWeekBatch({ ...validBatch, timeZone: null }), /timeZone/);
+   });
+
+   void it("rejects a batch with an unknown time zone", () => {
+      assert.throws(() => parseWeekBatch({ ...validBatch, timeZone: "Mars/Olympus_Mons" }), /valid IANA time zone/);
+   });
+
+   void it("validates the roster config time zone", () => {
+      assert.deepEqual(parseRosterConfig({ timeZone: "Asia/Tokyo" }), { timeZone: "Asia/Tokyo" });
+      assert.throws(() => parseRosterConfig({}), /timeZone/);
+      assert.throws(() => parseRosterConfig({ timeZone: "Not/AZone" }), /valid IANA time zone/);
    });
 });

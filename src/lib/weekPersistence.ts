@@ -1,6 +1,7 @@
 import type { Week } from "../../shared/weeks";
 import { parseClass, parseWeek } from "../../shared/rosterValidation";
 import { getIsoWeekNumber, getLocalWeekStartIso, shiftIsoDateByDays } from "./date";
+import { isRosterTimeZoneKnown } from "./rosterTimeZone";
 import { notifyError } from "./notyf";
 import { readBrowserStorage, removeBrowserStorage, writeBrowserStorage } from "./browserStorage";
 import { CURRENT_WEEK_CACHE_KEY, LAST_WEEK_CACHE_KEY, SESSION_CLASS_DIFFS_KEY } from "./weekCache";
@@ -51,7 +52,7 @@ function parseCachedWeek(cacheKey: string) {
 }
 
 export function readCachedCurrentWeek() {
-   if (typeof window === "undefined") {
+   if (typeof window === "undefined" || !isRosterTimeZoneKnown()) {
       return null;
    }
 
@@ -75,7 +76,7 @@ export function readCachedCurrentWeek() {
 }
 
 export function readCachedLastWeek() {
-   if (typeof window === "undefined") {
+   if (typeof window === "undefined" || !isRosterTimeZoneKnown()) {
       return null;
    }
 

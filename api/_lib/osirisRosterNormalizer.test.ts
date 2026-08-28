@@ -69,6 +69,57 @@ void describe("OSIRIS roster normalizer", () => {
       assert.equal(firstClass.teacher, sourceTeacher);
    });
 
+   void it("reads the date part of full timestamps in the configured roster time zone", () => {
+      const originalTimeZone = process.env["ROSTER_TIME_ZONE"];
+      process.env["ROSTER_TIME_ZONE"] = "Asia/Tokyo";
+      try {
+         const rawResponse = {
+            hasMore: false,
+            limit: 1,
+            offset: 0,
+            count: 1,
+            items: [
+               {
+                  jaar: 2026,
+                  week: 25,
+                  startdatum: "2026-06-15",
+                  einddatum: "2026-06-21",
+                  dagen: [
+                     {
+                        datum: "2026-06-15T15:30:00Z",
+                        rooster: [
+                           {
+                              id_rooster: "SOURCE_LESSON_ID",
+                              datum: "2026-06-15T15:30:00Z",
+                              onderwerp: "SOURCE_TITLE",
+                              subonderwerp: "",
+                              tijd_vanaf: "9:00",
+                              tijd_tm: "10:30",
+                              locatie: "SOURCE_ROOM",
+                              locatie_adres: "SOURCE_LOCATION",
+                              docenten: [{ naam: "SOURCE_TEACHER" }],
+                              actueel: "J",
+                           },
+                        ],
+                     },
+                  ],
+               },
+            ],
+         } satisfies OsirisRosterResponse;
+
+         const weeks = normalizeWeeksResponse(rawResponse, 0);
+
+         // 2026-06-15T15:30Z is 2026-06-16T00:30 in Tokyo, so the class lands on June 16.
+         assert.equal(weeks[0]?.classes[0]?.start, "2026-06-16T09:00:00");
+      } finally {
+         if (originalTimeZone === undefined) {
+            delete process.env["ROSTER_TIME_ZONE"];
+         } else {
+            process.env["ROSTER_TIME_ZONE"] = originalTimeZone;
+         }
+      }
+   });
+
    void it("does not treat the actueel flag as a cancellation status", () => {
       const rawResponse = {
          hasMore: false,

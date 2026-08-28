@@ -10,6 +10,7 @@ import { useDevPreview } from "./hooks/useDevPreview";
 import { useAppKeyboardShortcuts } from "./hooks/useAppKeyboardShortcuts";
 import { getPerceivedDay, useAgendaState } from "./hooks/useAgendaState";
 import { useOsirisTokenSettings } from "./hooks/useOsirisTokenSettings";
+import { useRosterTimeZone } from "./hooks/useRosterTimeZone";
 import { useViewportMetrics } from "./hooks/useViewportMetrics";
 import { useViewModePreference } from "./hooks/useViewModePreference";
 import { useWeekSwipeNavigation } from "./hooks/useWeekSwipeNavigation";
@@ -43,6 +44,7 @@ export default function App() {
    const [isSettingsOpen, setIsSettingsOpen] = useState(false);
    const [bearerTokenInput, setBearerTokenInput] = useState("");
    const devPreview = useDevPreview();
+   const rosterTimeZone = useRosterTimeZone();
    const {
       settings: tokenSettings,
       hasBearerToken,
@@ -55,13 +57,13 @@ export default function App() {
    } = useOsirisTokenSettings();
    useViewportMetrics();
    const { canGoNext, canGoPrevious, data, error, isWeekNavigable, loading, retryCountdownMs, retrying, refreshing, title } = useWeeks(weekOffset, {
-      enabled: !isTokenSettingsLoading && hasBearerToken,
-      clearCache: !isTokenSettingsLoading && !hasBearerToken,
+      enabled: !isTokenSettingsLoading && hasBearerToken && rosterTimeZone.isKnown,
+      clearCache: (!isTokenSettingsLoading && !hasBearerToken) || rosterTimeZone.hasTimeZoneChanged,
       resetKey: weeksResetKey,
    });
    const perceivedNow = devPreview.perceivedNow;
-   const perceivedDayKey = toDayKey(perceivedNow);
-   const perceivedDay = useMemo(() => getPerceivedDay(perceivedDayKey), [perceivedDayKey]);
+   const perceivedDayKey = rosterTimeZone.isKnown ? toDayKey(perceivedNow) : null;
+   const perceivedDay = useMemo(() => (perceivedDayKey ? getPerceivedDay(perceivedDayKey) : null), [perceivedDayKey]);
    const displayedData = useMemo(
       () => applyDevClassStatusPreview(data, IS_DEV_SERVER && devPreview.isEnabled ? devPreview.statusPreviewMode : "none"),
       [data, devPreview.isEnabled, devPreview.statusPreviewMode]
@@ -263,6 +265,21 @@ export default function App() {
    const frameGridZoom = viewMode === "grid" ? visibleGridZoom : gridZoom;
 
    const overlay = (() => {
+      if (!rosterTimeZone.isKnown) {
+         if (rosterTimeZone.isInitialLoading) {
+            return <LoadingState message="Checking roster configuration." />;
+         }
+         return (
+            <ErrorState
+               title="Roster configuration unavailable"
+               detail="The server did not declare which time zone the roster uses, so roster data cannot be interpreted safely."
+               log={rosterTimeZone.configError ?? "The roster time zone was not declared."}
+               retryCountdownMs={0}
+               isRetrying={false}
+               canRetry={false}
+            />
+         );
+      }
       if (isTokenSettingsLoading && !hasDisplayedData) {
          return <LoadingState message="Checking bearer token." />;
       }
@@ -331,7 +348,7 @@ export default function App() {
                onAnimationEnd={handleWeekTransitionEnd}
                key={`${viewMode}-${weekOffset}`}
             >
-               {viewMode === "agenda" ? (
+               {rosterTimeZone.isKnown && viewMode === "agenda" ? (
                   <ErrorBoundary variant="view">
                      <AgendaView
                         days={visibleDays}
@@ -342,11 +359,11 @@ export default function App() {
                         onSelectClass={selectClass}
                      />
                   </ErrorBoundary>
-               ) : (
+               ) : rosterTimeZone.isKnown ? (
                   <ErrorBoundary variant="view">
                      <GridView days={visibleDays} zoom={visibleGridZoom} now={perceivedNow} onSelectClass={selectClass} />
                   </ErrorBoundary>
-               )}
+               ) : null}
                {overlay}
             </section>
          </main>

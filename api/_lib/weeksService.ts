@@ -1,6 +1,7 @@
 import { MAX_WEEK_LIMIT, MAX_WEEK_OFFSET, MIN_OSIRIS_WEEK_OFFSET, type WeekBatch } from "../../shared/weeks.js";
 import { fetchOsirisRosterWeeks } from "./osirisClient.js";
 import { normalizeWeeksResponse } from "./osirisRosterNormalizer.js";
+import { getRosterTimeZone } from "./osirisConfig.js";
 import { resolveOsirisBearerToken } from "./osirisTokenSettingsService.js";
 import { ApiError } from "./errors.js";
 
@@ -28,6 +29,7 @@ export async function loadWeekBatch(request: WeeksRequest): Promise<WeekBatch> {
       weeks: normalizeWeeksResponse(rawResponse, offset),
       offset,
       limit,
+      timeZone: getRosterTimeZone(),
    };
 }
 

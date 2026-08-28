@@ -20,6 +20,8 @@ let originalHtmlOverflow = "";
 let originalHtmlOverflowPriority = "";
 let originalHtmlOverscrollBehavior = "";
 let originalHtmlOverscrollPriority = "";
+let originalHtmlScrollbarGutter = "";
+let originalHtmlScrollbarGutterPriority = "";
 let originalBodyPosition = "";
 let originalBodyTop = "";
 let originalBodyWidth = "";
@@ -232,12 +234,18 @@ function useLockedBodyScroll() {
          originalHtmlOverflowPriority = htmlStyle.getPropertyPriority("overflow");
          originalHtmlOverscrollBehavior = htmlStyle.getPropertyValue("overscroll-behavior");
          originalHtmlOverscrollPriority = htmlStyle.getPropertyPriority("overscroll-behavior");
+         originalHtmlScrollbarGutter = htmlStyle.getPropertyValue("scrollbar-gutter");
+         originalHtmlScrollbarGutterPriority = htmlStyle.getPropertyPriority("scrollbar-gutter");
          originalBodyPosition = document.body.style.position;
          originalBodyTop = document.body.style.top;
          originalBodyWidth = document.body.style.width;
          originalScrollY = window.scrollY;
          htmlStyle.setProperty("overflow", "hidden", "important");
          htmlStyle.setProperty("overscroll-behavior", "none", "important");
+         // Hiding the root overflow removes the document scrollbar, which would widen the viewport and shift
+         // the whole page sideways on platforms with classic scrollbars. Reserving the gutter keeps the
+         // viewport at exactly the width it had while the scrollbar was showing.
+         htmlStyle.setProperty("scrollbar-gutter", "stable", "important");
          document.body.style.overflow = "hidden";
          document.body.style.overscrollBehavior = "none";
          document.body.style.position = "fixed";
@@ -256,6 +264,7 @@ function useLockedBodyScroll() {
             document.body.style.width = originalBodyWidth;
             restoreStyleProperty(document.documentElement.style, "overflow", originalHtmlOverflow, originalHtmlOverflowPriority);
             restoreStyleProperty(document.documentElement.style, "overscroll-behavior", originalHtmlOverscrollBehavior, originalHtmlOverscrollPriority);
+            restoreStyleProperty(document.documentElement.style, "scrollbar-gutter", originalHtmlScrollbarGutter, originalHtmlScrollbarGutterPriority);
             window.scrollTo(0, originalScrollY);
          }
       };

@@ -8,6 +8,10 @@ export interface OsirisTokenSettings {
    hasBearerToken: boolean;
 }
 
+export interface RosterConfig {
+   timeZone: string;
+}
+
 export type ClassStatus = "scheduled" | "changed" | "cancelled";
 
 export interface ClassSnapshot {
@@ -53,4 +57,9 @@ export interface WeekBatch {
    weeks: Week[];
    offset: number;
    limit: number;
+   /**
+    * The IANA time zone the wall-clock times in this batch are expressed in. The server owns it;
+    * the client must interpret every timezone-less class time against this zone.
+    */
+   timeZone: string;
 }

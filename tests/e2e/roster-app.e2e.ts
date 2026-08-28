@@ -521,7 +521,8 @@ async function installFixedClock(page: Page) {
 
 async function installCachedLastWeek(page: Page) {
    await page.addInitScript(
-      ({ cacheKey, week }) => {
+      ({ cacheKey, timeZoneKey, timeZone, week }) => {
+         window.localStorage.setItem(timeZoneKey, timeZone);
          window.localStorage.setItem(
             cacheKey,
             JSON.stringify({
@@ -533,6 +534,8 @@ async function installCachedLastWeek(page: Page) {
       },
       {
          cacheKey: "roster-last-week-cache-v1",
+         timeZoneKey: "roster-time-zone-v1",
+         timeZone: "Europe/Amsterdam",
          week: createWeek(-1),
       }
    );
@@ -540,6 +543,14 @@ async function installCachedLastWeek(page: Page) {
 
 async function mockAppApis(page: Page) {
    let hasCustomToken = true;
+
+   await page.route("**/api/roster/config", async (route) => {
+      await route.fulfill({
+         status: 200,
+         contentType: "application/json",
+         body: JSON.stringify({ timeZone: "Europe/Amsterdam" }),
+      });
+   });
 
    await page.route("**/api/settings/osiris-token", async (route) => {
       const method = route.request().method();
@@ -574,6 +585,7 @@ function createRosterBatch(offset: number, limit: number) {
       offset,
       limit,
       hasMore: offset + limit < 50,
+      timeZone: "Europe/Amsterdam",
       weeks: Array.from({ length: limit }, (_, index) => createWeek(offset + index)),
    };
 }

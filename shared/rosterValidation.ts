@@ -1,4 +1,5 @@
-import type { Class, ClassSnapshot, ClassStatus, OsirisTokenSettings, WeekBatch, Week, WeekMeta } from "./weeks.js";
+import type { Class, ClassSnapshot, ClassStatus, OsirisTokenSettings, RosterConfig, WeekBatch, Week, WeekMeta } from "./weeks.js";
+import { isValidTimeZone, resolveCanonicalTimeZone } from "./timeZone.js";
 
 export interface ApiErrorPayload {
    error: string;
@@ -38,7 +39,23 @@ export function parseWeekBatch(value: unknown): WeekBatch {
       offset: readInteger(record["offset"], "offset"),
       limit: readInteger(record["limit"], "limit"),
       weeks: readArray(record["weeks"], "weeks").map((week, index) => parseWeek(week, `weeks[${index}]`)),
+      timeZone: readTimeZone(record["timeZone"], "roster response"),
    };
+}
+
+export function parseRosterConfig(value: unknown): RosterConfig {
+   const record = readRecord(value, "roster config response");
+   return {
+      timeZone: readTimeZone(record["timeZone"], "roster config response"),
+   };
+}
+
+function readTimeZone(value: unknown, path: string) {
+   const timeZone = readString(value, `${path}.timeZone`);
+   if (!isValidTimeZone(timeZone)) {
+      throw invalid(`${path}.timeZone`, "a valid IANA time zone");
+   }
+   return resolveCanonicalTimeZone(timeZone);
 }
 
 export function parseWeek(value: unknown, path = "roster response"): Week {

@@ -1,34 +1,59 @@
-const AMSTERDAM_TIME_ZONE = "Europe/Amsterdam";
-const AMSTERDAM_DATE_TIME_PARTS = new Intl.DateTimeFormat("en-CA", {
-   timeZone: AMSTERDAM_TIME_ZONE,
-   year: "numeric",
-   month: "2-digit",
-   day: "2-digit",
-   hour: "2-digit",
-   minute: "2-digit",
-   second: "2-digit",
-   hourCycle: "h23",
-});
+import { getZoneDateFormatter } from "../../shared/timeZone";
+import { getRosterTimeZone } from "./rosterTimeZone";
 
-export const dayLabel = new Intl.DateTimeFormat("en-GB", { weekday: "long", timeZone: AMSTERDAM_TIME_ZONE });
-export const dayShortLabel = new Intl.DateTimeFormat("en-GB", { weekday: "short", timeZone: AMSTERDAM_TIME_ZONE });
-export const monthDayLabel = new Intl.DateTimeFormat("en-GB", { day: "numeric", month: "short", timeZone: AMSTERDAM_TIME_ZONE });
-export const fullDayLabel = new Intl.DateTimeFormat("en-GB", {
-   weekday: "long",
-   day: "numeric",
-   month: "long",
-   timeZone: AMSTERDAM_TIME_ZONE,
-});
-export const timeLabel = new Intl.DateTimeFormat("en-GB", {
-   hour: "2-digit",
-   minute: "2-digit",
-   timeZone: AMSTERDAM_TIME_ZONE,
-});
-export const weekRangeLabel = new Intl.DateTimeFormat("en-GB", {
-   day: "numeric",
-   month: "short",
-   timeZone: AMSTERDAM_TIME_ZONE,
-});
+interface RosterFormatters {
+   dayLabel: Intl.DateTimeFormat;
+   dayShortLabel: Intl.DateTimeFormat;
+   monthDayLabel: Intl.DateTimeFormat;
+   fullDayLabel: Intl.DateTimeFormat;
+   timeLabel: Intl.DateTimeFormat;
+   weekRangeLabel: Intl.DateTimeFormat;
+   dayParts: Intl.DateTimeFormat;
+   dateKey: Intl.DateTimeFormat;
+}
+
+let formattersCache: { timeZone: string; formatters: RosterFormatters } | null = null;
+
+function getFormatters() {
+   const timeZone = getRosterTimeZone();
+   if (formattersCache?.timeZone !== timeZone) {
+      formattersCache = { timeZone, formatters: createFormatters(timeZone) };
+   }
+   return formattersCache.formatters;
+}
+
+function createFormatters(timeZone: string): RosterFormatters {
+   return {
+      dayLabel: new Intl.DateTimeFormat("en-GB", { weekday: "long", timeZone }),
+      dayShortLabel: new Intl.DateTimeFormat("en-GB", { weekday: "short", timeZone }),
+      monthDayLabel: new Intl.DateTimeFormat("en-GB", { day: "numeric", month: "short", timeZone }),
+      fullDayLabel: new Intl.DateTimeFormat("en-GB", { weekday: "long", day: "numeric", month: "long", timeZone }),
+      timeLabel: new Intl.DateTimeFormat("en-GB", { hour: "2-digit", minute: "2-digit", timeZone }),
+      weekRangeLabel: new Intl.DateTimeFormat("en-GB", { day: "numeric", month: "short", timeZone }),
+      dayParts: new Intl.DateTimeFormat("en-CA", {
+         timeZone,
+         year: "numeric",
+         month: "2-digit",
+         day: "2-digit",
+         hour: "2-digit",
+         minute: "2-digit",
+         second: "2-digit",
+         hourCycle: "h23",
+      }),
+      dateKey: getZoneDateFormatter(timeZone),
+   };
+}
+
+function lazyLabel(select: (formatters: RosterFormatters) => Intl.DateTimeFormat) {
+   return { format: (date: Date) => select(getFormatters()).format(date) };
+}
+
+export const dayLabel = lazyLabel((formatters) => formatters.dayLabel);
+export const dayShortLabel = lazyLabel((formatters) => formatters.dayShortLabel);
+export const monthDayLabel = lazyLabel((formatters) => formatters.monthDayLabel);
+export const fullDayLabel = lazyLabel((formatters) => formatters.fullDayLabel);
+export const timeLabel = lazyLabel((formatters) => formatters.timeLabel);
+export const weekRangeLabel = lazyLabel((formatters) => formatters.weekRangeLabel);
 
 export function parseIsoDateToLocal(isoDate: string) {
    const datePart = isoDate.split("T")[0] ?? isoDate;
@@ -53,6 +78,7 @@ export function parseLocalDateTime(isoDateTime: string) {
    }
 
    if (hasTimeZone) {
+      // Timezone-aware input identifies an absolute instant on its own; everything the roster serves is timezone-less.
       return new Date(normalized);
    }
 
@@ -70,18 +96,11 @@ export function parseLocalDateTime(isoDateTime: string) {
       return new Date(isoDateTime);
    }
 
-   return createDateInAmsterdam(year, month, day, hours, minutes, seconds);
+   return createDateInRosterZone(year, month, day, hours, minutes, seconds);
 }
 
-const AMSTERDAM_DATE_FORMATTER = new Intl.DateTimeFormat("en-CA", {
-   timeZone: AMSTERDAM_TIME_ZONE,
-   year: "numeric",
-   month: "2-digit",
-   day: "2-digit",
-});
-
 export function toDayKey(date: Date) {
-   return AMSTERDAM_DATE_FORMATTER.format(date);
+   return getFormatters().dateKey.format(date);
 }
 
 export function getLocalWeekStartIso(date: Date) {
@@ -113,32 +132,39 @@ export function getIsoWeekNumber(isoDate: string) {
 }
 
 export function getMinutesFromMidnight(date: Date) {
-   const parts = getAmsterdamParts(date);
+   const parts = getRosterZoneParts(date);
    return parts.hour * 60 + parts.minute;
 }
 
-export function getAmsterdamWeekBounds(date: Date, offset: number) {
+export function getRosterWeekBounds(date: Date, offset: number) {
    const start = shiftIsoDateByDays(getLocalWeekStartIso(date), offset * 7);
    return { start, end: shiftIsoDateByDays(start, 4) };
 }
 
-function createDateInAmsterdam(year: number, month: number, day: number, hour: number, minute: number, second: number) {
+/** ISO weekday number of a date key: 1 = Monday … 7 = Sunday. */
+export function getIsoWeekday(isoDate: string) {
+   const day = new Date(`${isoDate}T00:00:00Z`).getUTCDay();
+   return day === 0 ? 7 : day;
+}
+
+function createDateInRosterZone(year: number, month: number, day: number, hour: number, minute: number, second: number) {
    const utcGuess = Date.UTC(year, month - 1, day, hour, minute, second);
-   const firstOffset = getAmsterdamOffsetMilliseconds(new Date(utcGuess));
+   const firstOffset = getRosterZoneOffsetMilliseconds(new Date(utcGuess));
    const firstCandidate = new Date(utcGuess - firstOffset);
-   const correctedOffset = getAmsterdamOffsetMilliseconds(firstCandidate);
+   const correctedOffset = getRosterZoneOffsetMilliseconds(firstCandidate);
    return new Date(utcGuess - correctedOffset);
 }
 
-function getAmsterdamOffsetMilliseconds(date: Date) {
-   const parts = getAmsterdamParts(date);
+function getRosterZoneOffsetMilliseconds(date: Date) {
+   const parts = getRosterZoneParts(date);
    const representedAsUtc = Date.UTC(parts.year, parts.month - 1, parts.day, parts.hour, parts.minute, parts.second);
    return representedAsUtc - date.getTime();
 }
 
-function getAmsterdamParts(date: Date) {
+function getRosterZoneParts(date: Date) {
    const values = Object.fromEntries(
-      AMSTERDAM_DATE_TIME_PARTS.formatToParts(date)
+      getFormatters()
+         .dayParts.formatToParts(date)
          .filter((part) => part.type !== "literal")
          .map((part) => [part.type, Number(part.value)])
    );
@@ -150,9 +176,4 @@ function getAmsterdamParts(date: Date) {
       minute: values["minute"] ?? 0,
       second: values["second"] ?? 0,
    };
-}
-
-function getIsoWeekday(isoDate: string) {
-   const day = new Date(`${isoDate}T00:00:00Z`).getUTCDay();
-   return day === 0 ? 7 : day;
 }

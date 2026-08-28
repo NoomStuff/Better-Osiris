@@ -1,10 +1,15 @@
 import assert from "node:assert/strict";
-import { describe, it } from "node:test";
+import { beforeEach, describe, it } from "node:test";
 import { getClassNotificationBodies } from "./classNotifications.js";
+import { setRosterTimeZone } from "./rosterTimeZone.js";
 import type { SessionClassDiff } from "./classDiffs.js";
 import type { Class, ClassSnapshot } from "../types/weeks";
 
 void describe("roster desktop notification messages", () => {
+   beforeEach(() => {
+      setRosterTimeZone("Europe/Amsterdam");
+   });
+
    void it("describes a single cancellation with its day and start time", () => {
       const diff = createDiff("cancelled");
 

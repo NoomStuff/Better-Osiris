@@ -1,9 +1,12 @@
 import { getEnvValue } from "./env.js";
 import { ApiError } from "./errors.js";
+import { isValidTimeZone, resolveCanonicalTimeZone } from "../../shared/timeZone.js";
 
 const MIN_COOKIE_SECRET_LENGTH = 32;
 const TOKEN_MAX_LENGTH = 2_048;
 const INSECURE_COOKIE_SECRETS = new Set(["replace-with-a-long-random-value", "replace-with-at-least-32-cryptographically-random-characters"]);
+/** Used when ROSTER_TIME_ZONE is not configured; the zone the stored roster wall times are expressed in. */
+const DEFAULT_ROSTER_TIME_ZONE = "Europe/Amsterdam";
 
 export function getOsirisRosterUrl(): string {
    const configuredUrl = getEnvValue("OSIRIS_ROSTER_URL")?.trim();
@@ -73,10 +76,24 @@ export function getDefaultOsirisToken() {
    return normalizeBearerToken(rawToken, "BEARER_TOKEN");
 }
 
+export function getRosterTimeZone(): string {
+   const configuredTimeZone = getEnvValue("ROSTER_TIME_ZONE")?.trim();
+   if (!configuredTimeZone) {
+      return DEFAULT_ROSTER_TIME_ZONE;
+   }
+
+   if (!isValidTimeZone(configuredTimeZone)) {
+      throw configurationError(`ROSTER_TIME_ZONE must be a valid IANA time zone, but "${configuredTimeZone}" was configured.`);
+   }
+
+   return resolveCanonicalTimeZone(configuredTimeZone);
+}
+
 export function validateServerConfiguration() {
    getCookieSecret();
    getOsirisRosterUrl();
    getDefaultOsirisToken();
+   getRosterTimeZone();
 }
 
 export function isProduction() {

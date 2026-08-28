@@ -1,7 +1,8 @@
 import assert from "node:assert/strict";
-import { describe, it } from "node:test";
+import { afterEach, describe, it } from "node:test";
 import { getMinutesFromMidnight, toDayKey } from "./date.js";
-import { getDays, getPositionedClasses } from "./weekLayout.js";
+import { setRosterTimeZone } from "./rosterTimeZone.js";
+import { getDays, getPositionedClasses, getVisibleDays } from "./weekLayout.js";
 import type { Class } from "../types/weeks";
 
 function createClass(overrides: Partial<Class> = {}): Class {
@@ -21,6 +22,10 @@ function createClass(overrides: Partial<Class> = {}): Class {
 }
 
 void describe("roster layout", () => {
+   afterEach(() => {
+      setRosterTimeZone("Europe/Amsterdam");
+   });
+
    void it("positions valid classes with parsed dates and day keys", () => {
       const positioned = getPositionedClasses([createClass()]);
       const first = positioned.at(0);
@@ -105,20 +110,20 @@ void describe("roster layout", () => {
       );
    });
 
-   void it("groups positioned classes into five weekday columns", () => {
+   void it("groups positioned classes into all seven weekday groups", () => {
       const week = { offset: 0, number: 25, start: "2026-06-15", end: "2026-06-21" };
       const positioned = getPositionedClasses([
          createClass({ id: "late", start: "2026-06-16T13:00:00", end: "2026-06-16T14:00:00" }),
          createClass({ id: "early", start: "2026-06-16T09:00:00", end: "2026-06-16T10:30:00" }),
-         createClass({ id: "weekend-ignored", start: "2026-06-20T09:00:00", end: "2026-06-20T10:00:00" }),
+         createClass({ id: "weekend", start: "2026-06-20T09:00:00", end: "2026-06-20T10:00:00" }),
       ]);
 
       const groups = getDays(week, positioned);
 
-      assert.equal(groups.length, 5);
+      assert.equal(groups.length, 7);
       assert.deepEqual(
          groups.map((group) => group.key),
-         ["2026-06-15", "2026-06-16", "2026-06-17", "2026-06-18", "2026-06-19"]
+         ["2026-06-15", "2026-06-16", "2026-06-17", "2026-06-18", "2026-06-19", "2026-06-20", "2026-06-21"]
       );
       const tuesday = groups.at(1);
       assert.ok(tuesday);
@@ -129,6 +134,35 @@ void describe("roster layout", () => {
       const wednesday = groups.at(2);
       assert.ok(wednesday);
       assert.equal(wednesday.classes.length, 0);
+      const saturday = groups.at(5);
+      assert.ok(saturday);
+      assert.deepEqual(
+         saturday.classes.map((schoolClass) => schoolClass.id),
+         ["weekend"]
+      );
+   });
+
+   void it("hides weekend days by default but can show any weekday", () => {
+      const week = { offset: 0, number: 25, start: "2026-06-15", end: "2026-06-21" };
+      const positioned = getPositionedClasses([
+         createClass({ id: "friday", start: "2026-06-19T09:00:00", end: "2026-06-19T10:00:00" }),
+         createClass({ id: "saturday", start: "2026-06-20T09:00:00", end: "2026-06-20T10:00:00" }),
+         createClass({ id: "sunday", start: "2026-06-21T09:00:00", end: "2026-06-21T10:00:00" }),
+      ]);
+      const groups = getDays(week, positioned);
+
+      assert.deepEqual(
+         getVisibleDays(groups).map((group) => group.key),
+         ["2026-06-15", "2026-06-16", "2026-06-17", "2026-06-18", "2026-06-19"]
+      );
+      assert.deepEqual(
+         getVisibleDays(groups, [1, 2, 3, 4, 5, 6, 7]).map((group) => group.key),
+         ["2026-06-15", "2026-06-16", "2026-06-17", "2026-06-18", "2026-06-19", "2026-06-20", "2026-06-21"]
+      );
+      assert.deepEqual(
+         getVisibleDays(groups, [6]).map((group) => group.key),
+         ["2026-06-20"]
+      );
    });
 
    void it("sorts classes within a day chronologically", () => {

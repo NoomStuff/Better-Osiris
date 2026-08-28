@@ -1,7 +1,8 @@
 import assert from "node:assert/strict";
-import { afterEach, describe, it } from "node:test";
+import { afterEach, beforeEach, describe, it } from "node:test";
 import type { Class, Week } from "../types/weeks";
 import { getIsoWeekNumber, getLocalWeekStartIso, shiftIsoDateByDays } from "./date.js";
+import { setRosterTimeZone } from "./rosterTimeZone.js";
 import { readCachedCurrentWeek, readCachedLastWeek, readSessionClassDiffs, storeCachedCurrentWeek, storeSessionClassDiffs } from "./weekPersistence.js";
 import { CURRENT_WEEK_CACHE_KEY, LAST_WEEK_CACHE_KEY, SESSION_CLASS_DIFFS_KEY } from "./weekCache.js";
 
@@ -52,6 +53,10 @@ function createRosterResponse(weekStart: string): Week {
 }
 
 void describe("roster persistence", () => {
+   beforeEach(() => {
+      setRosterTimeZone("Europe/Amsterdam");
+   });
+
    afterEach(() => {
       delete (globalThis as { window?: unknown }).window;
    });

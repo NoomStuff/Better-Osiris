@@ -2,7 +2,14 @@ import compression from "compression";
 import express from "express";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { clearTokenSettingsRoute, getRosterWeeksRoute, getTokenSettingsRoute, saveTokenSettingsRoute, type ApiRouteResponse } from "./api/_lib/apiRoutes.js";
+import {
+   clearTokenSettingsRoute,
+   getRosterConfigRoute,
+   getRosterWeeksRoute,
+   getTokenSettingsRoute,
+   saveTokenSettingsRoute,
+   type ApiRouteResponse,
+} from "./api/_lib/apiRoutes.js";
 import { ApiError, toApiError, toApiErrorPayload } from "./api/_lib/errors.js";
 import { isProduction, validateServerConfiguration } from "./api/_lib/osirisConfig.js";
 import { enforceRateLimit } from "./api/_lib/rateLimit.js";
@@ -44,6 +51,12 @@ app.get("/api/roster/weeks", async (req, res) => {
    );
 });
 app.all("/api/roster/weeks", (_req, res) => sendMethodNotAllowed(res, ["GET"]));
+
+app.get("/api/roster/config", (req, res) => {
+   enforceRateLimit(req, "roster-config", 60, 60_000);
+   sendRouteResponse(res, getRosterConfigRoute());
+});
+app.all("/api/roster/config", (_req, res) => sendMethodNotAllowed(res, ["GET"]));
 
 app.get("/api/settings/osiris-token", (req, res) => {
    sendRouteResponse(res, getTokenSettingsRoute(req.headers.cookie));

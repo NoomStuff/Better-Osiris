@@ -1,5 +1,7 @@
 import type { Class, ClassStatus, Week } from "../../shared/weeks.js";
+import { getZoneDateFormatter } from "../../shared/timeZone.js";
 import { ApiError } from "./errors.js";
+import { getRosterTimeZone } from "./osirisConfig.js";
 import type { OsirisRosterEntry, OsirisRosterResponse, OsirisWeek } from "./osirisClient.js";
 
 function splitSubject(rawSubject: string) {
@@ -35,13 +37,6 @@ function splitSubject(rawSubject: string) {
    };
 }
 
-const AMSTERDAM_DATE_FORMATTER = new Intl.DateTimeFormat("en-CA", {
-   timeZone: "Europe/Amsterdam",
-   year: "numeric",
-   month: "2-digit",
-   day: "2-digit",
-});
-
 function getDatePart(dateIso: string) {
    const dateOnlyMatch = /^\d{4}-\d{2}-\d{2}$/.exec(dateIso);
    if (dateOnlyMatch) {
@@ -50,7 +45,8 @@ function getDatePart(dateIso: string) {
 
    const parsed = new Date(dateIso);
    if (!Number.isNaN(parsed.getTime())) {
-      return AMSTERDAM_DATE_FORMATTER.format(parsed);
+      // Upstream sent a full timestamp: read its date part in the roster time zone, never in the server's local zone.
+      return getZoneDateFormatter(getRosterTimeZone()).format(parsed);
    }
 
    const match = /\d{4}-\d{2}-\d{2}/.exec(dateIso);

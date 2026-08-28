@@ -1,6 +1,7 @@
-import type { OsirisTokenSettings } from "../../shared/weeks.js";
+import type { OsirisTokenSettings, RosterConfig } from "../../shared/weeks.js";
 import { toApiError, toApiErrorPayload } from "./errors.js";
 import { clearOsirisTokenSetting, getOsirisTokenSettings, saveOsirisTokenSetting } from "./osirisTokenSettingsService.js";
+import { getRosterTimeZone } from "./osirisConfig.js";
 import { loadWeekBatch, type WeeksRequest } from "./weeksService.js";
 
 export interface ApiRouteResponse<TPayload = unknown> {
@@ -14,6 +15,14 @@ export async function getRosterWeeksRoute(request: WeeksRequest): Promise<ApiRou
       return { statusCode: 200, payload: await loadWeekBatch(request) };
    } catch (error) {
       return errorResponse(error, "The roster could not be loaded.");
+   }
+}
+
+export function getRosterConfigRoute(): ApiRouteResponse<RosterConfig | ReturnType<typeof toApiErrorPayload>> {
+   try {
+      return { statusCode: 200, payload: { timeZone: getRosterTimeZone() } };
+   } catch (error) {
+      return errorResponse(error, "The roster configuration could not be loaded.");
    }
 }
 

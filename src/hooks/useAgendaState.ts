@@ -1,16 +1,19 @@
 import { useCallback, useMemo, useState } from "react";
-import { getAmsterdamWeekBounds, getIsoWeekNumber, parseIsoDateToLocal, toDayKey } from "../lib/date";
-import { getDays, getPositionedClasses } from "../lib/weekLayout";
+import { getRosterWeekBounds, getIsoWeekNumber, parseIsoDateToLocal, toDayKey } from "../lib/date";
+import { getDays, getPositionedClasses, getVisibleDays } from "../lib/weekLayout";
 import type { Week, WeekMeta } from "../types/weeks";
 
-export function useAgendaState(displayedData: Week | null, weekOffset: number, perceivedDay: Date) {
+export function useAgendaState(displayedData: Week | null, weekOffset: number, perceivedDay: Date | null) {
    const [expandedOverrides, setExpandedOverrides] = useState<Set<string>>(new Set());
    const [animateAgenda, setAnimateAgenda] = useState(false);
    const positionedClasses = useMemo(() => (displayedData ? getPositionedClasses(displayedData.classes) : []), [displayedData]);
-   const days = useMemo(() => (displayedData ? getDays(displayedData.week, positionedClasses) : []), [displayedData, positionedClasses]);
-   const blankWeek = useMemo(() => getBlankWeek(weekOffset, perceivedDay), [perceivedDay, weekOffset]);
-   const blankDays = useMemo(() => getDays(blankWeek, []), [blankWeek]);
-   const blankExpandedDays = useMemo(() => getDefaultExpandedDays(blankDays, blankWeek.offset, perceivedDay), [blankDays, blankWeek.offset, perceivedDay]);
+   const days = useMemo(() => (displayedData ? getVisibleDays(getDays(displayedData.week, positionedClasses)) : []), [displayedData, positionedClasses]);
+   const blankWeek = useMemo(() => (perceivedDay ? getBlankWeek(weekOffset, perceivedDay) : null), [perceivedDay, weekOffset]);
+   const blankDays = useMemo(() => (blankWeek ? getVisibleDays(getDays(blankWeek, [])) : []), [blankWeek]);
+   const blankExpandedDays = useMemo(
+      () => getDefaultExpandedDays(blankDays, blankWeek?.offset ?? weekOffset, perceivedDay),
+      [blankDays, blankWeek, weekOffset, perceivedDay]
+   );
    const autoExpandedDays = useMemo(
       () => (displayedData ? getDefaultExpandedDays(days, displayedData.week.offset, perceivedDay) : blankExpandedDays),
       [blankExpandedDays, days, displayedData, perceivedDay]
@@ -60,18 +63,18 @@ export function useAgendaState(displayedData: Week | null, weekOffset: number, p
    };
 }
 
-function getDefaultExpandedDays(days: ReturnType<typeof getDays>, weekOffset: number, now: Date) {
-   const todayKey = toDayKey(now);
+function getDefaultExpandedDays(days: ReturnType<typeof getDays>, weekOffset: number, now: Date | null) {
+   const todayKey = now ? toDayKey(now) : null;
    const nextExpanded = new Set<string>();
    days.forEach((group) => {
-      const hasPassed = weekOffset === 0 && group.key < todayKey;
+      const hasPassed = weekOffset === 0 && todayKey !== null && group.key < todayKey;
       if (!hasPassed && (group.key === todayKey || group.classes.length > 0)) nextExpanded.add(group.key);
    });
    return nextExpanded;
 }
 
 function getBlankWeek(offset: number, now: Date): WeekMeta {
-   const { start, end } = getAmsterdamWeekBounds(now, offset);
+   const { start, end } = getRosterWeekBounds(now, offset);
    return { offset, number: getIsoWeekNumber(start), start, end };
 }
 
