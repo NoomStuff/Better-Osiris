@@ -1,5 +1,6 @@
-import { useEffect, useRef, useState, type MouseEvent } from "react";
+import { useEffect, useRef, useState, type CSSProperties, type MouseEvent } from "react";
 import { dayShortLabel, fullDayLabel, getMinutesFromMidnight, timeLabel, toDayKey } from "../lib/date";
+import { clamp } from "../lib/clamp";
 import { DETAILS_SEPARATOR, getLessonLocationLabel } from "../lib/lessonFormat";
 import { WORKDAY_END, WORKDAY_START } from "../lib/rosterLayout";
 import type { DayGroup, GridZoom, Lesson } from "../types/roster";
@@ -22,6 +23,12 @@ const WORKDAY_RANGE = WORKDAY_END - WORKDAY_START;
 const BASE_INTERVAL = zoomOptions[2].interval;
 const TIME_MARKS = Array.from({ length: Math.floor(WORKDAY_RANGE / BASE_INTERVAL) + 1 }, (_, index) => WORKDAY_START + index * BASE_INTERVAL);
 const TIME_LABELS = TIME_MARKS.filter((minutes) => minutes !== WORKDAY_START && minutes !== WORKDAY_END);
+/** Below this rendered height a lesson switches to the compact one-line layout. */
+const COMPACT_HEIGHT_PX = 85;
+/** Below this rendered height even the compact layout drops the room label. */
+const TINY_HEIGHT_PX = 64;
+
+type GridStyle = CSSProperties & { "--grid-day-count": number };
 
 function formatMinutes(minutes: number) {
    const hour = Math.floor(minutes / 60);
@@ -31,10 +38,6 @@ function formatMinutes(minutes: number) {
 
 function getOffsetPercent(minutes: number) {
    return ((minutes - WORKDAY_START) / WORKDAY_RANGE) * 100;
-}
-
-function clamp(value: number, min: number, max: number) {
-   return Math.min(Math.max(value, min), max);
 }
 
 export function GridView({ groups, zoom: zoomId, now, onSelectLesson }: GridViewProps) {
@@ -104,7 +107,7 @@ export function GridView({ groups, zoom: zoomId, now, onSelectLesson }: GridView
 
    return (
       <div className="grid-shell" role="region" aria-label="Weekly timetable grid">
-         <div className="grid-header">
+         <div className="grid-header" style={{ "--grid-day-count": groups.length } as GridStyle}>
             <div className="grid-header__time" />
             {groups.map((group) => (
                <div
@@ -150,7 +153,7 @@ export function GridView({ groups, zoom: zoomId, now, onSelectLesson }: GridView
                   ))}
                </div>
 
-               <div className="grid-days">
+               <div className="grid-days" style={{ "--grid-day-count": groups.length } as GridStyle}>
                   {showNowLine ? (
                      <div
                         aria-hidden="true"
@@ -183,25 +186,15 @@ export function GridView({ groups, zoom: zoomId, now, onSelectLesson }: GridView
                            const width = `calc(${100 / lesson.overlapCount}% - 5px)`;
                            const left = `calc(${(100 / lesson.overlapCount) * lesson.overlapIndex}% + 2.5px)`;
                            const visibleHeight = (duration / WORKDAY_RANGE) * contentHeight;
-                           const isCompact = visibleHeight > 0 && visibleHeight < 85;
+                           const isCompact = visibleHeight > 0 && visibleHeight < COMPACT_HEIGHT_PX;
                            const densityClass = isCompact ? "is-tight" : "is-roomy";
                            const timeRange = `${timeLabel.format(lesson.startDate)}-${timeLabel.format(lesson.endDate)}`;
                            const classLabel = lesson.title || lesson.subject;
                            const subtitleLabel = lesson.subject;
-                           const roomLabel = lesson.room.trim();
-                           const locationLabel = lesson.location.trim();
-                           const hasSameLocation = Boolean(roomLabel) && Boolean(locationLabel) && roomLabel.toLowerCase() === locationLabel.toLowerCase();
                            const roomLocationLabel = getLessonLocationLabel(lesson);
                            const showLocation = !isCompact && Boolean(roomLocationLabel);
-                           const isTiny = visibleHeight > 0 && visibleHeight < 64;
-                           const compactParts = [timeRange];
-
-                           if (roomLabel) {
-                              compactParts.push(roomLabel);
-                           }
-                           if (locationLabel && !hasSameLocation) {
-                              compactParts.push(locationLabel);
-                           }
+                           const isTiny = visibleHeight > 0 && visibleHeight < TINY_HEIGHT_PX;
+                           const compactParts = [timeRange, roomLocationLabel].filter(Boolean);
 
                            const lessonLabel = [
                               classLabel,

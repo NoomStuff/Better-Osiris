@@ -1,7 +1,8 @@
 import { useId, type ButtonHTMLAttributes, type FocusEvent, type MouseEvent, type ReactNode } from "react";
 import { useDelayedTooltip } from "../hooks/useDelayedTooltip";
 import { useShortcutActivation } from "../hooks/useShortcutActivation";
-import { TooltipContent, type TooltipAlign, type TooltipPlacement } from "./Tooltip";
+import { TooltipContent, type TooltipPlacement } from "./Tooltip";
+import { getTooltipAnchorName } from "../lib/tooltipAnchor";
 import "./IconButton.css";
 
 type IconButtonHoverEffect = "nudge-left" | "nudge-right" | "rotate";
@@ -15,7 +16,6 @@ interface IconButtonProps extends Omit<ButtonHTMLAttributes<HTMLButtonElement>, 
    variant?: "default" | "ghost";
    hoverEffect?: IconButtonHoverEffect;
    tooltipPlacement?: TooltipPlacement;
-   tooltipAlign?: TooltipAlign;
    activationId?: string;
    children?: ReactNode;
 }
@@ -29,7 +29,6 @@ export function IconButton({
    variant = "default",
    hoverEffect,
    tooltipPlacement = "top",
-   tooltipAlign = "center",
    activationId,
    className,
    disabled,
@@ -38,6 +37,7 @@ export function IconButton({
    onMouseLeave,
    onFocus,
    onBlur,
+   style,
    children,
    ...buttonProps
 }: IconButtonProps) {
@@ -46,6 +46,7 @@ export function IconButton({
    const hasTooltip = Boolean(tooltipText);
    const { hideTooltip, isTooltipEnabled, isTooltipOpen, showTooltip } = useDelayedTooltip({ disabled, enabled: hasTooltip });
    const isShortcutActive = useShortcutActivation(activationId);
+   const anchorName = getTooltipAnchorName(tooltipId);
 
    const handleMouseEnter = (event: MouseEvent<HTMLButtonElement>) => {
       onMouseEnter?.(event);
@@ -79,10 +80,7 @@ export function IconButton({
          disabled={disabled}
          data-hover-effect={hoverEffect}
          data-shortcut-active={isShortcutActive ? "true" : undefined}
-         data-tooltip-align={tooltipAlign}
-         data-tooltip-host="true"
-         data-tooltip-open={isTooltipOpen ? "true" : undefined}
-         data-tooltip-placement={tooltipPlacement}
+         style={{ ...style, anchorName }}
          onMouseEnter={handleMouseEnter}
          onMouseLeave={handleMouseLeave}
          onFocus={handleFocus}
@@ -94,7 +92,9 @@ export function IconButton({
             </span>
             {children}
          </span>
-         {isTooltipEnabled ? <TooltipContent id={tooltipId} label={tooltipText} shortcut={shortcut} /> : null}
+         {isTooltipEnabled ? (
+            <TooltipContent id={tooltipId} anchorName={anchorName} open={isTooltipOpen} placement={tooltipPlacement} label={tooltipText} shortcut={shortcut} />
+         ) : null}
       </button>
    );
 }

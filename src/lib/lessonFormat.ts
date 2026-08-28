@@ -12,3 +12,7 @@ export function getLessonLocationLabel(lesson: Lesson): string {
 
    return room || location;
 }
+
+export function normalizeLessonField(value: string) {
+   return value.trim().toLowerCase();
+}

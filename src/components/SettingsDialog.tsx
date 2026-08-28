@@ -1,12 +1,13 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { SyntheticEvent } from "react";
 import type { OsirisTokenSettings } from "../api/settings";
-import { DEV_LESSON_STATUS_PREVIEW_MODES, type DevLessonStatusPreviewMode } from "../lib/devRosterStatusPreview";
+import type { DevLessonStatusPreviewMode } from "../lib/devRosterStatusPreview";
 import { notifyError, notifySuccess, notifyWarning } from "../lib/notyf";
 import { OSIRIS_BEARER_TOKEN_HELP_URL } from "../lib/osirisTokenHelp";
 import { ConfirmDialog } from "./ConfirmDialog";
+import { DevToolsSettings } from "./DevToolsSettings";
 import { IconButton } from "./IconButton";
-import { OverlayPanel } from "./OverlayPanel";
+import { OverlayPanel, PANEL_CLOSE_MS } from "./OverlayPanel";
 import "./SettingsDialog.css";
 
 interface SettingsDialogProps {
@@ -26,8 +27,6 @@ interface SettingsDialogProps {
 }
 
 const IS_DEV_SERVER = import.meta.env.DEV;
-const DAY_MINUTES = 24 * 60;
-const TIME_SLIDER_STEP_MINUTES = 15;
 
 export function SettingsDialog({
    isOpen,
@@ -48,7 +47,6 @@ export function SettingsDialog({
    const [isClosing, setIsClosing] = useState(false);
    const [isResetConfirmOpen, setIsResetConfirmOpen] = useState(false);
    const closeTimerRef = useRef<number | null>(null);
-   const perceivedMinutes = perceivedNow.getHours() * 60 + perceivedNow.getMinutes();
    const hasCustomToken = tokenSettings?.hasCustomToken === true;
    const hasBearerToken = tokenSettings?.hasBearerToken === true;
    const canSaveToken = token.trim().length > 0 && !isTokenLoading;
@@ -63,7 +61,7 @@ export function SettingsDialog({
          setToken("");
          setIsClosing(false);
          onClose();
-      }, 240);
+      }, PANEL_CLOSE_MS);
    }, [isClosing, onClose]);
 
    useEffect(() => {
@@ -73,33 +71,6 @@ export function SettingsDialog({
          }
       };
    }, []);
-
-   const handleDateOverrideChange = (value: string) => {
-      const [yearText, monthText, dayText] = value.split("-");
-      const year = Number(yearText);
-      const month = Number(monthText);
-      const day = Number(dayText);
-
-      if ([year, month, day].some((valuePart) => Number.isNaN(valuePart))) {
-         return;
-      }
-
-      const nextDate = new Date(perceivedNow);
-      nextDate.setFullYear(year, month - 1, day);
-      onChangeTimeOverride(nextDate);
-   };
-
-   const handleTimeOverrideChange = (value: string) => {
-      const nextMinutes = Number(value);
-
-      if (Number.isNaN(nextMinutes)) {
-         return;
-      }
-
-      const nextDate = new Date(perceivedNow);
-      nextDate.setHours(Math.floor(nextMinutes / 60), nextMinutes % 60, 0, 0);
-      onChangeTimeOverride(nextDate);
-   };
 
    const handleSubmit = async (event: SyntheticEvent<HTMLFormElement>) => {
       event.preventDefault();
@@ -154,14 +125,7 @@ export function SettingsDialog({
                   <p className="eyebrow">Settings</p>
                   <h2 id="settings-title">Preferences</h2>
                </div>
-               <IconButton
-                  className="lesson-panel__close"
-                  icon="fa-solid fa-xmark"
-                  label="Close settings"
-                  tooltipPlacement="bottom"
-                  tooltipAlign="end"
-                  onClick={closeSettings}
-               />
+               <IconButton className="lesson-panel__close" icon="fa-solid fa-xmark" label="Close settings" tooltipPlacement="bottom" onClick={closeSettings} />
             </header>
 
             <div className="settings-dialog__content">
@@ -210,85 +174,15 @@ export function SettingsDialog({
                </section>
 
                {IS_DEV_SERVER ? (
-                  <section className="settings-section" aria-labelledby="devtools-settings-title">
-                     <div className="settings-section__header">
-                        <h3 id="devtools-settings-title">Devtools</h3>
-                        <p>Local-only roster testing tools. These controls are not available in production.</p>
-                     </div>
-
-                     <label className="settings-toggle">
-                        <input type="checkbox" checked={isDevToolsEnabled} onChange={(event) => onToggleDevTools(event.target.checked)} />
-                        <span>
-                           <strong>Enable devtools</strong>
-                           <small>
-                              {timeOverride
-                                 ? `Override: ${formatDateLabel(timeOverride)} ${formatTimeLabel(timeOverride)}`
-                                 : `Real time: ${formatDateLabel(perceivedNow)} ${formatTimeLabel(perceivedNow)}`}
-                           </small>
-                        </span>
-                     </label>
-
-                     {isDevToolsEnabled ? (
-                        <div className="devtools-panel">
-                           <label className="settings-dialog__field settings-dialog__field--compact">
-                              <span>Perceived date</span>
-                              <input
-                                 type="date"
-                                 value={formatDateInputValue(perceivedNow)}
-                                 onChange={(event) => handleDateOverrideChange(event.target.value)}
-                              />
-                           </label>
-
-                           <div className="time-slider">
-                              <div className="time-slider__header">
-                                 <span>Perceived time</span>
-                                 <strong>{formatTimeLabel(perceivedNow)}</strong>
-                              </div>
-                              <input
-                                 type="range"
-                                 min={0}
-                                 max={DAY_MINUTES - TIME_SLIDER_STEP_MINUTES}
-                                 step={TIME_SLIDER_STEP_MINUTES}
-                                 value={Math.round(perceivedMinutes / TIME_SLIDER_STEP_MINUTES) * TIME_SLIDER_STEP_MINUTES}
-                                 onChange={(event) => handleTimeOverrideChange(event.target.value)}
-                              />
-                              <div className="time-slider__ticks" aria-hidden="true">
-                                 <span>00:00</span>
-                                 <span>06:00</span>
-                                 <span>12:00</span>
-                                 <span>18:00</span>
-                                 <span>23:45</span>
-                              </div>
-                           </div>
-
-                           <div className="settings-dialog__actions">
-                              <button className="settings-dialog__button" type="button" onClick={() => onChangeTimeOverride(new Date())}>
-                                 Use current time
-                              </button>
-                              <button className="settings-dialog__button" type="button" disabled={!timeOverride} onClick={() => onChangeTimeOverride(null)}>
-                                 Clear override
-                              </button>
-                           </div>
-
-                           <div className="devtools-option">
-                              <span className="devtools-option__label">Lesson diff preview</span>
-                              <div className="settings-segmented-control" role="group" aria-label="Lesson diff preview">
-                                 {DEV_LESSON_STATUS_PREVIEW_MODES.map((mode) => (
-                                    <button
-                                       type="button"
-                                       key={mode.id}
-                                       aria-pressed={statusPreviewMode === mode.id}
-                                       data-active={statusPreviewMode === mode.id}
-                                       onClick={() => onChangeStatusPreviewMode(mode.id)}
-                                    >
-                                       {mode.label}
-                                    </button>
-                                 ))}
-                              </div>
-                           </div>
-                        </div>
-                     ) : null}
-                  </section>
+                  <DevToolsSettings
+                     isEnabled={isDevToolsEnabled}
+                     perceivedNow={perceivedNow}
+                     timeOverride={timeOverride}
+                     statusPreviewMode={statusPreviewMode}
+                     onToggle={onToggleDevTools}
+                     onChangeTimeOverride={onChangeTimeOverride}
+                     onChangeStatusPreviewMode={onChangeStatusPreviewMode}
+                  />
                ) : null}
             </div>
          </OverlayPanel>
@@ -305,26 +199,4 @@ export function SettingsDialog({
          />
       </>
    );
-}
-
-function formatTimeLabel(date: Date) {
-   const hours = String(date.getHours()).padStart(2, "0");
-   const minutes = String(date.getMinutes()).padStart(2, "0");
-
-   return `${hours}:${minutes}`;
-}
-
-function formatDateInputValue(date: Date) {
-   const year = date.getFullYear();
-   const month = String(date.getMonth() + 1).padStart(2, "0");
-   const day = String(date.getDate()).padStart(2, "0");
-
-   return `${year}-${month}-${day}`;
-}
-
-function formatDateLabel(date: Date) {
-   const day = String(date.getDate()).padStart(2, "0");
-   const month = String(date.getMonth() + 1).padStart(2, "0");
-
-   return `${day}-${month}`;
 }

@@ -15,15 +15,14 @@ export function useAgendaState(displayedData: RosterResponse | null, weekOffset:
       [blankDayGroups, blankWeek.offset, perceivedDay]
    );
    const autoExpandedDays = useMemo(
-      () => (displayedData ? getDefaultExpandedDays(dayGroups, displayedData.week.offset, perceivedDay) : new Set<string>()),
-      [dayGroups, displayedData, perceivedDay]
+      () => (displayedData ? getDefaultExpandedDays(dayGroups, displayedData.week.offset, perceivedDay) : blankExpandedDays),
+      [blankExpandedDays, dayGroups, displayedData, perceivedDay]
    );
    const expandedDays = useMemo(() => {
-      if (!displayedData) return new Set<string>();
       const merged = new Set(autoExpandedDays);
       expandedOverrides.forEach((key) => (merged.has(key) ? merged.delete(key) : merged.add(key)));
       return merged;
-   }, [autoExpandedDays, displayedData, expandedOverrides]);
+   }, [autoExpandedDays, expandedOverrides]);
    const allDayKeys = useMemo(() => dayGroups.map((group) => group.key), [dayGroups]);
 
    const toggleDay = useCallback((dayKey: string) => {
@@ -37,16 +36,14 @@ export function useAgendaState(displayedData: RosterResponse | null, weekOffset:
    }, []);
 
    const expandAllDays = useCallback(() => {
-      if (!displayedData) return;
       setAnimateAgenda(true);
       setExpandedOverrides(new Set(allDayKeys.filter((key) => !autoExpandedDays.has(key))));
-   }, [allDayKeys, autoExpandedDays, displayedData]);
+   }, [allDayKeys, autoExpandedDays]);
 
    const collapseAllDays = useCallback(() => {
-      if (!displayedData) return;
       setAnimateAgenda(true);
       setExpandedOverrides(new Set(autoExpandedDays));
-   }, [autoExpandedDays, displayedData]);
+   }, [autoExpandedDays]);
 
    const resetAgenda = useCallback((animate = false) => {
       setAnimateAgenda(animate);
@@ -62,7 +59,7 @@ export function useAgendaState(displayedData: RosterResponse | null, weekOffset:
       resetAgenda,
       toggleDay,
       visibleDayGroups: displayedData ? dayGroups : blankDayGroups,
-      visibleExpandedDays: displayedData ? expandedDays : blankExpandedDays,
+      visibleExpandedDays: expandedDays,
    };
 }
 

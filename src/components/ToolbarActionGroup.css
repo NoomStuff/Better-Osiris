@@ -29,7 +29,7 @@
    left: 3px;
    width: calc((100% - 6px) / var(--toolbar-action-count));
    border-radius: 8px;
-   background: rgba(124, 199, 255, 0.12);
+   background: rgba(var(--accent-rgb), 0.12);
    transform: translateX(calc(var(--toolbar-action-index) * 100%));
    transition: transform 260ms cubic-bezier(0.22, 1, 0.36, 1);
 }
@@ -52,8 +52,15 @@
    scale: 1;
 }
 
+/* Invisible hit-area extension so the 28px rows still meet the ~44px touch-target guideline. */
+.toolbar-action-group__item::after {
+   content: "";
+   position: absolute;
+   inset: -6px -4px;
+}
+
 .toolbar-action-group__item:is(:hover, :focus-visible, [data-tooltip-open="true"], [data-shortcut-active="true"]) {
-   background: rgba(124, 199, 255, 0.08);
+   background: rgba(var(--accent-rgb), 0.08);
    color: var(--text-strong);
    transition:
       background-color 0s,

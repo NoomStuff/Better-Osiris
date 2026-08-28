@@ -35,6 +35,7 @@ export function ConfirmDialog({
          surfaceClassName="confirm-dialog__panel"
          closeLabel={cancelLabel}
          labelledBy="confirm-dialog-title"
+         dialogRole="alertdialog"
          onClose={onCancel}
       >
          <div className="confirm-dialog__content">

@@ -2,46 +2,62 @@ import { Notyf } from "notyf";
 import "notyf/notyf.min.css";
 import { escapeHtml } from "./html";
 
-const notyf = new Notyf({
-   position: {
-      x: "right",
-      y: "bottom",
-   },
-   duration: 5000,
-   dismissible: true,
-   ripple: true,
-   types: [
-      {
-         type: "success",
-         background: "#0da14a",
-         duration: 2000,
-         dismissible: false,
-         icon: {
-            className: "fa-solid fa-circle-check",
-            tagName: "i",
-            color: "white",
-         },
+// Created lazily so importing this module never touches the DOM; toasts are skipped in DOM-less environments.
+let notyfInstance: Notyf | null = null;
+
+function getNotyf() {
+   if (typeof document === "undefined") {
+      return null;
+   }
+
+   notyfInstance ??= new Notyf({
+      position: {
+         x: "right",
+         y: "bottom",
       },
-      {
-         type: "warning",
-         background: "#eb9321",
-         icon: {
-            className: "fa-solid fa-exclamation-triangle",
-            tagName: "i",
-            color: "white",
+      duration: 5000,
+      dismissible: true,
+      ripple: true,
+      // Toast backgrounds are deliberately deeper than the UI tokens: white icons need contrast on them.
+      types: [
+         {
+            type: "success",
+            background: "#0da14a",
+            duration: 2000,
+            dismissible: false,
+            icon: {
+               className: "fa-solid fa-circle-check",
+               tagName: "i",
+               color: "white",
+            },
          },
-      },
-      {
-         type: "error",
-         background: "#c33e31",
-         icon: {
-            className: "fa-solid fa-xmark",
-            tagName: "i",
-            color: "white",
+         {
+            type: "warning",
+            background: "#eb9321",
+            icon: {
+               className: "fa-solid fa-exclamation-triangle",
+               tagName: "i",
+               color: "white",
+            },
          },
-      },
-   ],
-});
+         {
+            type: "error",
+            background: "#c33e31",
+            icon: {
+               className: "fa-solid fa-xmark",
+               tagName: "i",
+               color: "white",
+            },
+         },
+      ],
+   });
+
+   return notyfInstance;
+}
+
+function openToast(toast: { type: string; message: string }) {
+   getNotyf()?.open(toast);
+}
 
 function getMessage(value: unknown, fallback: string) {
    if (value instanceof Error && value.message) {
@@ -56,7 +72,7 @@ function getMessage(value: unknown, fallback: string) {
 }
 
 export function notifySuccess(message = "Success") {
-   notyf.open({
+   openToast({
       type: "success",
       message: escapeHtml(message),
    });
@@ -65,7 +81,7 @@ export function notifySuccess(message = "Success") {
 export function notifyWarning(message: string, log = false, ...args: unknown[]) {
    if (log) console.warn(message, ...args);
 
-   notyf.open({
+   openToast({
       type: "warning",
       message: escapeHtml(message),
    });
@@ -75,7 +91,7 @@ export function notifyError(error: unknown, fallback = "Application error", log 
    if (log) console.error(error, ...args);
 
    const message = getMessage(error, fallback);
-   notyf.open({
+   openToast({
       type: "error",
       message: escapeHtml(message),
    });

@@ -92,12 +92,12 @@
 }
 
 .settings-dialog__field input:focus {
-   border-color: rgba(124, 199, 255, 0.45);
+   border-color: rgba(var(--accent-rgb), 0.45);
    background: rgba(255, 255, 255, 0.055);
 }
 
 .settings-dialog__field input:focus-visible {
-   outline: 3px solid rgba(124, 199, 255, 0.72);
+   outline: 3px solid rgba(var(--accent-rgb), 0.72);
    outline-offset: 2px;
 }
 
@@ -129,19 +129,19 @@
 }
 
 .settings-dialog__button--primary {
-   border-color: rgba(124, 199, 255, 0.45);
-   background: rgba(124, 199, 255, 0.14);
+   border-color: rgba(var(--accent-rgb), 0.45);
+   background: rgba(var(--accent-rgb), 0.14);
 }
 
 .settings-dialog__button--danger {
-   border-color: rgba(255, 88, 112, 0.58);
-   background: rgba(255, 88, 112, 0.14);
-   color: #ffb3be;
+   border-color: rgba(var(--danger-rgb), 0.58);
+   background: rgba(var(--danger-rgb), 0.14);
+   color: var(--danger-bright);
 }
 
 .settings-dialog__button--danger:hover:not(:disabled) {
-   border-color: rgba(255, 88, 112, 0.76);
-   background: rgba(255, 88, 112, 0.22);
+   border-color: rgba(var(--danger-rgb), 0.76);
+   background: rgba(var(--danger-rgb), 0.22);
 }
 
 .settings-dialog__button:disabled {
@@ -285,9 +285,9 @@
 }
 
 .settings-segmented-control button[data-active="true"] {
-   background: rgba(124, 199, 255, 0.16);
+   background: rgba(var(--accent-rgb), 0.16);
    color: var(--accent);
-   box-shadow: inset 0 0 0 1px rgba(124, 199, 255, 0.22);
+   box-shadow: inset 0 0 0 1px rgba(var(--accent-rgb), 0.22);
 }
 
 @media (max-width: 640px) {

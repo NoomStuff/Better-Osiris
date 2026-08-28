@@ -106,7 +106,6 @@ export const AppToolbar = memo(function AppToolbar({
                label="Open settings"
                shortcut={APP_SHORTCUT_LABELS.settings}
                activationId="settings"
-               tooltipAlign="end"
                tooltipPlacement="bottom"
                hoverEffect="rotate"
                onClick={onOpenSettings}

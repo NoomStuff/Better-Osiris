@@ -42,7 +42,7 @@ const EMPTY_TODAY_MESSAGES = [
       detail: "0 classes today. Maybe catch up on some rest?",
    },
    {
-      icon: "fa-regular fa-eraser",
+      icon: "fa-solid fa-eraser",
       title: "A blank day.",
       detail: "Nothing scheduled for today. A clean slate to fill as you wish.",
    },

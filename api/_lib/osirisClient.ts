@@ -92,7 +92,7 @@ export async function fetchOsirisRosterWeeks(offset: number, limit = 1, tokenOve
       return inFlight;
    }
 
-   const request = fetchOsirisRosterRange(rosterUrl, offset, safeLimit, bearerToken)
+   const request = fetchOsirisRosterWeeksFromEndpoint(rosterUrl, offset, safeLimit, bearerToken)
       .then((data) => {
          weekCache.set(cacheKey, {
             data,
@@ -109,15 +109,11 @@ export async function fetchOsirisRosterWeeks(offset: number, limit = 1, tokenOve
    return request;
 }
 
-async function fetchOsirisRosterRange(rosterUrl: string, offset: number, limit: number, bearerToken: string): Promise<OsirisRosterResponse> {
+async function fetchOsirisRosterWeeksFromEndpoint(rosterUrl: string, offset: number, limit: number, bearerToken: string): Promise<OsirisRosterResponse> {
    if (offset < 0) {
       throw new Error("OSIRIS does not expose previous roster weeks.");
    }
 
-   return fetchOsirisRosterWeeksFromEndpoint(rosterUrl, offset, limit, bearerToken);
-}
-
-async function fetchOsirisRosterWeeksFromEndpoint(rosterUrl: string, offset: number, limit: number, bearerToken: string): Promise<OsirisRosterResponse> {
    const searchParams = new URLSearchParams({
       limit: String(limit),
       offset: String(offset),
@@ -175,18 +171,17 @@ async function readLimitedJson(response: Response) {
    const chunks: Uint8Array[] = [];
    let byteLength = 0;
    for (;;) {
-      const result = await (async () => {
-         try {
-            return await reader.read();
-         } catch (error) {
-            throw new ApiError("OSIRIS disconnected while sending roster data.", {
-               code: "UPSTREAM_REQUEST_FAILED",
-               status: 502,
-               retryable: true,
-               cause: error,
-            });
-         }
-      })();
+      let result: Awaited<ReturnType<typeof reader.read>>;
+      try {
+         result = await reader.read();
+      } catch (error) {
+         throw new ApiError("OSIRIS disconnected while sending roster data.", {
+            code: "UPSTREAM_REQUEST_FAILED",
+            status: 502,
+            retryable: true,
+            cause: error,
+         });
+      }
 
       const { done, value } = result;
       if (done) {

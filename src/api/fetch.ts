@@ -13,6 +13,16 @@ export async function fetchWithTimeout(input: RequestInfo | URL, init: RequestIn
    }
 }
 
+/** Deliberately lenient: error-handling paths may get an empty body or a proxy's HTML error page, and that must not mask the HTTP status. */
+export async function tryReadJson(response: Response): Promise<unknown> {
+   try {
+      const body = await response.text();
+      return body.trim() ? (JSON.parse(body) as unknown) : null;
+   } catch {
+      return null;
+   }
+}
+
 export async function readJsonResponse(response: Response, requestLabel: string): Promise<unknown> {
    const body = await response.text();
    if (!body.trim()) {

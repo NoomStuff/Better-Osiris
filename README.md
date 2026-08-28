@@ -81,3 +81,7 @@ The frontend runs at `http://localhost:5173` and proxies API requests to the loc
 | `bun run verify`       | Run all pre commit checks                |
 
 For a production deployment, set the same environment variables in your hosting provider, run `bun run build`, then start the app with `bun run start`. The included `vercel.json` also supports deployment to Vercel.
+
+## Visual baselines
+
+The screenshot test only passes on the machine that recorded the baselines, since font rendering differs per platform. After intentional styling changes, refresh them with `bunx playwright test --project=chromium --grep "visual baselines" --update-snapshots`.

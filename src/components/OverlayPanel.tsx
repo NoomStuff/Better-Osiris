@@ -34,6 +34,9 @@ const FOCUSABLE_SELECTOR = [
    '[tabindex]:not([tabindex="-1"])',
 ].join(",");
 
+/** Slightly above the 220ms closing animations in the panel CSS, so the panel is unmounted only after it fully closed. */
+export const PANEL_CLOSE_MS = 240;
+
 interface OverlayPanelBaseProps {
    children: ReactNode;
    className?: string;
@@ -48,6 +51,7 @@ interface OverlayPanelBaseProps {
    onClose: () => void;
    rootProps?: HTMLAttributes<HTMLDivElement>;
    surfaceProps?: HTMLAttributes<HTMLElement>;
+   dialogRole?: "dialog" | "alertdialog";
 }
 
 type OverlayPanelProps = OverlayPanelBaseProps & ({ labelledBy: string; label?: never } | { label: string; labelledBy?: never });
@@ -68,6 +72,7 @@ export function OverlayPanel({
    onClose,
    rootProps,
    surfaceProps,
+   dialogRole = "dialog",
 }: OverlayPanelProps) {
    const overlayId = useId();
    const surfaceRef = useRef<HTMLElement | null>(null);
@@ -145,7 +150,7 @@ export function OverlayPanel({
          <section
             {...surfaceProps}
             className={surfaceClassNames}
-            role="dialog"
+            role={dialogRole}
             aria-modal="true"
             aria-labelledby={labelledBy}
             aria-label={label}
@@ -183,7 +188,7 @@ function useOverlayLifecycle(
       const focusFrame = window.requestAnimationFrame(() => {
          const surface = surfaceRef.current;
          const firstFocusable = surface?.querySelector<HTMLElement>(FOCUSABLE_SELECTOR);
-         (firstFocusable ?? surface)?.focus();
+         (firstFocusable ?? surface)?.focus({ preventScroll: true });
       });
 
       const handleKeyDown = (event: KeyboardEvent) => {

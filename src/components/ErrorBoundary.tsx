@@ -3,6 +3,7 @@ import { notifyError } from "../lib/notyf";
 
 interface ErrorBoundaryProps {
    children: ReactNode;
+   variant?: "fatal" | "view";
 }
 
 interface ErrorBoundaryState {
@@ -23,6 +24,19 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
    override render() {
       if (!this.state.errorMessage) {
          return this.props.children;
+      }
+
+      if (this.props.variant === "view") {
+         return (
+            <div className="view-error-boundary" role="alert">
+               <i className="fa-solid fa-triangle-exclamation" aria-hidden="true" />
+               <p>This view could not be rendered.</p>
+               <small>{this.state.errorMessage}</small>
+               <button type="button" onClick={() => this.setState({ errorMessage: null })}>
+                  Try again
+               </button>
+            </div>
+         );
       }
 
       return (

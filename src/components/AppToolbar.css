@@ -26,14 +26,10 @@
    width: 18px;
    height: 18px;
    flex: 0 0 auto;
-   border: 2.5px solid rgba(124, 199, 255, 0.18);
+   border: 2.5px solid rgba(var(--accent-rgb), 0.18);
    border-top-color: var(--accent);
    border-radius: 50%;
    animation: app-toolbar-spinner 720ms linear infinite;
-}
-
-.app-toolbar__spinner--mobile {
-   display: none;
 }
 
 .app-toolbar__actions {
@@ -66,8 +62,8 @@
 
 .view-toggle__button.is-selected .icon-button__surface {
    color: var(--text-strong);
-   border-color: rgba(124, 199, 255, 0.28);
-   background: rgba(124, 199, 255, 0.12);
+   border-color: rgba(var(--accent-rgb), 0.28);
+   background: rgba(var(--accent-rgb), 0.12);
 }
 
 @media (max-width: 640px) {

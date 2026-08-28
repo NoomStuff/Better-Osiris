@@ -157,9 +157,11 @@ export function AgendaView({ groups, expandedDays, animate, now, onToggleDay, on
          return;
       }
 
-      const todayBodyElement = agendaElement.querySelector<HTMLElement>(`[data-day="${CSS.escape(toDayKey(now))}"] .day-group__body-inner`);
+      const activeDayKey = toDayKey(now);
+      const todayGroup = groups.find((group) => group.key === activeDayKey);
+      const todayBodyElement = agendaElement.querySelector<HTMLElement>(`[data-day="${CSS.escape(activeDayKey)}"] .day-group__body-inner`);
       const activeSegment = getCurrentAgendaSegment(groups, now);
-      const todayExpanded = expandedDays.has(toDayKey(now));
+      const todayExpanded = expandedDays.has(activeDayKey);
       const selector = activeSegment ? `[data-current-segment="${CSS.escape(activeSegment.key)}"]` : null;
       const targetElement = selector && todayBodyElement ? todayBodyElement.querySelector<HTMLElement>(selector) : null;
       const progress = getSegmentProgress(activeSegment, now);
@@ -176,9 +178,7 @@ export function AgendaView({ groups, expandedDays, animate, now, onToggleDay, on
       }
 
       const anchor = getTodayProgressAnchor(groups, now);
-      const firstLesson = groups.find((group) => group.key === toDayKey(now))?.lessons[0];
-      const lastLesson = groups.find((group) => group.key === toDayKey(now))?.lessons.at(-1);
-      const anchorLesson = anchor === "before-first" ? firstLesson : lastLesson;
+      const anchorLesson = anchor === "before-first" ? todayGroup?.lessons[0] : todayGroup?.lessons.at(-1);
       const anchorElement =
          anchorLesson && todayBodyElement ? todayBodyElement.querySelector<HTMLElement>(`[data-current-segment="${CSS.escape(anchorLesson.id)}"]`) : null;
 
@@ -213,7 +213,7 @@ export function AgendaView({ groups, expandedDays, animate, now, onToggleDay, on
    }, [measureIndicator]);
 
    return (
-      <section className="agenda-view" ref={agendaRef}>
+      <section className="agenda-view" ref={agendaRef} aria-label="Weekly agenda">
          {groups.map((group) => {
             const expanded = expandedDays.has(group.key);
             const countLabel = group.lessons.length === 0 ? "empty" : `${group.lessons.length} class${group.lessons.length === 1 ? "" : "es"}`;
@@ -230,17 +230,19 @@ export function AgendaView({ groups, expandedDays, animate, now, onToggleDay, on
                   data-empty={group.lessons.length === 0}
                   key={group.key}
                >
-                  <button className="day-group__header" type="button" onClick={() => onToggleDay(group.key)} aria-expanded={expanded}>
-                     <span className="day-group__daymark">
-                        <span className="day-group__weekday">{dayLabel.format(group.date)}</span>
-                        <span className="day-group__date">{monthDayLabel.format(group.date)}</span>
-                     </span>
+                  <h3 className="day-group__heading">
+                     <button className="day-group__header" type="button" onClick={() => onToggleDay(group.key)} aria-expanded={expanded}>
+                        <span className="day-group__daymark">
+                           <span className="day-group__weekday">{dayLabel.format(group.date)}</span>
+                           <span className="day-group__date">{monthDayLabel.format(group.date)}</span>
+                        </span>
 
-                     <div className="day-group__meta">
-                        <span>{countLabel}</span>
-                        <i className="fa-solid fa-chevron-down day-group__chevron" />
-                     </div>
-                  </button>
+                        <span className="day-group__meta">
+                           <span>{countLabel}</span>
+                           <i className="fa-solid fa-chevron-down day-group__chevron" />
+                        </span>
+                     </button>
+                  </h3>
 
                   <div className="day-group__body" aria-hidden={!expanded} inert={!expanded ? true : undefined}>
                      <div className="day-group__body-inner">
@@ -283,7 +285,7 @@ export function AgendaView({ groups, expandedDays, animate, now, onToggleDay, on
                               return (
                                  <Fragment key={lesson.id}>
                                     {breaktimeLabel && breaktimeKey ? (
-                                       <div className="agenda-breaktime" aria-label={breaktimeLabel} data-current-segment={breaktimeKey}>
+                                       <div className="agenda-breaktime" role="note" data-current-segment={breaktimeKey}>
                                           <span className="agenda-breaktime__line" aria-hidden="true" />
                                           <span className="agenda-breaktime__label">
                                              <i className={breakIcon} aria-hidden="true" />

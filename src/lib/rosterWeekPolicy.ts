@@ -1,5 +1,6 @@
 import { MAX_WEEK_OFFSET, MIN_WEEK_OFFSET, type RosterResponse } from "../../shared/roster";
 import { formatWeekTitle, getIsoWeekNumber, shiftIsoDateByDays } from "./date";
+import { isSameLessonDetails } from "./lessonSnapshot";
 import type { RosterLoadError } from "./rosterLoadError";
 
 export interface WeekEntry {
@@ -99,17 +100,6 @@ export function isSameRosterData(left: RosterResponse | null | undefined, right:
          return false;
       }
 
-      return (
-         lesson.id === nextLesson.id &&
-         lesson.title === nextLesson.title &&
-         lesson.subject === nextLesson.subject &&
-         lesson.start === nextLesson.start &&
-         lesson.end === nextLesson.end &&
-         lesson.teacher === nextLesson.teacher &&
-         lesson.room === nextLesson.room &&
-         lesson.location === nextLesson.location &&
-         lesson.description === nextLesson.description &&
-         lesson.status === nextLesson.status
-      );
+      return lesson.id === nextLesson.id && lesson.status === nextLesson.status && isSameLessonDetails(lesson, nextLesson);
    });
 }

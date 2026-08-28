@@ -1,7 +1,8 @@
 import { useId, type CSSProperties, type FocusEvent, type KeyboardEvent, type MouseEvent } from "react";
 import { useDelayedTooltip } from "../hooks/useDelayedTooltip";
 import { useShortcutActivation } from "../hooks/useShortcutActivation";
-import { TooltipContent, type TooltipAlign, type TooltipPlacement } from "./Tooltip";
+import { TooltipContent, type TooltipPlacement } from "./Tooltip";
+import { getTooltipAnchorName } from "../lib/tooltipAnchor";
 import "./ToolbarActionGroup.css";
 
 export interface ToolbarActionOption<T extends string> {
@@ -45,8 +46,7 @@ interface ToolbarActionItemProps {
    role?: "button" | "radio";
    tabIndex?: number;
    optionId?: string;
-   tooltipAlign: TooltipAlign;
-   tooltipPlacement?: TooltipPlacement;
+   tooltipPlacement: TooltipPlacement;
    onPress: () => void;
 }
 
@@ -93,7 +93,7 @@ export function ToolbarActionSelector<T extends string>({ label, options, value,
 
    return (
       <div className="toolbar-action-group toolbar-action-group--selector" role="radiogroup" aria-label={label} style={style} onKeyDown={handleKeyDown}>
-         {options.map((option, index) => (
+         {options.map((option) => (
             <ToolbarActionItem
                key={option.id}
                label={option.label}
@@ -105,7 +105,6 @@ export function ToolbarActionSelector<T extends string>({ label, options, value,
                role="radio"
                tabIndex={option.id === value ? 0 : -1}
                optionId={option.id}
-               tooltipAlign={getTooltipAlign(index, options.length)}
                tooltipPlacement="bottom"
                onPress={() => onChange(option.id)}
             />
@@ -117,7 +116,7 @@ export function ToolbarActionSelector<T extends string>({ label, options, value,
 export function ToolbarActionButtons({ label, actions }: ToolbarActionButtonsProps) {
    return (
       <div className="toolbar-action-group toolbar-action-group--buttons" role="group" aria-label={label}>
-         {actions.map((action, index) => (
+         {actions.map((action) => (
             <ToolbarActionItem
                key={action.id}
                label={action.label}
@@ -125,7 +124,6 @@ export function ToolbarActionButtons({ label, actions }: ToolbarActionButtonsPro
                shortcut={action.shortcut}
                activationId={action.activationId}
                disabled={action.disabled}
-               tooltipAlign={getTooltipAlign(index, actions.length)}
                tooltipPlacement="bottom"
                onPress={action.onPress}
             />
@@ -144,13 +142,13 @@ function ToolbarActionItem({
    role = "button",
    tabIndex,
    optionId,
-   tooltipAlign,
-   tooltipPlacement = "top",
+   tooltipPlacement,
    onPress,
 }: ToolbarActionItemProps) {
    const tooltipId = useId();
    const { hideTooltip, isTooltipEnabled, isTooltipOpen, showTooltip } = useDelayedTooltip({ disabled });
    const isShortcutActive = useShortcutActivation(activationId);
+   const anchorName = getTooltipAnchorName(tooltipId);
 
    const handleMouseEnter = (_event: MouseEvent<HTMLButtonElement>) => {
       showTooltip();
@@ -180,10 +178,7 @@ function ToolbarActionItem({
          tabIndex={tabIndex}
          data-selected={selected ? "true" : undefined}
          data-shortcut-active={isShortcutActive ? "true" : undefined}
-         data-tooltip-align={tooltipAlign}
-         data-tooltip-host="true"
-         data-tooltip-open={isTooltipOpen ? "true" : undefined}
-         data-tooltip-placement={tooltipPlacement}
+         style={{ anchorName }}
          onBlur={handleBlur}
          onClick={onPress}
          onFocus={handleFocus}
@@ -191,7 +186,9 @@ function ToolbarActionItem({
          onMouseLeave={handleMouseLeave}
       >
          {label}
-         {isTooltipEnabled ? <TooltipContent id={tooltipId} label={tooltip} shortcut={shortcut} /> : null}
+         {isTooltipEnabled ? (
+            <TooltipContent id={tooltipId} anchorName={anchorName} open={isTooltipOpen} placement={tooltipPlacement} label={tooltip} shortcut={shortcut} />
+         ) : null}
       </button>
    );
 }
@@ -201,16 +198,4 @@ function getNextSelectorIndex(key: string, currentIndex: number, optionCount: nu
    if (key === "End") return optionCount - 1;
    const direction = key === "ArrowLeft" || key === "ArrowUp" ? -1 : 1;
    return (currentIndex + direction + optionCount) % optionCount;
-}
-
-function getTooltipAlign(index: number, count: number): TooltipAlign {
-   if (index === 0) {
-      return "start";
-   }
-
-   if (index === count - 1) {
-      return "end";
-   }
-
-   return "center";
 }

@@ -1,9 +1,10 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { ReactNode } from "react";
 import { fullDayLabel, parseLocalDateTime, timeLabel } from "../lib/date";
+import { normalizeLessonField } from "../lib/lessonFormat";
 import type { Lesson } from "../types/roster";
 import { IconButton } from "./IconButton";
-import { OverlayPanel } from "./OverlayPanel";
+import { OverlayPanel, PANEL_CLOSE_MS } from "./OverlayPanel";
 import "./LessonDrawer.css";
 
 interface LessonDrawerProps {
@@ -26,7 +27,7 @@ export function LessonDrawer({ lesson, onClose }: LessonDrawerProps) {
          setDisplayLesson(null);
          setIsClosing(false);
          onClose();
-      }, 240);
+      }, PANEL_CLOSE_MS);
    }, [isClosing, onClose]);
 
    useEffect(() => {
@@ -66,8 +67,9 @@ export function LessonDrawer({ lesson, onClose }: LessonDrawerProps) {
    const title = activeLesson.title.trim();
    const subtitle = activeLesson.subject.trim();
    const details = activeLesson.description.trim();
-   const showLocation = Boolean(location) && normalizeField(location) !== normalizeField(room);
-   const showDetails = Boolean(details) && normalizeField(details) !== normalizeField(title) && normalizeField(details) !== normalizeField(subtitle);
+   const showLocation = Boolean(location) && normalizeLessonField(location) !== normalizeLessonField(room);
+   const showDetails =
+      Boolean(details) && normalizeLessonField(details) !== normalizeLessonField(title) && normalizeLessonField(details) !== normalizeLessonField(subtitle);
    const previous = activeLesson.status === "changed" ? activeLesson.previous : undefined;
    const previousStartDate = previous ? parseLocalDateTime(previous.start) : null;
    const previousEndDate = previous ? parseLocalDateTime(previous.end) : null;
@@ -78,11 +80,11 @@ export function LessonDrawer({ lesson, onClose }: LessonDrawerProps) {
    const previousRoom = previous?.room.trim() ?? "";
    const previousLocation = previous?.location.trim() ?? "";
    const previousDetails = previous?.description.trim() ?? "";
-   const showPreviousLocation = Boolean(previousLocation) && normalizeField(previousLocation) !== normalizeField(previousRoom);
+   const showPreviousLocation = Boolean(previousLocation) && normalizeLessonField(previousLocation) !== normalizeLessonField(previousRoom);
    const showPreviousDetails =
       Boolean(previousDetails) &&
-      normalizeField(previousDetails) !== normalizeField(previous?.title ?? "") &&
-      normalizeField(previousDetails) !== normalizeField(previous?.subject ?? "");
+      normalizeLessonField(previousDetails) !== normalizeLessonField(previous?.title ?? "") &&
+      normalizeLessonField(previousDetails) !== normalizeLessonField(previous?.subject ?? "");
 
    return (
       <OverlayPanel
@@ -107,14 +109,7 @@ export function LessonDrawer({ lesson, onClose }: LessonDrawerProps) {
                </div>
                <p>{activeLesson.subject}</p>
             </div>
-            <IconButton
-               className="lesson-panel__close"
-               icon="fa-solid fa-xmark"
-               label="Close"
-               tooltipPlacement="bottom"
-               tooltipAlign="end"
-               onClick={closePanel}
-            />
+            <IconButton className="lesson-panel__close" icon="fa-solid fa-xmark" label="Close" tooltipPlacement="bottom" onClick={closePanel} />
          </div>
 
          <dl className="lesson-panel__details">
@@ -147,10 +142,6 @@ export function LessonDrawer({ lesson, onClose }: LessonDrawerProps) {
          </dl>
       </OverlayPanel>
    );
-}
-
-function normalizeField(value: string) {
-   return value.trim().toLowerCase();
 }
 
 interface LessonDetailProps {

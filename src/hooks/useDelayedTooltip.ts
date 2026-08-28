@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
-const TOOLTIP_DELAY_MS = 1000;
-const TOOLTIP_WARM_WINDOW_MS = 1000;
+const TOOLTIP_DELAY_MS = 500;
+const TOOLTIP_WARM_WINDOW_MS = 500;
 const MOBILE_TOOLTIP_MEDIA_QUERY = "(hover: none), (pointer: coarse), (max-width: 767px)";
 
 let lastTooltipClosedAt = Number.NEGATIVE_INFINITY;

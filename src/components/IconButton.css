@@ -1,4 +1,5 @@
 .icon-button {
+   position: relative;
    width: 36px;
    height: 36px;
    padding: 0;
@@ -7,6 +8,13 @@
    justify-content: center;
    color: inherit;
    cursor: pointer;
+}
+
+/* Invisible hit-area extension: keeps the visual 36px chip but reaches the ~44px touch-target guideline. */
+.icon-button::after {
+   content: "";
+   position: absolute;
+   inset: -4px;
 }
 
 .icon-button__surface {
@@ -38,7 +46,7 @@
 
 .icon-button:is(:hover, :focus-visible, [data-tooltip-open="true"], [data-shortcut-active="true"]):not(:disabled):not(.is-selected) .icon-button__surface {
    border-color: var(--line-strong);
-   background: rgba(124, 199, 255, 0.14);
+   background: rgba(var(--accent-rgb), 0.14);
    color: var(--text-strong);
    transition:
       transform 260ms var(--bounce-overshoot),
@@ -48,14 +56,14 @@
 }
 
 .icon-button.is-selected .icon-button__surface {
-   border-color: rgba(124, 199, 255, 0.28);
-   background: rgba(124, 199, 255, 0.12);
+   border-color: rgba(var(--accent-rgb), 0.28);
+   background: rgba(var(--accent-rgb), 0.12);
    color: var(--text-strong);
 }
 
 .icon-button.is-selected:is(:hover, :focus-visible, [data-tooltip-open="true"], [data-shortcut-active="true"]):not(:disabled) .icon-button__surface {
-   border-color: rgba(124, 199, 255, 0.45);
-   background: rgba(124, 199, 255, 0.12);
+   border-color: rgba(var(--accent-rgb), 0.45);
+   background: rgba(var(--accent-rgb), 0.12);
    transition:
       transform 260ms var(--bounce-overshoot),
       border-color 0s,

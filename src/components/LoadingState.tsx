@@ -54,7 +54,10 @@ export function ErrorState({ title, detail, log, retryCountdownMs, isRetrying, c
    return (
       <RosterOverlayState title={title} detail={detail} icon="fa-solid fa-triangle-exclamation" role="alert">
          {canRetry ? <strong className="roster-overlay-state__retry">{retryText}</strong> : null}
-         <p className="roster-overlay-state__log">Error: {log}</p>
+         <details className="roster-overlay-state__log">
+            <summary>Error log</summary>
+            <p>Error: {log}</p>
+         </details>
       </RosterOverlayState>
    );
 }

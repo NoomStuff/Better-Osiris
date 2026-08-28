@@ -1,4 +1,5 @@
 import type { Lesson, LessonSnapshot, LessonStatus, RosterResponse } from "../types/roster";
+import { isSameLessonDetails, toLessonSnapshot } from "./lessonSnapshot";
 
 type DiffLessonStatus = Extract<LessonStatus, "changed" | "cancelled">;
 
@@ -9,21 +10,6 @@ export interface SessionLessonDiff {
 }
 
 export type SessionLessonDiffsByWeek = Map<number, Map<string, SessionLessonDiff>>;
-
-function toLessonSnapshot(lesson: Lesson): LessonSnapshot {
-   return {
-      id: lesson.id,
-      title: lesson.title,
-      subject: lesson.subject,
-      start: lesson.start,
-      end: lesson.end,
-      teacher: lesson.teacher,
-      room: lesson.room,
-      location: lesson.location,
-      description: lesson.description,
-      status: lesson.status,
-   };
-}
 
 function cloneLessonWithStatus(lesson: Lesson, status: DiffLessonStatus, previousLesson: LessonSnapshot): Lesson {
    return {
@@ -37,21 +23,8 @@ function getLessonDayKey(lesson: Lesson) {
    return lesson.start.split("T")[0] ?? lesson.start;
 }
 
-function lessonsHaveSameVisibleDetails(left: LessonSnapshot, right: LessonSnapshot) {
-   return (
-      left.title === right.title &&
-      left.subject === right.subject &&
-      left.start === right.start &&
-      left.end === right.end &&
-      left.teacher === right.teacher &&
-      left.room === right.room &&
-      left.location === right.location &&
-      left.description === right.description
-   );
-}
-
 function normalizeMatchValue(value: string) {
-   return value.trim().toLocaleLowerCase();
+   return value.trim().toLowerCase();
 }
 
 function getLessonMatchScore(previousLesson: Lesson, nextLesson: Lesson) {
@@ -79,6 +52,10 @@ function getWeekDiffs(weekDiffs: SessionLessonDiffsByWeek, weekOffset: number) {
    return diffs;
 }
 
+/**
+ * Stores a diff anchored to the first-seen version of the lesson (so rendering keeps the original details) but
+ * returns a diff against the immediately previous version, which is what change notifications should announce.
+ */
 function rememberLessonDiff(weekDiffs: SessionLessonDiffsByWeek, weekOffset: number, lesson: Lesson, previousLesson: Lesson, status: DiffLessonStatus) {
    const diffs = getWeekDiffs(weekDiffs, weekOffset);
    const existingDiff = diffs.get(lesson.id) ?? diffs.get(previousLesson.id);
@@ -120,7 +97,7 @@ export function recordSessionLessonDiffs(previousWeek: RosterResponse, nextWeek:
 
       if (nextLesson.status === "cancelled" && previousLesson.status !== "cancelled") {
          recordedDiffs.push(rememberLessonDiff(weekDiffs, previousWeek.week.offset, nextLesson, previousLesson, "cancelled"));
-      } else if (!lessonsHaveSameVisibleDetails(previousLesson, nextLesson) || previousLesson.status !== nextLesson.status) {
+      } else if (!isSameLessonDetails(previousLesson, nextLesson) || previousLesson.status !== nextLesson.status) {
          recordedDiffs.push(rememberLessonDiff(weekDiffs, previousWeek.week.offset, nextLesson, previousLesson, "changed"));
       }
    });
@@ -170,7 +147,7 @@ function clearRevertedDiff(weekDiffs: SessionLessonDiffsByWeek, weekOffset: numb
       .filter(
          ([currentLessonId, diff]) =>
             (currentLessonId === lesson.id || diff.previousLesson.id === lesson.id) &&
-            lessonsHaveSameVisibleDetails(diff.previousLesson, lesson) &&
+            isSameLessonDetails(diff.previousLesson, lesson) &&
             diff.previousLesson.status === lesson.status
       )
       .map(([currentLessonId]) => currentLessonId);

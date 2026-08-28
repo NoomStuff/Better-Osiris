@@ -11,7 +11,7 @@ import { applyPrivateResponseHeaders, assertSameOrigin, CONTENT_SECURITY_POLICY 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const app = express();
-const port = Number(process.env.PORT) || 8787;
+const port = Number(process.env["PORT"]) || 8787;
 
 validateServerConfiguration();
 app.disable("x-powered-by");

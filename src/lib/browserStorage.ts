@@ -1,5 +1,7 @@
 type BrowserStorageName = "localStorage" | "sessionStorage";
 
+let hasWarnedAboutWriteFailure = false;
+
 export function readBrowserStorage(name: BrowserStorageName, key: string) {
    try {
       return getStorage(name)?.getItem(key) ?? null;
@@ -12,7 +14,11 @@ export function writeBrowserStorage(name: BrowserStorageName, key: string, value
    try {
       getStorage(name)?.setItem(key, value);
       return true;
-   } catch {
+   } catch (error) {
+      if (!hasWarnedAboutWriteFailure) {
+         hasWarnedAboutWriteFailure = true;
+         console.warn("Browser storage is unavailable, so cached roster data will not persist.", error);
+      }
       return false;
    }
 }

@@ -18,6 +18,7 @@ import { applyDevLessonStatusPreview } from "./lib/devRosterStatusPreview";
 import { useRosterWeek } from "./hooks/useRosterWeek";
 import { toDayKey } from "./lib/date";
 import { getEmptyWeekMessage } from "./lib/rosterFlavor";
+import { ErrorBoundary } from "./components/ErrorBoundary";
 import { notifyError, notifySuccess } from "./lib/notyf";
 import { requestRosterNotificationPermission } from "./lib/rosterNotifications";
 import type { GridZoom, Lesson, RosterWeek, ViewMode } from "./types/roster";
@@ -118,10 +119,6 @@ export default function App() {
 
       return displayedData.lessons.find((lesson) => lesson.id === selectedLessonId) ?? null;
    }, [displayedData, selectedLessonId]);
-
-   const ignoreBlankDayToggle = useCallback((_dayKey: string) => undefined, []);
-
-   const ignoreBlankLessonSelection = useCallback((_lesson: Lesson) => undefined, []);
 
    const selectLesson = useCallback((lesson: Lesson) => {
       setIsSettingsOpen(false);
@@ -264,25 +261,41 @@ export default function App() {
    const hasOverlayUnderlay = hasBlockingTokenState || loading || (Boolean(error) && !data) || isVisuallyEmptyWeek;
    const visibleGridZoom = hasOverlayUnderlay ? "hour" : gridZoom;
    const frameGridZoom = viewMode === "grid" ? visibleGridZoom : gridZoom;
-   const overlay =
-      isTokenSettingsLoading && !hasDisplayedData ? (
-         <LoadingState message="Checking bearer token." />
-      ) : !isTokenSettingsLoading && !hasBearerToken ? (
-         <BearerTokenState token={bearerTokenInput} isSaving={isTokenMutating} onTokenChange={setBearerTokenInput} onSubmit={() => void submitBearerToken()} />
-      ) : loading ? (
-         <LoadingState message="Fetching week data." />
-      ) : error && !data ? (
-         <ErrorState
-            title={error.title}
-            detail={errorDetail}
-            log={error.log}
-            retryCountdownMs={retryCountdownMs}
-            isRetrying={retrying}
-            canRetry={error.retryable}
-         />
-      ) : displayedData?.lessons.length === 0 ? (
-         <EmptyWeekState week={displayedData.week} />
-      ) : null;
+
+   const overlay = (() => {
+      if (isTokenSettingsLoading && !hasDisplayedData) {
+         return <LoadingState message="Checking bearer token." />;
+      }
+      if (!isTokenSettingsLoading && !hasBearerToken) {
+         return (
+            <BearerTokenState
+               token={bearerTokenInput}
+               isSaving={isTokenMutating}
+               onTokenChange={setBearerTokenInput}
+               onSubmit={() => void submitBearerToken()}
+            />
+         );
+      }
+      if (loading) {
+         return <LoadingState message="Fetching week data." />;
+      }
+      if (error && !data) {
+         return (
+            <ErrorState
+               title={error.title}
+               detail={errorDetail}
+               log={error.log}
+               retryCountdownMs={retryCountdownMs}
+               isRetrying={retrying}
+               canRetry={error.retryable}
+            />
+         );
+      }
+      if (displayedData?.lessons.length === 0) {
+         return <EmptyWeekState week={displayedData.week} />;
+      }
+      return null;
+   })();
 
    return (
       <div className="shell">
@@ -319,21 +332,20 @@ export default function App() {
                key={`${viewMode}-${weekOffset}`}
             >
                {viewMode === "agenda" ? (
-                  <AgendaView
-                     groups={visibleDayGroups}
-                     expandedDays={visibleExpandedDays}
-                     animate={displayedData ? animateAgenda : false}
-                     now={perceivedNow}
-                     onToggleDay={displayedData ? toggleDay : ignoreBlankDayToggle}
-                     onSelectLesson={displayedData ? selectLesson : ignoreBlankLessonSelection}
-                  />
+                  <ErrorBoundary variant="view">
+                     <AgendaView
+                        groups={visibleDayGroups}
+                        expandedDays={visibleExpandedDays}
+                        animate={animateAgenda}
+                        now={perceivedNow}
+                        onToggleDay={toggleDay}
+                        onSelectLesson={selectLesson}
+                     />
+                  </ErrorBoundary>
                ) : (
-                  <GridView
-                     groups={visibleDayGroups}
-                     zoom={visibleGridZoom}
-                     now={perceivedNow}
-                     onSelectLesson={displayedData ? selectLesson : ignoreBlankLessonSelection}
-                  />
+                  <ErrorBoundary variant="view">
+                     <GridView groups={visibleDayGroups} zoom={visibleGridZoom} now={perceivedNow} onSelectLesson={selectLesson} />
+                  </ErrorBoundary>
                )}
                {overlay}
             </section>

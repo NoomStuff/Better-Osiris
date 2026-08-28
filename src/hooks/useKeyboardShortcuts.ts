@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { triggerShortcutActivation } from "./useShortcutActivation";
 
 export interface KeyboardShortcut {
@@ -15,17 +15,44 @@ export interface KeyboardShortcut {
 }
 
 export function useKeyboardShortcuts(shortcuts: readonly KeyboardShortcut[], enabled = true) {
+   // The listener reads the latest shortcuts when a key lands, so it only has to be attached once.
+   const shortcutsRef = useRef(shortcuts);
+
+   useEffect(() => {
+      shortcutsRef.current = shortcuts;
+   });
+
    useEffect(() => {
       if (!enabled) {
          return;
       }
+
+      // Chromium re-evaluates :focus-visible on keyboard input, so after any keypress a
+      // button that was merely clicked would suddenly paint a focus ring. Track
+      // pointer-focused elements and release them when a shortcut is handled; elements
+      // focused through keyboard navigation keep their ring.
+      let pointerFocused: HTMLElement | null = null;
+      const markPointerFocus = (event: PointerEvent) => {
+         pointerFocused = event.target instanceof HTMLElement ? (event.target.closest("button") ?? event.target) : null;
+      };
+      const releasePointerFocus = () => {
+         if (pointerFocused && document.activeElement === pointerFocused) {
+            pointerFocused.blur();
+         }
+         pointerFocused = null;
+      };
 
       const handleKeyDown = (event: KeyboardEvent) => {
          if (event.repeat || isEditableTarget(event.target)) {
             return;
          }
 
-         const shortcut = shortcuts.find((candidate) => !candidate.disabled && matchesShortcut(event, candidate));
+         // Space activates whatever control is focused, so never claim it for a shortcut.
+         if (event.key === " " && isInteractiveTarget(event.target)) {
+            return;
+         }
+
+         const shortcut = shortcutsRef.current.find((candidate) => !candidate.disabled && matchesShortcut(event, candidate));
          if (!shortcut) {
             return;
          }
@@ -38,15 +65,18 @@ export function useKeyboardShortcuts(shortcuts: readonly KeyboardShortcut[], ena
             triggerShortcutActivation(shortcut.activationTargetId);
          }
 
+         releasePointerFocus();
          shortcut.onPress();
       };
 
       window.addEventListener("keydown", handleKeyDown);
+      window.addEventListener("pointerdown", markPointerFocus, true);
 
       return () => {
          window.removeEventListener("keydown", handleKeyDown);
+         window.removeEventListener("pointerdown", markPointerFocus, true);
       };
-   }, [enabled, shortcuts]);
+   }, [enabled]);
 }
 
 export function formatShortcut(shortcut: Pick<KeyboardShortcut, "altKey" | "ctrlKey" | "key" | "metaKey" | "shiftKey">) {
@@ -98,4 +128,10 @@ function isEditableTarget(target: EventTarget | null) {
    }
 
    return target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement || target instanceof HTMLSelectElement;
+}
+
+const INTERACTIVE_TARGET_SELECTOR = "button, a, select, summary, label, [role='button'], [role='radio'], [role='checkbox'], [role='switch']";
+
+function isInteractiveTarget(target: EventTarget | null) {
+   return target instanceof HTMLElement && Boolean(target.closest(INTERACTIVE_TARGET_SELECTOR));
 }

@@ -44,6 +44,8 @@ test("week navigation and view controls work with mocked roster data", async ({ 
    await expect(page.getByRole("button", { name: "Previous week" })).toBeEnabled();
    await expect(page.getByRole("button", { name: "SOURCE_TITLE_1_1" })).toBeVisible();
 
+   // Space must not be stolen from focused controls, so blur the week button before using the jump shortcut.
+   await page.evaluate(() => (document.activeElement instanceof HTMLElement ? document.activeElement.blur() : undefined));
    await page.keyboard.press("Space");
    await expect(page.locator(".weekbar__label")).toHaveText("This week");
    await expect(page.getByRole("heading", { name: /Week 25:/ })).toBeVisible();
@@ -77,7 +79,10 @@ test("uses the bundled Quicksand variable font", async ({ page }) => {
       loaded: [...document.fonts].some((font) => font.family.includes("Quicksand Variable") && font.status === "loaded"),
    }));
    expect(fontState.computedFamily).toContain("Quicksand Variable");
-   expect(fontState.loaded).toBe(true);
+   // WebKit can resolve fonts.ready before the FontFace is marked loaded, so poll instead of asserting once.
+   await expect
+      .poll(() => page.evaluate(() => [...document.fonts].some((font) => font.family.includes("Quicksand Variable") && font.status === "loaded")))
+      .toBe(true);
 });
 
 test("defaults to agenda on mobile when no roster view was saved", async ({ page }) => {
@@ -167,9 +172,9 @@ test("settings dialog opens, resets token state, and closes", async ({ page }) =
    await expect(page.getByRole("button", { name: "Save token" })).toBeDisabled();
 
    await page.getByRole("button", { name: "Reset" }).click();
-   await expect(page.getByRole("dialog", { name: "Reset bearer token?" })).toBeVisible();
+   await expect(page.getByRole("alertdialog", { name: "Reset bearer token?" })).toBeVisible();
    await page.getByRole("button", { name: "Reset token" }).click();
-   await expect(page.getByRole("dialog", { name: "Reset bearer token?" })).toBeHidden();
+   await expect(page.getByRole("alertdialog", { name: "Reset bearer token?" })).toBeHidden();
    await expect(page.getByRole("dialog", { name: "Preferences" })).toBeVisible();
    await expect(page.getByText("No bearer token is set.")).toBeVisible();
 
@@ -190,7 +195,7 @@ test("only the topmost dialog handles Escape and focus stays contained", async (
    await expect(closeSettingsButton).toBeFocused();
 
    await page.getByRole("button", { name: "Reset" }).click();
-   const confirmation = page.getByRole("dialog", { name: "Reset bearer token?" });
+   const confirmation = page.getByRole("alertdialog", { name: "Reset bearer token?" });
    await expect(confirmation).toBeVisible();
    await page.keyboard.press("Escape");
 
@@ -308,6 +313,16 @@ test("week swipe navigation is disabled while an overlay is open", async ({ page
       window.dispatchEvent(endEvent);
    });
 
+   await expect(page.locator(".weekbar__label")).toHaveText("This week");
+});
+
+test("space activates a focused lesson instead of jumping to the current week", async ({ page }) => {
+   await page.goto("/");
+   const lesson = page.getByRole("button", { name: /SOURCE_TITLE_0_1/ });
+   await lesson.focus();
+   await page.keyboard.press("Space");
+
+   await expect(page.getByRole("dialog", { name: "Class details" })).toBeVisible();
    await expect(page.locator(".weekbar__label")).toHaveText("This week");
 });
 

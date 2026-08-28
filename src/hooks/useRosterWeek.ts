@@ -7,7 +7,7 @@ import { getDisplayWeeksFromPayload, getInitialRosterEntries } from "../lib/rost
 import { readSessionLessonDiffs } from "../lib/rosterPersistence";
 import { canNavigateToWeek, getAdjacentBatchStarts, getBatchOffsets, getBatchStart, getDerivedWeekTitle } from "../lib/rosterWeekPolicy";
 import { rosterWeekReducer } from "../lib/rosterWeekReducer";
-import { MAX_WEEK_OFFSET, MIN_WEEK_OFFSET } from "../../shared/roster";
+import { MAX_WEEK_OFFSET } from "../../shared/roster";
 import type { RosterResponse } from "../types/roster";
 
 interface UseRosterWeekOptions {
@@ -108,11 +108,8 @@ export function useRosterWeek(offset: number, options: UseRosterWeekOptions = {}
          const force = options.force ?? false;
          const passive = options.passive ?? false;
 
-         if (startOffset < MIN_WEEK_OFFSET || startOffset > MAX_WEEK_OFFSET) {
-            return;
-         }
-
-         if (startOffset < 0) {
+         // OSIRIS serves no past weeks, so offset -1 (last week) is cache-only and is never fetched.
+         if (startOffset < 0 || startOffset > MAX_WEEK_OFFSET) {
             return;
          }
 
@@ -231,11 +228,7 @@ export function useRosterWeek(offset: number, options: UseRosterWeekOptions = {}
          });
 
          passiveBatchStarts.forEach((batchStart) => {
-            if (batchStart < MIN_WEEK_OFFSET || batchStart > MAX_WEEK_OFFSET) {
-               return;
-            }
-
-            if (batchStart < 0) {
+            if (batchStart < 0 || batchStart > MAX_WEEK_OFFSET) {
                return;
             }
 

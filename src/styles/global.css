@@ -26,8 +26,15 @@
    --text-muted: #7482a6;
    --text-strong: #f3f7ff;
    --accent: #7cc7ff;
+   --accent-rgb: 124, 199, 255;
    --warning: #ffbf69;
    --danger: #ff6b81;
+   --danger-rgb: 255, 107, 129;
+   --danger-bright: #ffb3be;
+   --surface-rgb: 10, 13, 20;
+   --overlay-surface: rgba(8, 11, 18, 0.96);
+   /* Combined height of the app toolbar and week bar; the grid frame height math in App.css depends on it. */
+   --chrome-height: 127px;
    --shadow: 0 24px 80px rgba(0, 0, 0, 0.35);
    --bounce-overshoot: cubic-bezier(0.2, 3.2, 0.2, 1);
 }
@@ -86,7 +93,7 @@ button {
 }
 
 :where(button, a, input, select, textarea, [tabindex]):focus-visible {
-   outline: 3px solid rgba(124, 199, 255, 0.72);
+   outline: 3px solid rgba(var(--accent-rgb), 0.72);
    outline-offset: 3px;
 }
 
@@ -160,7 +167,46 @@ button {
    padding: 0 16px;
    border: 2px solid var(--line-strong);
    border-radius: 10px;
-   background: rgba(124, 199, 255, 0.14);
+   background: rgba(var(--accent-rgb), 0.14);
+   cursor: pointer;
+}
+
+.view-error-boundary {
+   position: absolute;
+   inset: 0;
+   z-index: 1;
+   display: grid;
+   place-content: center;
+   justify-items: center;
+   gap: 10px;
+   padding: 24px;
+   text-align: center;
+   background: rgba(var(--surface-rgb), 0.82);
+   color: var(--text-dim);
+}
+
+.view-error-boundary i {
+   color: var(--warning);
+   font-size: 2rem;
+}
+
+.view-error-boundary p {
+   margin: 0;
+   color: var(--text-strong);
+   font-weight: 600;
+}
+
+.view-error-boundary small {
+   max-width: 420px;
+   overflow-wrap: anywhere;
+}
+
+.view-error-boundary button {
+   min-height: 42px;
+   padding: 0 16px;
+   border: 2px solid var(--line-strong);
+   border-radius: 10px;
+   background: rgba(var(--accent-rgb), 0.14);
    cursor: pointer;
 }
 

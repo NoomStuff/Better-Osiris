@@ -77,7 +77,7 @@
 
 .lesson-panel__status--cancelled {
    color: var(--danger);
-   background: rgba(255, 107, 129, 0.1);
+   background: rgba(var(--danger-rgb), 0.1);
 }
 
 .lesson-panel__title p {

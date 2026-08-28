@@ -37,7 +37,7 @@ export function parseIsoDateToLocal(isoDate: string) {
       return new Date(isoDate);
    }
 
-   return parseAmsterdamDateTime(`${datePart}T12:00:00`);
+   return parseLocalDateTime(`${datePart}T12:00:00`);
 }
 
 export function parseLocalDateTime(isoDateTime: string) {
@@ -84,10 +84,6 @@ export function toDayKey(date: Date) {
    return AMSTERDAM_DATE_FORMATTER.format(date);
 }
 
-export function formatLocalIsoDate(date: Date) {
-   return toDayKey(date);
-}
-
 export function getLocalWeekStartIso(date: Date) {
    const dayKey = toDayKey(date);
    const day = getIsoWeekday(dayKey);
@@ -124,10 +120,6 @@ export function getMinutesFromMidnight(date: Date) {
 export function getAmsterdamWeekBounds(date: Date, offset: number) {
    const start = shiftIsoDateByDays(getLocalWeekStartIso(date), offset * 7);
    return { start, end: shiftIsoDateByDays(start, 4) };
-}
-
-function parseAmsterdamDateTime(value: string) {
-   return parseLocalDateTime(value);
 }
 
 function createDateInAmsterdam(year: number, month: number, day: number, hour: number, minute: number, second: number) {

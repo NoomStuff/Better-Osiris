@@ -11,7 +11,7 @@
    width: min(420px, calc(100vw - 32px));
    border: 2px solid var(--line);
    border-radius: 18px;
-   background: rgba(10, 13, 20, 0.96);
+   background: rgba(var(--surface-rgb), 0.96);
    box-shadow: var(--shadow);
 }
 
@@ -67,19 +67,19 @@
 }
 
 .confirm-dialog__button--confirm[data-variant="default"] {
-   border-color: rgba(124, 199, 255, 0.45);
-   background: rgba(124, 199, 255, 0.14);
+   border-color: rgba(var(--accent-rgb), 0.45);
+   background: rgba(var(--accent-rgb), 0.14);
 }
 
 .confirm-dialog__button--confirm[data-variant="danger"] {
-   border-color: rgba(255, 88, 112, 0.58);
-   background: rgba(255, 88, 112, 0.16);
-   color: #ffb3be;
+   border-color: rgba(var(--danger-rgb), 0.58);
+   background: rgba(var(--danger-rgb), 0.16);
+   color: var(--danger-bright);
 }
 
 .confirm-dialog__button--confirm[data-variant="danger"]:hover:not(:disabled) {
-   border-color: rgba(255, 88, 112, 0.76);
-   background: rgba(255, 88, 112, 0.24);
+   border-color: rgba(var(--danger-rgb), 0.76);
+   background: rgba(var(--danger-rgb), 0.24);
 }
 
 .confirm-dialog__button:disabled {

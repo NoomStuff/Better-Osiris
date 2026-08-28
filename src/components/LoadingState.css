@@ -34,7 +34,7 @@
 }
 
 .roster-overlay-state[role="alert"] > i {
-   color: #ffcf6a;
+   color: var(--warning);
    filter: drop-shadow(0 10px 22px rgba(255, 207, 106, 0.16));
 }
 
@@ -50,9 +50,19 @@
 }
 
 .roster-overlay-state__log {
+   margin: 0;
    font-weight: 300;
    font-size: 0.9em;
    color: var(--text-muted);
+}
+
+.roster-overlay-state__log summary {
+   cursor: pointer;
+}
+
+.roster-overlay-state__log p {
+   margin: 6px 0 0;
+   overflow-wrap: anywhere;
 }
 
 .roster-overlay-state__form {
@@ -94,21 +104,21 @@
 }
 
 .roster-overlay-state__token-row input:focus {
-   border-color: rgba(124, 199, 255, 0.5);
+   border-color: rgba(var(--accent-rgb), 0.5);
    background: rgba(255, 255, 255, 0.075);
 }
 
 .roster-overlay-state__token-row input:focus-visible {
-   outline: 3px solid rgba(124, 199, 255, 0.72);
+   outline: 3px solid rgba(var(--accent-rgb), 0.72);
    outline-offset: 2px;
 }
 
 .roster-overlay-state__button {
    width: 44px;
    height: 44px;
-   border: 2px solid rgba(124, 199, 255, 0.45);
+   border: 2px solid rgba(var(--accent-rgb), 0.45);
    border-radius: 10px;
-   background: rgba(124, 199, 255, 0.14);
+   background: rgba(var(--accent-rgb), 0.14);
    color: var(--text-strong);
    padding: 0;
    font-size: 1rem;
@@ -122,8 +132,8 @@
 }
 
 .roster-overlay-state__button:hover:not(:disabled) {
-   border-color: rgba(124, 199, 255, 0.62);
-   background: rgba(124, 199, 255, 0.2);
+   border-color: rgba(var(--accent-rgb), 0.62);
+   background: rgba(var(--accent-rgb), 0.2);
 }
 
 .roster-overlay-state__button:disabled {
