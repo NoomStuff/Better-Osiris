@@ -1,4 +1,4 @@
-import type { Lesson, LessonStatus, RosterResponse } from "../../shared/roster.js";
+import type { Class, ClassStatus, Week } from "../../shared/weeks.js";
 import { ApiError } from "./errors.js";
 import type { OsirisRosterEntry, OsirisRosterResponse, OsirisWeek } from "./osirisClient.js";
 
@@ -69,14 +69,14 @@ function toLocalDateOnly(dayIso: string) {
    return getDatePart(dayIso);
 }
 
-function normalizeLesson(item: OsirisRosterEntry): Lesson {
+function normalizeClass(item: OsirisRosterEntry): Class {
    const parsed = splitSubject(item.onderwerp);
-   const status: LessonStatus = resolveLessonStatus(item);
+   const status: ClassStatus = resolveClassStatus(item);
 
    const start = toLocalDateTime(item.datum, item.tijd_vanaf);
    const end = toLocalDateTime(item.datum, item.tijd_tm);
    if (end <= start) {
-      throw new ApiError(`OSIRIS lesson ${item.id_rooster} has an invalid time range.`, {
+      throw new ApiError(`OSIRIS schoolClass ${item.id_rooster} has an invalid time range.`, {
          code: "UPSTREAM_INVALID_RESPONSE",
          status: 502,
       });
@@ -96,7 +96,7 @@ function normalizeLesson(item: OsirisRosterEntry): Lesson {
    };
 }
 
-function resolveLessonStatus(item: OsirisRosterEntry): LessonStatus {
+function resolveClassStatus(item: OsirisRosterEntry): ClassStatus {
    const statusHints = ["status", "roosterstatus", "status_omschrijving", "statusomschrijving"];
    const itemRecord = item as unknown as Record<string, unknown>;
    const normalizedHints = statusHints
@@ -115,7 +115,7 @@ function resolveLessonStatus(item: OsirisRosterEntry): LessonStatus {
    return "scheduled";
 }
 
-function normalizeRosterWeekItem(week: OsirisWeek, requestedOffset: number): RosterResponse {
+function normalizeRosterWeekItem(week: OsirisWeek, requestedOffset: number): Week {
    return {
       week: {
          offset: requestedOffset,
@@ -123,11 +123,11 @@ function normalizeRosterWeekItem(week: OsirisWeek, requestedOffset: number): Ros
          start: toLocalDateOnly(week.startdatum),
          end: toLocalDateOnly(week.einddatum),
       },
-      lessons: week.dagen.flatMap((day) => day.rooster.map(normalizeLesson)),
+      classes: week.dagen.flatMap((day) => day.rooster.map(normalizeClass)),
    };
 }
 
-export function normalizeRosterWeeksResponse(rawData: OsirisRosterResponse, requestedOffset: number): RosterResponse[] {
+export function normalizeWeeksResponse(rawData: OsirisRosterResponse, requestedOffset: number): Week[] {
    if (!rawData.items.length) {
       throw new Error("OSIRIS roster response did not include week items.");
    }

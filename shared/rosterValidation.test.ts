@@ -1,12 +1,12 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { parseRosterResponse } from "./rosterValidation.js";
+import { parseWeek } from "./rosterValidation.js";
 
 const validRoster = {
    week: { offset: 0, number: 29, start: "2026-07-13", end: "2026-07-17" },
-   lessons: [
+   classes: [
       {
-         id: "lesson-1",
+         id: "schoolClass-1",
          title: "Testing",
          subject: "Runtime validation",
          start: "2026-07-15T09:00:00",
@@ -22,24 +22,24 @@ const validRoster = {
 
 void describe("roster response validation", () => {
    void it("accepts valid normalized roster dates", () => {
-      assert.deepEqual(parseRosterResponse(validRoster), validRoster);
+      assert.deepEqual(parseWeek(validRoster), validRoster);
    });
 
    void it("rejects impossible dates and out-of-range times", () => {
-      assert.throws(() => parseRosterResponse({ ...validRoster, week: { ...validRoster.week, start: "2026-02-30" } }), /valid ISO date/);
+      assert.throws(() => parseWeek({ ...validRoster, week: { ...validRoster.week, start: "2026-02-30" } }), /valid ISO date/);
       assert.throws(
          () =>
-            parseRosterResponse({
+            parseWeek({
                ...validRoster,
-               lessons: [{ ...validRoster.lessons[0], start: "2026-07-15T25:00:00" }],
+               classes: [{ ...validRoster.classes[0], start: "2026-07-15T25:00:00" }],
             }),
          /valid local ISO date-time/
       );
       assert.throws(
          () =>
-            parseRosterResponse({
+            parseWeek({
                ...validRoster,
-               lessons: [{ ...validRoster.lessons[0], end: "2026-07-15T08:59:00" }],
+               classes: [{ ...validRoster.classes[0], end: "2026-07-15T08:59:00" }],
             }),
          /end after its start/
       );

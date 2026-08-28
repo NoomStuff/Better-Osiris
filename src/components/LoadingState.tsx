@@ -2,7 +2,7 @@ import type { ReactNode, SyntheticEvent } from "react";
 import { OSIRIS_BEARER_TOKEN_HELP_URL } from "../lib/osirisTokenHelp";
 import "./LoadingState.css";
 
-interface RosterOverlayStateProps {
+interface WeekOverlayStateProps {
    title: string;
    detail: string;
    icon?: string;
@@ -31,7 +31,7 @@ interface BearerTokenStateProps {
    onSubmit: () => void;
 }
 
-export function RosterOverlayState({ title, detail, icon, spinning = false, role, children }: RosterOverlayStateProps) {
+export function WeekOverlayState({ title, detail, icon, spinning = false, role, children }: WeekOverlayStateProps) {
    return (
       <div className="roster-overlay-state" role={role}>
          {spinning ? <span className="spinner roster-overlay-state__spinner" /> : null}
@@ -44,7 +44,7 @@ export function RosterOverlayState({ title, detail, icon, spinning = false, role
 }
 
 export function LoadingState({ message }: LoadingStateProps) {
-   return <RosterOverlayState title="Loading roster" detail={message} spinning role="status" />;
+   return <WeekOverlayState title="Loading roster" detail={message} spinning role="status" />;
 }
 
 export function ErrorState({ title, detail, log, retryCountdownMs, isRetrying, canRetry }: ErrorStateProps) {
@@ -52,13 +52,13 @@ export function ErrorState({ title, detail, log, retryCountdownMs, isRetrying, c
    const retryText = isRetrying ? "Retrying now..." : secondsUntilRetry > 0 ? `Retrying in ${secondsUntilRetry}s.` : "Retrying soon.";
 
    return (
-      <RosterOverlayState title={title} detail={detail} icon="fa-solid fa-triangle-exclamation" role="alert">
+      <WeekOverlayState title={title} detail={detail} icon="fa-solid fa-triangle-exclamation" role="alert">
          {canRetry ? <strong className="roster-overlay-state__retry">{retryText}</strong> : null}
          <details className="roster-overlay-state__log">
             <summary>Error log</summary>
             <p>Error: {log}</p>
          </details>
-      </RosterOverlayState>
+      </WeekOverlayState>
    );
 }
 
@@ -75,7 +75,7 @@ export function BearerTokenState({ token, isSaving, onTokenChange, onSubmit }: B
    };
 
    return (
-      <RosterOverlayState
+      <WeekOverlayState
          title="Bearer token required"
          detail="Paste your OSIRIS bearer token to load the roster. You can change this any time from settings."
          icon="fa-solid fa-key"
@@ -100,6 +100,6 @@ export function BearerTokenState({ token, isSaving, onTokenChange, onSubmit }: B
                </button>
             </div>
          </form>
-      </RosterOverlayState>
+      </WeekOverlayState>
    );
 }

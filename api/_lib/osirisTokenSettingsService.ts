@@ -2,7 +2,7 @@ import { buildClearOsirisTokenCookieHeader, buildOsirisTokenCookieHeader } from 
 import { createEncryptedOsirisTokenCookieValue, hasOsirisTokenCookie, readOsirisTokenFromCookie } from "./osirisTokenCookie.js";
 import { ApiError } from "./errors.js";
 import { getCookieSecret, getDefaultOsirisToken, isProduction, normalizeBearerToken } from "./osirisConfig.js";
-import type { OsirisTokenSettings } from "../../shared/roster.js";
+import type { OsirisTokenSettings } from "../../shared/weeks.js";
 
 export interface OsirisTokenSettingsResult {
    settings: OsirisTokenSettings;

@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { readBrowserStorage, writeBrowserStorage } from "../lib/browserStorage";
-import type { ViewMode } from "../types/roster";
+import type { ViewMode } from "../types/weeks";
 
 const STORAGE_KEY = "roster-view-mode";
 const MOBILE_VIEW_MODE_MEDIA_QUERY = "(max-width: 640px)";

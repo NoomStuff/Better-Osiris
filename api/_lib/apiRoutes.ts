@@ -1,7 +1,7 @@
-import type { OsirisTokenSettings } from "../../shared/roster.js";
+import type { OsirisTokenSettings } from "../../shared/weeks.js";
 import { toApiError, toApiErrorPayload } from "./errors.js";
 import { clearOsirisTokenSetting, getOsirisTokenSettings, saveOsirisTokenSetting } from "./osirisTokenSettingsService.js";
-import { loadRosterWeeks, type RosterWeeksRequest } from "./rosterWeeksService.js";
+import { loadWeekBatch, type WeeksRequest } from "./weeksService.js";
 
 export interface ApiRouteResponse<TPayload = unknown> {
    statusCode: number;
@@ -9,9 +9,9 @@ export interface ApiRouteResponse<TPayload = unknown> {
    headers?: Record<string, string | string[]>;
 }
 
-export async function getRosterWeeksRoute(request: RosterWeeksRequest): Promise<ApiRouteResponse> {
+export async function getRosterWeeksRoute(request: WeeksRequest): Promise<ApiRouteResponse> {
    try {
-      return { statusCode: 200, payload: await loadRosterWeeks(request) };
+      return { statusCode: 200, payload: await loadWeekBatch(request) };
    } catch (error) {
       return errorResponse(error, "The roster could not be loaded.");
    }

@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { normalizeRosterWeeksResponse } from "./osirisRosterNormalizer.js";
+import { normalizeWeeksResponse } from "./osirisRosterNormalizer.js";
 import type { OsirisRosterResponse } from "./osirisClient.js";
 
 void describe("OSIRIS roster normalizer", () => {
@@ -50,23 +50,23 @@ void describe("OSIRIS roster normalizer", () => {
          ],
       } satisfies OsirisRosterResponse;
 
-      const weeks = normalizeRosterWeeksResponse(rawResponse, 3);
+      const weeks = normalizeWeeksResponse(rawResponse, 3);
       const firstWeek = weeks[0];
       const secondWeek = weeks[1];
       assert.ok(firstWeek);
       assert.ok(secondWeek);
 
-      const firstLesson = firstWeek.lessons[0];
-      assert.ok(firstLesson);
+      const firstClass = firstWeek.classes[0];
+      assert.ok(firstClass);
 
       assert.equal(weeks.length, 2);
       assert.equal(firstWeek.week.offset, 3);
       assert.equal(secondWeek.week.offset, 4);
-      assert.equal(firstLesson.title, sourceTitle);
-      assert.equal(firstLesson.subject, sourceSubject);
-      assert.equal(firstLesson.description, sourceDescription);
-      assert.equal(firstLesson.start, "2026-06-16T09:00:00");
-      assert.equal(firstLesson.teacher, sourceTeacher);
+      assert.equal(firstClass.title, sourceTitle);
+      assert.equal(firstClass.subject, sourceSubject);
+      assert.equal(firstClass.description, sourceDescription);
+      assert.equal(firstClass.start, "2026-06-16T09:00:00");
+      assert.equal(firstClass.teacher, sourceTeacher);
    });
 
    void it("does not treat the actueel flag as a cancellation status", () => {
@@ -104,10 +104,10 @@ void describe("OSIRIS roster normalizer", () => {
          ],
       } satisfies OsirisRosterResponse;
 
-      const lesson = normalizeRosterWeeksResponse(rawResponse, 0)[0]?.lessons[0];
-      assert.ok(lesson);
-      assert.equal(lesson.status, "scheduled");
-      assert.equal(lesson.description, "Description - Extra detail");
+      const schoolClass = normalizeWeeksResponse(rawResponse, 0)[0]?.classes[0];
+      assert.ok(schoolClass);
+      assert.equal(schoolClass.status, "scheduled");
+      assert.equal(schoolClass.description, "Description - Extra detail");
    });
 
    void it("uses cancellation text from any explicit status field", () => {
@@ -147,8 +147,8 @@ void describe("OSIRIS roster normalizer", () => {
          ],
       } satisfies OsirisRosterResponse;
 
-      const lesson = normalizeRosterWeeksResponse(rawResponse, 0)[0]?.lessons[0];
-      assert.ok(lesson);
-      assert.equal(lesson.status, "cancelled");
+      const schoolClass = normalizeWeeksResponse(rawResponse, 0)[0]?.classes[0];
+      assert.ok(schoolClass);
+      assert.equal(schoolClass.status, "cancelled");
    });
 });

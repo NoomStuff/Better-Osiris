@@ -58,18 +58,18 @@ void describe("GET /api/roster/weeks", () => {
       const payload = JSON.parse(response.body) as {
          offset: number;
          limit: number;
-         weeks: { week: { offset: number; number: number }; lessons: { title: string; teacher: string }[] }[];
+         weeks: { week: { offset: number; number: number }; classes: { title: string; teacher: string }[] }[];
       };
       const firstWeek = payload.weeks[0];
       assert.ok(firstWeek);
-      const firstLesson = firstWeek.lessons[0];
-      assert.ok(firstLesson);
+      const firstClass = firstWeek.classes[0];
+      assert.ok(firstClass);
 
       assert.equal(payload.offset, 2);
       assert.equal(payload.limit, 5);
       assert.equal(firstWeek.week.offset, 2);
-      assert.equal(firstLesson.title, "SOURCE_TITLE");
-      assert.equal(firstLesson.teacher, "SOURCE_TEACHER");
+      assert.equal(firstClass.title, "SOURCE_TITLE");
+      assert.equal(firstClass.teacher, "SOURCE_TEACHER");
       assert.equal(response.headers.get("cache-control"), "private, no-store, max-age=0");
       assert.equal(response.headers.get("vary"), "Cookie");
 

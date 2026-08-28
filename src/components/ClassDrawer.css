@@ -1,0 +1,215 @@
+.class-panel {
+   z-index: 30;
+   padding: 18px;
+}
+
+.class-panel__backdrop {
+   background: rgba(2, 4, 8, 0.54);
+   animation: panel-fade 220ms ease both;
+}
+
+.class-panel[data-closing="true"] .class-panel__backdrop {
+   animation: panel-fade-out 220ms ease both;
+}
+
+.class-panel__card {
+   display: grid;
+   grid-template-rows: auto minmax(0, 1fr);
+   width: min(760px, calc(100vw - 36px));
+   max-height: min(78vh, 680px);
+   overflow: hidden;
+   border-radius: 24px 24px 18px 18px;
+   border: 2px solid var(--line);
+   background: radial-gradient(circle at top right, rgba(22, 106, 170, 0.12), transparent 28%), rgba(12, 15, 24, 0.38);
+   box-shadow: var(--shadow);
+   backdrop-filter: blur(24px);
+   animation: panel-rise 420ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.class-panel[data-closing="true"] .class-panel__card {
+   animation: panel-drop 220ms ease both;
+}
+
+.class-panel__close {
+   margin-left: auto;
+}
+
+.class-panel__header {
+   display: flex;
+   flex-direction: row;
+   justify-content: space-between;
+   gap: 16px;
+   padding: 24px 24px 18px;
+   border-bottom: 1px solid var(--line);
+   touch-action: pan-y;
+}
+
+.class-panel__title-line {
+   display: flex;
+   flex-wrap: wrap;
+   align-items: center;
+   gap: 12px;
+}
+
+.class-panel__title h3 {
+   margin: 0;
+   font-size: 1.45rem;
+}
+
+.class-panel__status {
+   display: inline-flex;
+   align-items: center;
+   min-height: 24px;
+   padding: 3px 9px;
+   border: 1px solid currentColor;
+   border-radius: 999px;
+   font-size: 0.72rem;
+   font-weight: 750;
+   letter-spacing: 0.08em;
+   line-height: 1;
+   text-transform: uppercase;
+}
+
+.class-panel__status--changed {
+   color: var(--warning);
+   background: rgba(255, 191, 105, 0.1);
+}
+
+.class-panel__status--cancelled {
+   color: var(--danger);
+   background: rgba(var(--danger-rgb), 0.1);
+}
+
+.class-panel__title p {
+   margin: 0;
+   color: var(--text-dim);
+}
+
+.class-panel__details {
+   min-height: 0;
+   margin: 0;
+   overflow: auto;
+   overscroll-behavior: contain;
+   padding: 18px 24px 24px;
+   display: grid;
+   grid-template-columns: repeat(2, minmax(0, 1fr));
+   gap: 16px;
+}
+
+.class-panel__details div {
+   padding-bottom: 14px;
+   border-bottom: 1px solid var(--line);
+}
+
+.class-panel__details dt {
+   margin-bottom: 4px;
+   color: var(--text-muted);
+   font-size: 0.82rem;
+   text-transform: uppercase;
+   letter-spacing: 0.1em;
+}
+
+.class-panel__details dd {
+   margin: 0;
+   color: var(--text-strong);
+}
+
+.class-panel__details .class-panel__field--changed {
+   border-bottom-color: rgba(255, 191, 105, 0.5);
+}
+
+.class-panel__change-values {
+   display: flex;
+   flex-wrap: wrap;
+   align-items: center;
+   gap: 10px;
+   min-width: 0;
+}
+
+.class-panel__change-values s {
+   color: var(--text-muted);
+   text-decoration-color: var(--danger);
+   text-decoration-thickness: 2px;
+}
+
+.class-panel__change-values i {
+   flex: 0 0 auto;
+   color: var(--warning);
+   font-size: 0.72rem;
+}
+
+.class-panel__change-values strong {
+   color: var(--text-strong);
+}
+
+@keyframes panel-rise {
+   from {
+      opacity: 0;
+      transform: translateY(34px) scale(0.985);
+   }
+
+   to {
+      opacity: 1;
+      transform: translateY(0) scale(1);
+   }
+}
+
+@keyframes panel-fade {
+   from {
+      opacity: 0;
+   }
+
+   to {
+      opacity: 1;
+   }
+}
+
+@keyframes panel-fade-out {
+   from {
+      opacity: 1;
+   }
+
+   to {
+      opacity: 0;
+   }
+}
+
+@keyframes panel-drop {
+   from {
+      opacity: 1;
+      transform: translateY(0) scale(1);
+   }
+
+   to {
+      opacity: 0;
+      transform: translateY(24px) scale(0.99);
+   }
+}
+
+@media (max-width: 640px) {
+   .class-panel {
+      padding: 10px;
+   }
+
+   .class-panel__card {
+      width: 100%;
+      max-height: 78vh;
+   }
+
+   .class-panel__header {
+      padding: 20px 20px 16px;
+   }
+
+   .class-panel__details {
+      grid-template-columns: 1fr;
+      gap: 14px;
+      padding: 16px 20px 20px;
+   }
+}
+
+@media (prefers-reduced-motion: reduce) {
+   .class-panel__backdrop,
+   .class-panel__card {
+      animation: none;
+   }
+}

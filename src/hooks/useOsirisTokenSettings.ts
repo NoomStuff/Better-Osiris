@@ -1,16 +1,16 @@
 import { useCallback, useEffect, useState } from "react";
 import { clearOsirisToken, fetchOsirisTokenSettings, saveOsirisToken, type OsirisTokenSettings } from "../api/settings";
 import { notifyError } from "../lib/notyf";
-import { clearRosterBrowserCache } from "../lib/rosterCache";
+import { clearWeekBrowserCache } from "../lib/weekCache";
 
 export function useOsirisTokenSettings() {
    const [settings, setSettings] = useState<OsirisTokenSettings | null>(null);
    const [isInitialLoading, setIsInitialLoading] = useState(true);
    const [isMutating, setIsMutating] = useState(false);
-   const [rosterResetKey, setRosterResetKey] = useState(0);
+   const [weeksResetKey, setRosterResetKey] = useState(0);
 
    const applySettings = useCallback((next: OsirisTokenSettings) => {
-      clearRosterBrowserCache();
+      clearWeekBrowserCache();
       setSettings(next);
       setRosterResetKey((current) => current + 1);
       return next;
@@ -23,14 +23,14 @@ export function useOsirisTokenSettings() {
          .then((next) => {
             if (!isStale) {
                if (!next.hasBearerToken) {
-                  clearRosterBrowserCache();
+                  clearWeekBrowserCache();
                }
                setSettings(next);
             }
          })
          .catch((error: unknown) => {
             if (!isStale) {
-               clearRosterBrowserCache();
+               clearWeekBrowserCache();
                setSettings({ hasCustomToken: false, hasBearerToken: false });
                notifyError(error, "Failed to load bearer token settings.");
             }
@@ -53,7 +53,7 @@ export function useOsirisTokenSettings() {
          setSettings((current) => {
             const next = current ? { ...current, hasCustomToken: false } : current;
             if (next && !next.hasBearerToken) {
-               clearRosterBrowserCache();
+               clearWeekBrowserCache();
             }
             return next;
          });
@@ -86,7 +86,7 @@ export function useOsirisTokenSettings() {
       hasBearerToken: settings?.hasBearerToken === true,
       isInitialLoading,
       isMutating,
-      rosterResetKey,
+      weeksResetKey,
       saveToken,
       clearToken,
       refreshAfterAuthError,

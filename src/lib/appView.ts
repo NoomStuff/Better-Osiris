@@ -1,4 +1,4 @@
-import type { GridZoom, ViewMode } from "../types/roster";
+import type { GridZoom, ViewMode } from "../types/weeks";
 
 export const GRID_ZOOM_ORDER = ["hour", "half", "quarter"] as const satisfies readonly GridZoom[];
 

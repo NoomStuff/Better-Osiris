@@ -1,6 +1,6 @@
 import { APP_SHORTCUTS } from "../lib/appShortcuts";
 import { getAdjacentGridZoom, getToolbarActionActivationId } from "../lib/appView";
-import type { GridZoom, ViewMode } from "../types/roster";
+import type { GridZoom, ViewMode } from "../types/weeks";
 import { useKeyboardShortcuts, type KeyboardShortcut } from "./useKeyboardShortcuts";
 
 const FUTURE_WEEK_KEYS = ["1", "2", "3", "4", "5", "6", "7", "8", "9"] as const;

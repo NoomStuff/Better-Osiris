@@ -1,4 +1,4 @@
-import type { Lesson, LessonSnapshot, LessonStatus, OsirisTokenSettings, RosterBatchResponse, RosterResponse, RosterWeek } from "./roster.js";
+import type { Class, ClassSnapshot, ClassStatus, OsirisTokenSettings, WeekBatch, Week, WeekMeta } from "./weeks.js";
 
 export interface ApiErrorPayload {
    error: string;
@@ -32,24 +32,24 @@ export function parseOsirisTokenSettings(value: unknown): OsirisTokenSettings {
    };
 }
 
-export function parseRosterBatchResponse(value: unknown): RosterBatchResponse {
+export function parseWeekBatch(value: unknown): WeekBatch {
    const record = readRecord(value, "roster response");
    return {
       offset: readInteger(record["offset"], "offset"),
       limit: readInteger(record["limit"], "limit"),
-      weeks: readArray(record["weeks"], "weeks").map((week, index) => parseRosterResponse(week, `weeks[${index}]`)),
+      weeks: readArray(record["weeks"], "weeks").map((week, index) => parseWeek(week, `weeks[${index}]`)),
    };
 }
 
-export function parseRosterResponse(value: unknown, path = "roster response"): RosterResponse {
+export function parseWeek(value: unknown, path = "roster response"): Week {
    const record = readRecord(value, path);
    return {
-      week: parseRosterWeek(record["week"], `${path}.week`),
-      lessons: readArray(record["lessons"], `${path}.lessons`).map((lesson, index) => parseLesson(lesson, `${path}.lessons[${index}]`)),
+      week: parseWeekMeta(record["week"], `${path}.week`),
+      classes: readArray(record["classes"], `${path}.classes`).map((schoolClass, index) => parseClass(schoolClass, `${path}.classes[${index}]`)),
    };
 }
 
-function parseRosterWeek(value: unknown, path: string): RosterWeek {
+function parseWeekMeta(value: unknown, path: string): WeekMeta {
    const record = readRecord(value, path);
    return {
       offset: readInteger(record["offset"], `${path}.offset`),
@@ -59,18 +59,18 @@ function parseRosterWeek(value: unknown, path: string): RosterWeek {
    };
 }
 
-export function parseLesson(value: unknown, path = "lesson"): Lesson {
+export function parseClass(value: unknown, path = "schoolClass"): Class {
    const record = readRecord(value, path);
    const previous = record["previous"];
-   const lesson = parseLessonSnapshot(record, path);
+   const schoolClass = parseClassSnapshot(record, path);
    return {
-      ...lesson,
-      ...(previous === undefined ? {} : { previous: parseLessonSnapshot(readRecord(previous, `${path}.previous`), `${path}.previous`) }),
+      ...schoolClass,
+      ...(previous === undefined ? {} : { previous: parseClassSnapshot(readRecord(previous, `${path}.previous`), `${path}.previous`) }),
    };
 }
 
-function parseLessonSnapshot(record: Record<string, unknown>, path: string): LessonSnapshot {
-   const snapshot: LessonSnapshot = {
+function parseClassSnapshot(record: Record<string, unknown>, path: string): ClassSnapshot {
+   const snapshot: ClassSnapshot = {
       id: readString(record["id"], `${path}.id`),
       title: readString(record["title"], `${path}.title`),
       subject: readString(record["subject"], `${path}.subject`),
@@ -80,19 +80,19 @@ function parseLessonSnapshot(record: Record<string, unknown>, path: string): Les
       room: readString(record["room"], `${path}.room`),
       location: readString(record["location"], `${path}.location`),
       description: readString(record["description"], `${path}.description`),
-      status: readLessonStatus(record["status"], `${path}.status`),
+      status: readClassStatus(record["status"], `${path}.status`),
    };
    if (snapshot.end <= snapshot.start) {
-      throw invalid(path, "a lesson with an end after its start");
+      throw invalid(path, "a schoolClass with an end after its start");
    }
    return snapshot;
 }
 
-function readLessonStatus(value: unknown, path: string): LessonStatus {
+function readClassStatus(value: unknown, path: string): ClassStatus {
    if (value === "scheduled" || value === "changed" || value === "cancelled") {
       return value;
    }
-   throw invalid(path, "a known lesson status");
+   throw invalid(path, "a known schoolClass status");
 }
 
 function readRecord(value: unknown, path: string): Record<string, unknown> {

@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { SyntheticEvent } from "react";
 import type { OsirisTokenSettings } from "../api/settings";
-import type { DevLessonStatusPreviewMode } from "../lib/devRosterStatusPreview";
+import type { DevClassStatusPreviewMode } from "../lib/devStatusPreview";
 import { notifyError, notifySuccess, notifyWarning } from "../lib/notyf";
 import { OSIRIS_BEARER_TOKEN_HELP_URL } from "../lib/osirisTokenHelp";
 import { ConfirmDialog } from "./ConfirmDialog";
@@ -15,7 +15,7 @@ interface SettingsDialogProps {
    isDevToolsEnabled: boolean;
    perceivedNow: Date;
    timeOverride: Date | null;
-   statusPreviewMode: DevLessonStatusPreviewMode;
+   statusPreviewMode: DevClassStatusPreviewMode;
    tokenSettings: OsirisTokenSettings | null;
    isTokenLoading: boolean;
    onClose: () => void;
@@ -23,7 +23,7 @@ interface SettingsDialogProps {
    onClearToken: () => Promise<OsirisTokenSettings>;
    onToggleDevTools: (enabled: boolean) => void;
    onChangeTimeOverride: (date: Date | null) => void;
-   onChangeStatusPreviewMode: (mode: DevLessonStatusPreviewMode) => void;
+   onChangeStatusPreviewMode: (mode: DevClassStatusPreviewMode) => void;
 }
 
 const IS_DEV_SERVER = import.meta.env.DEV;
@@ -109,9 +109,9 @@ export function SettingsDialog({
    return (
       <>
          <OverlayPanel
-            className="settings-dialog lesson-panel"
-            backdropClassName="lesson-panel__backdrop"
-            surfaceClassName="settings-dialog__panel lesson-panel__card"
+            className="settings-dialog class-panel"
+            backdropClassName="class-panel__backdrop"
+            surfaceClassName="settings-dialog__panel class-panel__card"
             closeLabel="Close settings"
             labelledBy="settings-title"
             placement="bottom"
@@ -120,12 +120,12 @@ export function SettingsDialog({
             swipeIgnoreSelector=".settings-dialog__content"
             onClose={closeSettings}
          >
-            <header className="settings-dialog__header lesson-panel__header">
-               <div className="lesson-panel__title">
+            <header className="settings-dialog__header class-panel__header">
+               <div className="class-panel__title">
                   <p className="eyebrow">Settings</p>
                   <h2 id="settings-title">Preferences</h2>
                </div>
-               <IconButton className="lesson-panel__close" icon="fa-solid fa-xmark" label="Close settings" tooltipPlacement="bottom" onClick={closeSettings} />
+               <IconButton className="class-panel__close" icon="fa-solid fa-xmark" label="Close settings" tooltipPlacement="bottom" onClick={closeSettings} />
             </header>
 
             <div className="settings-dialog__content">

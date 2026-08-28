@@ -1,5 +1,5 @@
-import type { DevLessonStatusPreviewMode } from "../lib/devRosterStatusPreview";
-import { DEV_LESSON_STATUS_PREVIEW_MODES } from "../lib/devRosterStatusPreview";
+import type { DevClassStatusPreviewMode } from "../lib/devStatusPreview";
+import { DEV_CLASS_STATUS_PREVIEW_MODES } from "../lib/devStatusPreview";
 
 const DAY_MINUTES = 24 * 60;
 const TIME_SLIDER_STEP_MINUTES = 15;
@@ -8,10 +8,10 @@ interface DevToolsSettingsProps {
    isEnabled: boolean;
    perceivedNow: Date;
    timeOverride: Date | null;
-   statusPreviewMode: DevLessonStatusPreviewMode;
+   statusPreviewMode: DevClassStatusPreviewMode;
    onToggle: (enabled: boolean) => void;
    onChangeTimeOverride: (date: Date | null) => void;
-   onChangeStatusPreviewMode: (mode: DevLessonStatusPreviewMode) => void;
+   onChangeStatusPreviewMode: (mode: DevClassStatusPreviewMode) => void;
 }
 
 export function DevToolsSettings({
@@ -110,9 +110,9 @@ export function DevToolsSettings({
                </div>
 
                <div className="devtools-option">
-                  <span className="devtools-option__label">Lesson diff preview</span>
-                  <div className="settings-segmented-control" role="group" aria-label="Lesson diff preview">
-                     {DEV_LESSON_STATUS_PREVIEW_MODES.map((mode) => (
+                  <span className="devtools-option__label">Class diff preview</span>
+                  <div className="settings-segmented-control" role="group" aria-label="Class diff preview">
+                     {DEV_CLASS_STATUS_PREVIEW_MODES.map((mode) => (
                         <button
                            type="button"
                            key={mode.id}

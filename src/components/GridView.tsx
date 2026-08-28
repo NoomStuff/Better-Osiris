@@ -1,16 +1,16 @@
 import { useEffect, useRef, useState, type CSSProperties, type MouseEvent } from "react";
 import { dayShortLabel, fullDayLabel, getMinutesFromMidnight, timeLabel, toDayKey } from "../lib/date";
 import { clamp } from "../lib/clamp";
-import { DETAILS_SEPARATOR, getLessonLocationLabel } from "../lib/lessonFormat";
-import { WORKDAY_END, WORKDAY_START } from "../lib/rosterLayout";
-import type { DayGroup, GridZoom, Lesson } from "../types/roster";
+import { DETAILS_SEPARATOR, getClassLocationLabel } from "../lib/classFormat";
+import { WORKDAY_END, WORKDAY_START } from "../lib/weekLayout";
+import type { Day, GridZoom, Class } from "../types/weeks";
 import "./GridView.css";
 
 interface GridViewProps {
-   groups: DayGroup[];
+   days: Day[];
    zoom: GridZoom;
    now: Date;
-   onSelectLesson: (lesson: Lesson) => void;
+   onSelectClass: (schoolClass: Class) => void;
 }
 
 const zoomOptions = [
@@ -23,7 +23,7 @@ const WORKDAY_RANGE = WORKDAY_END - WORKDAY_START;
 const BASE_INTERVAL = zoomOptions[2].interval;
 const TIME_MARKS = Array.from({ length: Math.floor(WORKDAY_RANGE / BASE_INTERVAL) + 1 }, (_, index) => WORKDAY_START + index * BASE_INTERVAL);
 const TIME_LABELS = TIME_MARKS.filter((minutes) => minutes !== WORKDAY_START && minutes !== WORKDAY_END);
-/** Below this rendered height a lesson switches to the compact one-line layout. */
+/** Below this rendered height a schoolClass switches to the compact one-line layout. */
 const COMPACT_HEIGHT_PX = 85;
 /** Below this rendered height even the compact layout drops the room label. */
 const TINY_HEIGHT_PX = 64;
@@ -40,7 +40,7 @@ function getOffsetPercent(minutes: number) {
    return ((minutes - WORKDAY_START) / WORKDAY_RANGE) * 100;
 }
 
-export function GridView({ groups, zoom: zoomId, now, onSelectLesson }: GridViewProps) {
+export function GridView({ days, zoom: zoomId, now, onSelectClass }: GridViewProps) {
    const [hoverGuide, setHoverGuide] = useState<{ top: number; label: string } | null>(null);
    const [animateZoom, setAnimateZoom] = useState(false);
    const [contentHeight, setContentHeight] = useState(0);
@@ -50,7 +50,7 @@ export function GridView({ groups, zoom: zoomId, now, onSelectLesson }: GridView
    const zoom = zoomOptions.find((option) => option.id === zoomId) ?? zoomOptions[0];
    const todayKey = toDayKey(now);
    const nowMinutes = getMinutesFromMidnight(now);
-   const todayIndex = groups.findIndex((group) => group.key === todayKey);
+   const todayIndex = days.findIndex((group) => group.key === todayKey);
    const showNowLine = todayIndex >= 0 && nowMinutes >= WORKDAY_START && nowMinutes <= WORKDAY_END;
    const nowLineTop = getOffsetPercent(clamp(nowMinutes, WORKDAY_START, WORKDAY_END));
 
@@ -107,13 +107,13 @@ export function GridView({ groups, zoom: zoomId, now, onSelectLesson }: GridView
 
    return (
       <div className="grid-shell" role="region" aria-label="Weekly timetable grid">
-         <div className="grid-header" style={{ "--grid-day-count": groups.length } as GridStyle}>
+         <div className="grid-header" style={{ "--grid-day-count": days.length } as GridStyle}>
             <div className="grid-header__time" />
-            {groups.map((group) => (
+            {days.map((group) => (
                <div
                   className="grid-header__day"
                   data-today={group.key === todayKey}
-                  data-empty={group.lessons.length === 0}
+                  data-empty={group.classes.length === 0}
                   id={`grid-day-${group.key}`}
                   key={group.key}
                >
@@ -153,7 +153,7 @@ export function GridView({ groups, zoom: zoomId, now, onSelectLesson }: GridView
                   ))}
                </div>
 
-               <div className="grid-days" style={{ "--grid-day-count": groups.length } as GridStyle}>
+               <div className="grid-days" style={{ "--grid-day-count": days.length } as GridStyle}>
                   {showNowLine ? (
                      <div
                         aria-hidden="true"
@@ -164,7 +164,7 @@ export function GridView({ groups, zoom: zoomId, now, onSelectLesson }: GridView
                      />
                   ) : null}
 
-                  {groups.map((group) => (
+                  {days.map((group) => (
                      <div className="grid-day-column" key={group.key} role="group" aria-labelledby={`grid-day-${group.key}`}>
                         {TIME_MARKS.map((minutes) => (
                            <div
@@ -177,58 +177,58 @@ export function GridView({ groups, zoom: zoomId, now, onSelectLesson }: GridView
                            />
                         ))}
 
-                        {group.lessons.map((lesson) => {
-                           const start = getMinutesFromMidnight(lesson.startDate);
-                           const end = getMinutesFromMidnight(lesson.endDate);
+                        {group.classes.map((schoolClass) => {
+                           const start = getMinutesFromMidnight(schoolClass.startDate);
+                           const end = getMinutesFromMidnight(schoolClass.endDate);
                            const duration = end - start;
                            const top = getOffsetPercent(start);
                            const height = (duration / WORKDAY_RANGE) * 100;
-                           const width = `calc(${100 / lesson.overlapCount}% - 5px)`;
-                           const left = `calc(${(100 / lesson.overlapCount) * lesson.overlapIndex}% + 2.5px)`;
+                           const width = `calc(${100 / schoolClass.overlapCount}% - 5px)`;
+                           const left = `calc(${(100 / schoolClass.overlapCount) * schoolClass.overlapIndex}% + 2.5px)`;
                            const visibleHeight = (duration / WORKDAY_RANGE) * contentHeight;
                            const isCompact = visibleHeight > 0 && visibleHeight < COMPACT_HEIGHT_PX;
                            const densityClass = isCompact ? "is-tight" : "is-roomy";
-                           const timeRange = `${timeLabel.format(lesson.startDate)}-${timeLabel.format(lesson.endDate)}`;
-                           const classLabel = lesson.title || lesson.subject;
-                           const subtitleLabel = lesson.subject;
-                           const roomLocationLabel = getLessonLocationLabel(lesson);
+                           const timeRange = `${timeLabel.format(schoolClass.startDate)}-${timeLabel.format(schoolClass.endDate)}`;
+                           const classLabel = schoolClass.title || schoolClass.subject;
+                           const subtitleLabel = schoolClass.subject;
+                           const roomLocationLabel = getClassLocationLabel(schoolClass);
                            const showLocation = !isCompact && Boolean(roomLocationLabel);
                            const isTiny = visibleHeight > 0 && visibleHeight < TINY_HEIGHT_PX;
                            const compactParts = [timeRange, roomLocationLabel].filter(Boolean);
 
-                           const lessonLabel = [
+                           const accessibleLabel = [
                               classLabel,
                               subtitleLabel,
-                              fullDayLabel.format(lesson.startDate),
+                              fullDayLabel.format(schoolClass.startDate),
                               timeRange,
-                              lesson.teacher,
+                              schoolClass.teacher,
                               roomLocationLabel,
-                              lesson.status === "scheduled" ? "" : lesson.status,
+                              schoolClass.status === "scheduled" ? "" : schoolClass.status,
                            ]
                               .filter(Boolean)
                               .join(", ");
 
                            return (
                               <button
-                                 className={`grid-lesson ${densityClass} ${isCompact ? "is-compact" : ""} ${isTiny ? "is-tiny" : ""} status-${lesson.status}`}
+                                 className={`grid-class ${densityClass} ${isCompact ? "is-compact" : ""} ${isTiny ? "is-tiny" : ""} status-${schoolClass.status}`}
                                  type="button"
-                                 key={lesson.id}
-                                 onClick={() => onSelectLesson(lesson)}
+                                 key={schoolClass.id}
+                                 onClick={() => onSelectClass(schoolClass)}
                                  style={{
                                     top: `calc(${top}% + 2.5px)`,
                                     height: `calc(${height}% - 5px)`,
                                     width,
                                     left,
                                  }}
-                                 title={lesson.title}
-                                 aria-label={lessonLabel}
+                                 title={schoolClass.title}
+                                 aria-label={accessibleLabel}
                               >
                                  <strong>{classLabel}</strong>
-                                 {subtitleLabel ? <span className="grid-lesson__title">{subtitleLabel}</span> : null}
-                                 <span className="grid-lesson__meta">
-                                    {showLocation ? <small className="grid-lesson__meta-place">{roomLocationLabel}</small> : null}
-                                    <small className="grid-lesson__meta-time">{timeRange}</small>
-                                    <small className="grid-lesson__meta-compact">{compactParts.join(DETAILS_SEPARATOR)}</small>
+                                 {subtitleLabel ? <span className="grid-class__title">{subtitleLabel}</span> : null}
+                                 <span className="grid-class__meta">
+                                    {showLocation ? <small className="grid-class__meta-place">{roomLocationLabel}</small> : null}
+                                    <small className="grid-class__meta-time">{timeRange}</small>
+                                    <small className="grid-class__meta-compact">{compactParts.join(DETAILS_SEPARATOR)}</small>
                                  </span>
                               </button>
                            );

@@ -2,11 +2,11 @@ import { useCallback, useEffect, useMemo, useState, type AnimationEvent } from "
 import { AgendaView } from "./components/AgendaView";
 import { AppToolbar } from "./components/AppToolbar";
 import { GridView } from "./components/GridView";
-import { LessonDrawer } from "./components/LessonDrawer";
-import { BearerTokenState, ErrorState, LoadingState, RosterOverlayState } from "./components/LoadingState";
+import { ClassDrawer } from "./components/ClassDrawer";
+import { BearerTokenState, ErrorState, LoadingState, WeekOverlayState } from "./components/LoadingState";
 import { SettingsDialog } from "./components/SettingsDialog";
 import { WeekNavigator } from "./components/WeekNavigator";
-import { useDevRosterPreview } from "./hooks/useDevRosterPreview";
+import { useDevPreview } from "./hooks/useDevPreview";
 import { useAppKeyboardShortcuts } from "./hooks/useAppKeyboardShortcuts";
 import { getPerceivedDay, useAgendaState } from "./hooks/useAgendaState";
 import { useOsirisTokenSettings } from "./hooks/useOsirisTokenSettings";
@@ -14,24 +14,24 @@ import { useViewportMetrics } from "./hooks/useViewportMetrics";
 import { useViewModePreference } from "./hooks/useViewModePreference";
 import { useWeekSwipeNavigation } from "./hooks/useWeekSwipeNavigation";
 import { getAdjacentGridZoom, GRID_ZOOM_ORDER } from "./lib/appView";
-import { applyDevLessonStatusPreview } from "./lib/devRosterStatusPreview";
-import { useRosterWeek } from "./hooks/useRosterWeek";
+import { applyDevClassStatusPreview } from "./lib/devStatusPreview";
+import { useWeeks } from "./hooks/useWeeks";
 import { toDayKey } from "./lib/date";
-import { getEmptyWeekMessage } from "./lib/rosterFlavor";
+import { getEmptyWeekMessage } from "./lib/flavor";
 import { ErrorBoundary } from "./components/ErrorBoundary";
 import { notifyError, notifySuccess } from "./lib/notyf";
-import { requestRosterNotificationPermission } from "./lib/rosterNotifications";
-import type { GridZoom, Lesson, RosterWeek, ViewMode } from "./types/roster";
+import { requestNotificationPermission } from "./lib/classNotifications";
+import type { GridZoom, Class, WeekMeta, ViewMode } from "./types/weeks";
 import "./styles/App.css";
 
 const IS_DEV_SERVER = import.meta.env.DEV;
 
 type WeekTransitionDirection = "default" | "previous" | "next" | "settled";
 
-function EmptyWeekState({ week }: { week: RosterWeek }) {
+function EmptyWeekState({ week }: { week: WeekMeta }) {
    const message = getEmptyWeekMessage(week.start);
 
-   return <RosterOverlayState icon={message.icon} title={message.title} detail={message.detail} />;
+   return <WeekOverlayState icon={message.icon} title={message.title} detail={message.detail} />;
 }
 
 export default function App() {
@@ -39,31 +39,31 @@ export default function App() {
    const [weekTransitionDirection, setWeekTransitionDirection] = useState<WeekTransitionDirection>("default");
    const [viewMode, setViewMode] = useViewModePreference();
    const [gridZoom, setGridZoom] = useState<GridZoom>("hour");
-   const [selectedLessonId, setSelectedLessonId] = useState<string | null>(null);
+   const [selectedClassId, setSelectedClassId] = useState<string | null>(null);
    const [isSettingsOpen, setIsSettingsOpen] = useState(false);
    const [bearerTokenInput, setBearerTokenInput] = useState("");
-   const devPreview = useDevRosterPreview();
+   const devPreview = useDevPreview();
    const {
       settings: tokenSettings,
       hasBearerToken,
       isInitialLoading: isTokenSettingsLoading,
       isMutating: isTokenMutating,
-      rosterResetKey,
+      weeksResetKey,
       saveToken,
       clearToken,
       refreshAfterAuthError,
    } = useOsirisTokenSettings();
    useViewportMetrics();
-   const { canGoNext, canGoPrevious, data, error, isWeekNavigable, loading, retryCountdownMs, retrying, refreshing, title } = useRosterWeek(weekOffset, {
+   const { canGoNext, canGoPrevious, data, error, isWeekNavigable, loading, retryCountdownMs, retrying, refreshing, title } = useWeeks(weekOffset, {
       enabled: !isTokenSettingsLoading && hasBearerToken,
       clearCache: !isTokenSettingsLoading && !hasBearerToken,
-      resetKey: rosterResetKey,
+      resetKey: weeksResetKey,
    });
    const perceivedNow = devPreview.perceivedNow;
    const perceivedDayKey = toDayKey(perceivedNow);
    const perceivedDay = useMemo(() => getPerceivedDay(perceivedDayKey), [perceivedDayKey]);
    const displayedData = useMemo(
-      () => applyDevLessonStatusPreview(data, IS_DEV_SERVER && devPreview.isEnabled ? devPreview.statusPreviewMode : "none"),
+      () => applyDevClassStatusPreview(data, IS_DEV_SERVER && devPreview.isEnabled ? devPreview.statusPreviewMode : "none"),
       [data, devPreview.isEnabled, devPreview.statusPreviewMode]
    );
    const errorDetail = useMemo(() => {
@@ -79,7 +79,7 @@ export default function App() {
    }, [error, tokenSettings?.hasCustomToken]);
 
    useEffect(() => {
-      requestRosterNotificationPermission();
+      requestNotificationPermission();
    }, []);
 
    useEffect(() => {
@@ -90,7 +90,7 @@ export default function App() {
       void refreshAfterAuthError();
    }, [error?.isAuthRelated, refreshAfterAuthError]);
 
-   const { animateAgenda, collapseAllDays, expandAllDays, resetAgenda, toggleDay, visibleDayGroups, visibleExpandedDays } = useAgendaState(
+   const { animateAgenda, collapseAllDays, expandAllDays, resetAgenda, toggleDay, visibleDays, visibleExpandedDays } = useAgendaState(
       displayedData,
       weekOffset,
       perceivedDay
@@ -106,23 +106,23 @@ export default function App() {
 
          setWeekTransitionDirection(transitionDirection);
          setWeekOffset(next);
-         setSelectedLessonId(null);
+         setSelectedClassId(null);
          resetAgenda();
       },
       [resetAgenda, weekOffset]
    );
 
-   const selectedLesson: Lesson | null = useMemo(() => {
-      if (!displayedData || !selectedLessonId) {
+   const selectedClass: Class | null = useMemo(() => {
+      if (!displayedData || !selectedClassId) {
          return null;
       }
 
-      return displayedData.lessons.find((lesson) => lesson.id === selectedLessonId) ?? null;
-   }, [displayedData, selectedLessonId]);
+      return displayedData.classes.find((schoolClass) => schoolClass.id === selectedClassId) ?? null;
+   }, [displayedData, selectedClassId]);
 
-   const selectLesson = useCallback((lesson: Lesson) => {
+   const selectClass = useCallback((schoolClass: Class) => {
       setIsSettingsOpen(false);
-      setSelectedLessonId(lesson.id);
+      setSelectedClassId(schoolClass.id);
    }, []);
 
    const goPreviousWeek = useCallback(() => {
@@ -145,7 +145,7 @@ export default function App() {
 
    const handleCurrentWeek = useCallback(() => {
       if (weekOffset === 0) {
-         setSelectedLessonId(null);
+         setSelectedClassId(null);
          resetAgenda(true);
          return;
       }
@@ -157,7 +157,7 @@ export default function App() {
       updateWeekOffset(0);
    }, [isWeekNavigable, resetAgenda, updateWeekOffset, weekOffset]);
 
-   useWeekSwipeNavigation(!isSettingsOpen && selectedLesson === null, goPreviousWeek, goNextWeek);
+   useWeekSwipeNavigation(!isSettingsOpen && selectedClass === null, goPreviousWeek, goNextWeek);
 
    const handleWeekTransitionEnd = useCallback((event: AnimationEvent<HTMLElement>) => {
       if (event.currentTarget !== event.target) {
@@ -176,11 +176,11 @@ export default function App() {
    );
 
    const openSettings = useCallback(() => {
-      setSelectedLessonId(null);
+      setSelectedClassId(null);
       setIsSettingsOpen(true);
    }, []);
 
-   const closeLesson = useCallback(() => setSelectedLessonId(null), []);
+   const closeClass = useCallback(() => setSelectedClassId(null), []);
 
    const closeSettings = useCallback(() => setIsSettingsOpen(false), []);
 
@@ -237,7 +237,7 @@ export default function App() {
    );
 
    useAppKeyboardShortcuts({
-      enabled: !isSettingsOpen && selectedLesson === null,
+      enabled: !isSettingsOpen && selectedClass === null,
       viewMode,
       gridZoom,
       canGoPrevious,
@@ -256,7 +256,7 @@ export default function App() {
    });
 
    const hasDisplayedData = Boolean(displayedData);
-   const isVisuallyEmptyWeek = displayedData ? displayedData.lessons.length === 0 : true;
+   const isVisuallyEmptyWeek = displayedData ? displayedData.classes.length === 0 : true;
    const hasBlockingTokenState = isTokenSettingsLoading ? !hasDisplayedData : !hasBearerToken;
    const hasOverlayUnderlay = hasBlockingTokenState || loading || (Boolean(error) && !data) || isVisuallyEmptyWeek;
    const visibleGridZoom = hasOverlayUnderlay ? "hour" : gridZoom;
@@ -291,7 +291,7 @@ export default function App() {
             />
          );
       }
-      if (displayedData?.lessons.length === 0) {
+      if (displayedData?.classes.length === 0) {
          return <EmptyWeekState week={displayedData.week} />;
       }
       return null;
@@ -334,24 +334,24 @@ export default function App() {
                {viewMode === "agenda" ? (
                   <ErrorBoundary variant="view">
                      <AgendaView
-                        groups={visibleDayGroups}
+                        days={visibleDays}
                         expandedDays={visibleExpandedDays}
                         animate={animateAgenda}
                         now={perceivedNow}
                         onToggleDay={toggleDay}
-                        onSelectLesson={selectLesson}
+                        onSelectClass={selectClass}
                      />
                   </ErrorBoundary>
                ) : (
                   <ErrorBoundary variant="view">
-                     <GridView groups={visibleDayGroups} zoom={visibleGridZoom} now={perceivedNow} onSelectLesson={selectLesson} />
+                     <GridView days={visibleDays} zoom={visibleGridZoom} now={perceivedNow} onSelectClass={selectClass} />
                   </ErrorBoundary>
                )}
                {overlay}
             </section>
          </main>
 
-         <LessonDrawer lesson={selectedLesson} onClose={closeLesson} />
+         <ClassDrawer schoolClass={selectedClass} onClose={closeClass} />
          <SettingsDialog
             isOpen={isSettingsOpen}
             isDevToolsEnabled={devPreview.isEnabled}

@@ -27,7 +27,7 @@ test("week navigation and view controls work with mocked roster data", async ({ 
    await expect(page.locator(".app-toolbar__identity .eyebrow")).toHaveCount(0);
    await expect(page.getByRole("button", { name: "Previous week" })).toBeEnabled();
    await expect(page.getByRole("button", { name: "Next week" })).toBeEnabled();
-   await expect(page.locator(".grid-lesson", { hasText: "SOURCE_TITLE_0_1" })).toBeVisible();
+   await expect(page.locator(".grid-class", { hasText: "SOURCE_TITLE_0_1" })).toBeVisible();
 
    await page.getByRole("button", { name: "Previous week" }).click();
    await expect(page.locator(".weekbar__label")).toHaveText("Last week");
@@ -223,13 +223,13 @@ test("saving a replacement token refreshes roster data without reloading the pag
    await tokenInput.fill("Bearer replacement-token");
    await expect(tokenInput).toHaveValue("Bearer replacement-token");
    await expect(saveButton).toBeEnabled();
-   const rosterRefresh = page.waitForResponse((response) => response.url().includes("/api/roster/weeks?") && response.request().method() === "GET");
+   const weekRefresh = page.waitForResponse((response) => response.url().includes("/api/roster/weeks?") && response.request().method() === "GET");
    await saveButton.click();
-   await rosterRefresh;
+   await weekRefresh;
 
    await expect.poll(() => rosterRequestCount).toBeGreaterThan(initialRequestCount);
    await expect(settings).toBeVisible();
-   await expect(page.locator(".grid-lesson", { hasText: "SOURCE_TITLE_0_1" })).toBeVisible();
+   await expect(page.locator(".grid-class", { hasText: "SOURCE_TITLE_0_1" })).toBeVisible();
 });
 
 test("an aborted credential request cannot restore stale roster data", async ({ page }) => {
@@ -265,7 +265,7 @@ test("an aborted credential request cannot restore stale roster data", async ({ 
       }
 
       const batch = createRosterBatch(offset, limit);
-      const firstLesson = batch.weeks[0]?.lessons[0];
+      const firstLesson = batch.weeks[0]?.classes[0];
       if (firstLesson) {
          firstLesson.title = `TOKEN_${requestedTokenVersion}_TITLE`;
       }
@@ -290,7 +290,7 @@ test("an aborted credential request cannot restore stale roster data", async ({ 
    const freshRosterResponse = waitForRosterResponseTitle(page, "TOKEN_2_TITLE");
    await saveButton.click();
    await freshRosterResponse;
-   await expect(page.locator(".grid-lesson", { hasText: "TOKEN_2_TITLE" })).toBeVisible({ timeout: 10_000 });
+   await expect(page.locator(".grid-class", { hasText: "TOKEN_2_TITLE" })).toBeVisible({ timeout: 10_000 });
    await settings.getByRole("button", { name: "Close settings" }).click();
 
    await expect(page.getByRole("button", { name: "TOKEN_2_TITLE" })).toBeVisible();
@@ -316,17 +316,17 @@ test("week swipe navigation is disabled while an overlay is open", async ({ page
    await expect(page.locator(".weekbar__label")).toHaveText("This week");
 });
 
-test("space activates a focused lesson instead of jumping to the current week", async ({ page }) => {
+test("space activates a focused schoolClass instead of jumping to the current week", async ({ page }) => {
    await page.goto("/");
-   const lesson = page.getByRole("button", { name: /SOURCE_TITLE_0_1/ });
-   await lesson.focus();
+   const schoolClass = page.getByRole("button", { name: /SOURCE_TITLE_0_1/ });
+   await schoolClass.focus();
    await page.keyboard.press("Space");
 
    await expect(page.getByRole("dialog", { name: "Class details" })).toBeVisible();
    await expect(page.locator(".weekbar__label")).toHaveText("This week");
 });
 
-test("collapsed agenda days remove hidden lessons from keyboard navigation", async ({ page }) => {
+test("collapsed agenda days remove hidden classes from keyboard navigation", async ({ page }) => {
    await page.goto("/");
    await page.getByRole("button", { name: "Agenda view" }).click();
    const currentDay = page.locator(".day-group").filter({ hasText: "SOURCE_TITLE_0_1" });
@@ -371,7 +371,7 @@ test("missing bearer token shows an entry overlay without requesting roster data
    expect(rosterWasRequested).toBe(false);
 });
 
-test("devtools can preview changed and cancelled lesson states", async ({ page }) => {
+test("devtools can preview changed and cancelled schoolClass states", async ({ page }) => {
    await page.goto("/");
 
    await page.getByRole("button", { name: "Agenda view" }).click();
@@ -380,22 +380,22 @@ test("devtools can preview changed and cancelled lesson states", async ({ page }
    await page.getByRole("button", { name: "Mixed" }).click();
    await page.locator(".settings-dialog__header").getByRole("button", { name: "Close settings" }).click();
 
-   await expect(page.locator(".agenda-lesson.status-changed")).toHaveCount(1);
-   await expect(page.locator(".agenda-lesson.status-cancelled")).toHaveCount(1);
+   await expect(page.locator(".agenda-class.status-changed")).toHaveCount(1);
+   await expect(page.locator(".agenda-class.status-cancelled")).toHaveCount(1);
 
    await page.getByRole("button", { name: /SOURCE_TITLE_0_1/ }).click();
-   await expect(page.locator(".lesson-panel__status--changed")).toHaveText("changed");
-   const roomDetails = page.locator(".lesson-panel__details > div", { has: page.locator("dt", { hasText: "Room" }) });
+   await expect(page.locator(".class-panel__status--changed")).toHaveText("changed");
+   const roomDetails = page.locator(".class-panel__details > div", { has: page.locator("dt", { hasText: "Room" }) });
    await expect(roomDetails.locator("s")).toHaveText("A101");
    await expect(roomDetails.locator("strong")).toHaveText("SOURCE_ROOM");
-   await expect(page.locator(".lesson-panel__details dt", { hasText: "Date" })).toHaveCount(1);
-   await expect(page.locator(".lesson-panel__details dt", { hasText: "Time" })).toHaveCount(1);
-   await expect(page.locator(".lesson-panel__details dt", { hasText: "Status" })).toHaveCount(0);
-   await page.locator(".lesson-panel__header").getByRole("button", { name: "Close", exact: true }).click();
+   await expect(page.locator(".class-panel__details dt", { hasText: "Date" })).toHaveCount(1);
+   await expect(page.locator(".class-panel__details dt", { hasText: "Time" })).toHaveCount(1);
+   await expect(page.locator(".class-panel__details dt", { hasText: "Status" })).toHaveCount(0);
+   await page.locator(".class-panel__header").getByRole("button", { name: "Close", exact: true }).click();
 
    await page.getByRole("button", { name: /SOURCE_TITLE_0_2/ }).click();
-   await expect(page.locator(".lesson-panel__status--cancelled")).toHaveText("cancelled");
-   await expect(page.locator(".lesson-panel__details dt", { hasText: "Status" })).toHaveCount(0);
+   await expect(page.locator(".class-panel__status--cancelled")).toHaveText("cancelled");
+   await expect(page.locator(".class-panel__details dt", { hasText: "Status" })).toHaveCount(0);
 });
 
 test("time indicators are visible and positioned for the fixed current time", async ({ page }) => {
@@ -428,7 +428,7 @@ test("timeline zoom supports radio-group arrow navigation", async ({ page }) => 
    await expect(page.locator(".weekbar__label")).toHaveText("This week");
 });
 
-test("lesson dialogs isolate the app and lock mobile page scrolling", async ({ page }) => {
+test("schoolClass dialogs isolate the app and lock mobile page scrolling", async ({ page }) => {
    await page.setViewportSize({ width: 390, height: 500 });
    await page.goto("/");
    await page.getByRole("button", { name: /SOURCE_TITLE_0_1/ }).click();
@@ -448,7 +448,7 @@ test("lesson dialogs isolate the app and lock mobile page scrolling", async ({ p
    await expect(page.locator("#app")).toHaveAttribute("aria-hidden", "false");
 });
 
-test("grid lessons expose day, time, teacher, and place in their accessible names", async ({ page }) => {
+test("grid classes expose day, time, teacher, and place in their accessible names", async ({ page }) => {
    await page.goto("/");
    await expect(page.getByRole("region", { name: "Weekly timetable grid" })).toBeVisible();
    await expect(
@@ -533,7 +533,7 @@ async function installCachedLastWeek(page: Page) {
       },
       {
          cacheKey: "roster-last-week-cache-v1",
-         week: createRosterWeek(-1),
+         week: createWeek(-1),
       }
    );
 }
@@ -574,11 +574,11 @@ function createRosterBatch(offset: number, limit: number) {
       offset,
       limit,
       hasMore: offset + limit < 50,
-      weeks: Array.from({ length: limit }, (_, index) => createRosterWeek(offset + index)),
+      weeks: Array.from({ length: limit }, (_, index) => createWeek(offset + index)),
    };
 }
 
-function createRosterWeek(offset: number) {
+function createWeek(offset: number) {
    const startDate = new Date(`${WEEK_START_ISO}T00:00:00Z`);
    startDate.setUTCDate(startDate.getUTCDate() + offset * 7);
    const start = toIsoDate(startDate);
@@ -593,9 +593,9 @@ function createRosterWeek(offset: number) {
          start,
          end: toIsoDate(endDate),
       },
-      lessons: [
+      classes: [
          {
-            id: `lesson-${offset}-1`,
+            id: `class-${offset}-1`,
             title: `SOURCE_TITLE_${offset}_1`,
             subject: `SOURCE_SUBJECT_${offset}_1`,
             start: `${tuesdayIso}T09:00:00`,
@@ -607,7 +607,7 @@ function createRosterWeek(offset: number) {
             status: "scheduled",
          },
          {
-            id: `lesson-${offset}-2`,
+            id: `class-${offset}-2`,
             title: `SOURCE_TITLE_${offset}_2`,
             subject: `SOURCE_SUBJECT_${offset}_2`,
             start: `${tuesdayIso}T11:00:00`,
@@ -636,7 +636,7 @@ function waitForRosterResponseTitle(page: Page, expectedTitle: string) {
          return false;
       }
 
-      const payload = (await response.json()) as { weeks?: { lessons?: { title?: string }[] }[] };
-      return payload.weeks?.[0]?.lessons?.[0]?.title === expectedTitle;
+      const payload = (await response.json()) as { weeks?: { classes?: { title?: string }[] }[] };
+      return payload.weeks?.[0]?.classes?.[0]?.title === expectedTitle;
    });
 }

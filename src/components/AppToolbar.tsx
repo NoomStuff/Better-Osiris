@@ -1,6 +1,6 @@
 import { memo } from "react";
 import { APP_SHORTCUT_LABELS } from "../lib/appShortcuts";
-import type { GridZoom, ViewMode } from "../types/roster";
+import type { GridZoom, ViewMode } from "../types/weeks";
 import { IconButton } from "./IconButton";
 import { ToolbarActionButtons, ToolbarActionSelector, type ToolbarActionOption } from "./ToolbarActionGroup";
 import "./AppToolbar.css";

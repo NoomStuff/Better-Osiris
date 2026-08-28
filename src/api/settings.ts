@@ -1,8 +1,8 @@
-import type { OsirisTokenSettings } from "../../shared/roster";
+import type { OsirisTokenSettings } from "../../shared/weeks";
 import { parseApiErrorPayload, parseOsirisTokenSettings } from "../../shared/rosterValidation";
 import { fetchWithTimeout, readJsonResponse } from "./fetch";
 
-export type { OsirisTokenSettings } from "../../shared/roster";
+export type { OsirisTokenSettings } from "../../shared/weeks";
 
 export async function fetchOsirisTokenSettings(): Promise<OsirisTokenSettings> {
    const response = await fetchWithTimeout("/api/settings/osiris-token");
