@@ -27,6 +27,10 @@ const TIME_LABELS = TIME_MARKS.filter((minutes) => minutes !== WORKDAY_START && 
 const COMPACT_HEIGHT_PX = 85;
 /** Below this rendered height even the compact layout drops the room label. */
 const TINY_HEIGHT_PX = 64;
+/** Per-second rate of the hover guide's chase toward the cursor; about 95% of the way in 170ms. */
+const GUIDE_CHASE_RATE = 18;
+/** How close the hover guide must be to its target, in percent of the grid height, to count as arrived. */
+const GUIDE_SETTLE_PERCENT = 0.01;
 
 type GridStyle = CSSProperties & { "--grid-day-count": number };
 
@@ -41,12 +45,13 @@ function getOffsetPercent(minutes: number) {
 }
 
 export function GridView({ days, zoom: zoomId, now, onSelectClass }: GridViewProps) {
-   const [hoverGuide, setHoverGuide] = useState<{ top: number; label: string } | null>(null);
    const [animateZoom, setAnimateZoom] = useState(false);
    const [contentHeight, setContentHeight] = useState(0);
    const previousZoomRef = useRef<GridZoom | null>(null);
    const contentRef = useRef<HTMLDivElement | null>(null);
-   const hoverGuideRef = useRef(hoverGuide);
+   const guideElementRef = useRef<HTMLDivElement | null>(null);
+   const guideLabelRef = useRef<HTMLSpanElement | null>(null);
+   const guideMotion = useRef({ top: 0, target: 0, visible: false, frame: 0, lastTime: 0 });
    const zoom = zoomOptions.find((option) => option.id === zoomId) ?? zoomOptions[0];
    const todayKey = toDayKey(now);
    const nowMinutes = getMinutesFromMidnight(now);
@@ -54,9 +59,7 @@ export function GridView({ days, zoom: zoomId, now, onSelectClass }: GridViewPro
    const showNowLine = todayIndex >= 0 && nowMinutes >= WORKDAY_START && nowMinutes <= WORKDAY_END;
    const nowLineTop = getOffsetPercent(clamp(nowMinutes, WORKDAY_START, WORKDAY_END));
 
-   useEffect(() => {
-      hoverGuideRef.current = hoverGuide;
-   }, [hoverGuide]);
+   useEffect(() => () => cancelAnimationFrame(guideMotion.current.frame), []);
 
    useEffect(() => {
       if (previousZoomRef.current && previousZoomRef.current !== zoomId) {
@@ -84,25 +87,83 @@ export function GridView({ days, zoom: zoomId, now, onSelectClass }: GridViewPro
       return () => observer.disconnect();
    }, []);
 
+   const renderGuide = () => {
+      const motion = guideMotion.current;
+      const element = guideElementRef.current;
+      if (!element) {
+         return;
+      }
+      element.style.top = `${motion.top}%`;
+      if (guideLabelRef.current) {
+         const minutes = clamp(Math.round(WORKDAY_START + (motion.top / 100) * WORKDAY_RANGE), WORKDAY_START, WORKDAY_END);
+         guideLabelRef.current.textContent = formatMinutes(minutes);
+      }
+   };
+
+   const stepGuide = (time: number) => {
+      const motion = guideMotion.current;
+      motion.frame = 0;
+      if (!motion.lastTime) {
+         motion.lastTime = time;
+      }
+      const delta = Math.min((time - motion.lastTime) / 1000, 0.1);
+      motion.lastTime = time;
+      motion.top += (motion.target - motion.top) * (1 - Math.exp(-GUIDE_CHASE_RATE * delta));
+      if (Math.abs(motion.target - motion.top) < GUIDE_SETTLE_PERCENT) {
+         motion.top = motion.target;
+      }
+      renderGuide();
+      if (motion.top !== motion.target) {
+         motion.frame = requestAnimationFrame(stepGuide);
+      }
+   };
+
+   const animateGuide = () => {
+      const motion = guideMotion.current;
+      if (motion.frame) {
+         return;
+      }
+      if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+         motion.top = motion.target;
+         renderGuide();
+         return;
+      }
+      motion.lastTime = 0;
+      motion.frame = requestAnimationFrame(stepGuide);
+   };
+
    const updateHoverGuide = (event: MouseEvent<HTMLDivElement>) => {
       const rect = event.currentTarget.getBoundingClientRect();
       const height = event.currentTarget.clientHeight;
       const y = clamp(event.clientY - rect.top, 0, height);
       const minutes = clamp(Math.round(WORKDAY_START + (y / height) * WORKDAY_RANGE), WORKDAY_START, WORKDAY_END);
-      const nextGuide = {
-         top: getOffsetPercent(minutes),
-         label: formatMinutes(minutes),
-      };
+      const motion = guideMotion.current;
+      motion.target = getOffsetPercent(minutes);
 
-      if (hoverGuideRef.current?.top !== nextGuide.top || hoverGuideRef.current.label !== nextGuide.label) {
-         hoverGuideRef.current = nextGuide;
-         setHoverGuide(nextGuide);
+      if (!motion.visible) {
+         motion.visible = true;
+         motion.top = motion.target;
+         guideElementRef.current?.style.setProperty("opacity", "1");
+      }
+
+      if (motion.top !== motion.target) {
+         animateGuide();
+      } else {
+         renderGuide();
       }
    };
 
    const clearHoverGuide = () => {
-      hoverGuideRef.current = null;
-      setHoverGuide(null);
+      const motion = guideMotion.current;
+      if (!motion.visible) {
+         return;
+      }
+      motion.visible = false;
+      guideElementRef.current?.style.setProperty("opacity", "0");
+      if (motion.frame) {
+         cancelAnimationFrame(motion.frame);
+         motion.frame = 0;
+      }
    };
 
    return (
@@ -133,11 +194,9 @@ export function GridView({ days, zoom: zoomId, now, onSelectClass }: GridViewPro
             onMouseLeave={clearHoverGuide}
          >
             <div className="grid-scroll-content" ref={contentRef}>
-               {hoverGuide ? (
-                  <div className="grid-hover-guide" style={{ top: `${hoverGuide.top}%` }}>
-                     <span>{hoverGuide.label}</span>
-                  </div>
-               ) : null}
+               <div className="grid-hover-guide" ref={guideElementRef} aria-hidden="true">
+                  <span ref={guideLabelRef} />
+               </div>
 
                <div className="grid-time-column" aria-hidden="true">
                   {TIME_LABELS.map((minutes) => (

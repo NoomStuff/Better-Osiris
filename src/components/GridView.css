@@ -135,6 +135,7 @@
    opacity: 0;
 }
 
+/* `top` is written per frame by the chase loop in GridView; only the fade is a CSS transition. */
 .grid-hover-guide {
    position: absolute;
    left: 0;
@@ -143,6 +144,8 @@
    height: 1px;
    pointer-events: none;
    background: rgba(var(--accent-rgb), 0.14);
+   opacity: 0;
+   transition: opacity 160ms ease;
 }
 
 .grid-hover-guide span {
@@ -377,7 +380,8 @@
 
 @media (prefers-reduced-motion: reduce) {
    .grid-line,
-   .grid-time-slot {
+   .grid-time-slot,
+   .grid-hover-guide {
       transition: none;
    }
 }
