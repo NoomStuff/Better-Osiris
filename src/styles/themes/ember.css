@@ -1,0 +1,32 @@
+/* Smoldering palette: ember-orange coals over wine-charcoal, playing in reds and purples. */
+html[data-theme="ember"] {
+   color-scheme: dark;
+
+   --page-background:
+      radial-gradient(circle at 50% 0, rgba(224, 82, 100, 0.08), transparent 32%), linear-gradient(180deg, #2a1a16 0%, #140b12 52%, #1e1018 100%);
+
+   --line: rgba(232, 165, 155, 0.14);
+   --line-strong: rgba(232, 165, 155, 0.3);
+   --text-strong: #f5eee8;
+   --text-dim: #cfc2c0;
+   --text-muted: #a3949a;
+   --accent: #e56b3c;
+   --accent-rgb: 229, 107, 60;
+   --warning: #f5d467;
+   --warning-rgb: 245, 212, 103;
+   --danger: #e0455a;
+   --danger-rgb: 224, 69, 90;
+   --danger-bright: #ff9fb0;
+   --surface-rgb: 22, 16, 18;
+   --highlight-rgb: 245, 238, 238;
+   --overlay-surface: rgba(26, 18, 21, 0.96);
+   --backdrop: rgba(8, 4, 6, 0.55);
+   --backdrop-strong: rgba(8, 4, 6, 0.6);
+   --panel-veil: 0.42;
+   --class-surface: rgba(42, 32, 38, 0.96);
+   --class-surface-raised: rgba(54, 41, 48, 0.98);
+   --class-border: rgba(186, 132, 214, 0.16);
+   --class-border-raised: rgba(186, 132, 214, 0.3);
+   --class-surface-cancelled: rgba(74, 26, 42, 0.96);
+   --shadow: 0 24px 80px rgba(5, 2, 4, 0.5);
+}

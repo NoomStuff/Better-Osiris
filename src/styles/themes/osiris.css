@@ -1,0 +1,81 @@
+/* The original OSIRIS Student, remembered fondly: teal roster accents on crisp white
+   panels, and the purple banner where the header lives. Chrome and content split:
+   the banner (chrome) is purple, the roster surfaces (content) are white and teal. */
+html[data-theme="osiris"] {
+   color-scheme: light;
+
+   --page-background:
+      radial-gradient(circle at 50% 0, rgba(94, 33, 112, 0.07), transparent 32%), linear-gradient(180deg, #f5f3f8 0%, #eae8ef 52%, #efeef3 100%);
+
+   --line: rgba(35, 45, 60, 0.16);
+   --line-strong: rgba(35, 45, 60, 0.32);
+   --text-strong: #212429;
+   --text-dim: #4d545e;
+   --text-muted: #666e7a;
+   --accent: #15808d;
+   --accent-rgb: 21, 128, 141;
+   --warning: #c8a704;
+   --warning-rgb: 200, 167, 4;
+   --danger: #cf3f56;
+   --danger-rgb: 207, 63, 86;
+   --danger-bright: #a02538;
+   --surface-rgb: 255, 255, 255;
+   --highlight-rgb: 26, 106, 116;
+   --overlay-surface: rgba(255, 255, 255, 0.97);
+   --backdrop: rgba(40, 32, 50, 0.42);
+   --backdrop-strong: rgba(40, 32, 50, 0.46);
+   --panel-veil: 0.62;
+   --class-surface: rgba(255, 255, 255, 0.96);
+   --class-surface-raised: rgba(255, 255, 255, 1);
+   --class-border: rgba(35, 45, 60, 0.16);
+   --class-border-raised: rgba(35, 45, 60, 0.32);
+   --class-surface-cancelled: rgba(207, 63, 86, 0.07);
+   --shadow: 0 24px 80px rgba(50, 40, 60, 0.16);
+
+   --chrome-strong: #ffffff;
+   --chrome-dim: #ecdff2;
+   --chrome-muted: #cbb3d6;
+   --chrome-accent: #7fd8d8;
+   --chrome-accent-rgb: 127, 216, 216;
+   --chrome-warning: #f0c56a;
+   --chrome-highlight-rgb: 255, 255, 255;
+   --chrome-line: rgba(255, 255, 255, 0.18);
+   --chrome-line-strong: rgba(255, 255, 255, 0.36);
+   --chrome-surface: rgba(94, 33, 112, 0.96);
+}
+
+/* On desktop the header is bare against the page, so this theme paints the banner itself.
+   On mobile the bar already uses --chrome-surface and gets the same banner as a card. */
+@media (min-width: 641px) {
+   html[data-theme="osiris"] .mobile-bottom-bar {
+      display: flex;
+      flex-direction: column;
+      padding: 10px 16px 12px;
+      border-radius: 16px;
+      background: var(--chrome-surface);
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(14px);
+   }
+
+   html[data-theme="osiris"] .weekbar {
+      padding: 0;
+   }
+}
+
+/* The chrome layer is tuned for the purple banner; the fatal screen sits on the bare page instead. */
+html[data-theme="osiris"] .fatal-error-boundary {
+   color: var(--text-muted);
+}
+
+html[data-theme="osiris"] .fatal-error-boundary h1 {
+   color: var(--text-strong);
+}
+
+html[data-theme="osiris"] .fatal-error-boundary i {
+   color: var(--accent);
+}
+
+html[data-theme="osiris"] .fatal-error-boundary button {
+   border-color: var(--line-strong);
+   background: rgba(var(--accent-rgb), 0.14);
+}

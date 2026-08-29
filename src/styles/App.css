@@ -12,11 +12,65 @@
    display: contents;
 }
 
+/* The header layer speaks chrome: text, borders, and hover tints for everything that sits
+   on the page backdrop (desktop) or on the mobile bar card instead of the app frame. */
+.mobile-bottom-bar {
+   color: var(--chrome-strong);
+}
+
+.mobile-bottom-bar .eyebrow {
+   color: var(--chrome-muted);
+}
+
+.mobile-bottom-bar .icon-button__surface {
+   border-color: var(--chrome-line);
+   background: rgba(var(--chrome-highlight-rgb), 0.035);
+}
+
+.mobile-bottom-bar
+   .icon-button:is(:hover, :focus-visible, [data-tooltip-open="true"], [data-shortcut-active="true"]):not(:disabled):not(.is-selected)
+   .icon-button__surface {
+   border-color: var(--chrome-line-strong);
+   background: rgba(var(--chrome-accent-rgb), 0.14);
+   color: var(--chrome-strong);
+}
+
+.mobile-bottom-bar .icon-button.is-selected .icon-button__surface,
+.mobile-bottom-bar
+   .icon-button.is-selected:is(:hover, :focus-visible, [data-tooltip-open="true"], [data-shortcut-active="true"]):not(:disabled)
+   .icon-button__surface {
+   border-color: rgba(var(--chrome-accent-rgb), 0.28);
+   background: rgba(var(--chrome-accent-rgb), 0.12);
+   color: var(--chrome-strong);
+}
+
+.mobile-bottom-bar .toolbar-action-group {
+   border-color: var(--chrome-line);
+   background: rgba(var(--chrome-highlight-rgb), 0.026);
+}
+
+.mobile-bottom-bar .toolbar-action-group::before {
+   background: rgba(var(--chrome-accent-rgb), 0.12);
+}
+
+.mobile-bottom-bar .toolbar-action-group__item {
+   color: var(--chrome-dim);
+}
+
+.mobile-bottom-bar .toolbar-action-group__item:is(:hover, :focus-visible, [data-tooltip-open="true"], [data-shortcut-active="true"]) {
+   background: rgba(var(--chrome-accent-rgb), 0.08);
+   color: var(--chrome-strong);
+}
+
+.mobile-bottom-bar .toolbar-action-group__item[data-selected="true"] {
+   color: var(--chrome-strong);
+}
+
 .app-content-frame {
    position: relative;
    border-radius: 24px;
    border: 2px solid var(--line);
-   background: linear-gradient(180deg, rgba(255, 255, 255, 0.02), rgba(255, 255, 255, 0.012)), rgba(var(--surface-rgb), 0.82);
+   background: linear-gradient(180deg, rgba(var(--highlight-rgb), 0.02), rgba(var(--highlight-rgb), 0.012)), rgba(var(--surface-rgb), var(--frame-veil));
    overflow: hidden;
 }
 
@@ -134,11 +188,37 @@
       flex-direction: column;
       gap: 10px;
       padding: 10px;
-      border: 2px solid var(--line);
+      border: 2px solid var(--chrome-line);
       border-radius: 18px;
-      background: rgba(var(--surface-rgb), 0.92);
+      background: var(--chrome-surface);
       box-shadow: var(--shadow);
       backdrop-filter: blur(18px);
+      /* Undocked the bar floats a little narrower over the content; docked it spans the page.
+         The width snaps with the app's overshoot bounce; the coat fades smoothly. */
+      margin-inline: 10px;
+      transition:
+         background-color 260ms ease-out,
+         border-color 260ms ease-out,
+         margin-left 420ms var(--bounce-overshoot),
+         margin-right 420ms var(--bounce-overshoot);
+   }
+
+   /* Docked: the content has scrolled clear of the bar, so the bar sits on the bare page
+      and switches to the content surface. Re-mapping the chrome aliases makes every color
+      inside the bar follow; cohesive themes define both coats identically. */
+   .mobile-bottom-bar[data-docked="true"] {
+      --chrome-strong: var(--text-strong);
+      --chrome-dim: var(--text-dim);
+      --chrome-muted: var(--text-muted);
+      --chrome-accent: var(--accent);
+      --chrome-accent-rgb: var(--accent-rgb);
+      --chrome-warning: var(--warning);
+      --chrome-highlight-rgb: var(--highlight-rgb);
+      --chrome-line: var(--line);
+      --chrome-line-strong: var(--line-strong);
+      border-color: var(--line);
+      background: rgba(var(--surface-rgb), 0.92);
+      margin-inline: 0;
    }
 
    .app-content-frame {

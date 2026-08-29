@@ -5,7 +5,7 @@
    width: 8px;
    overflow: hidden;
    border-radius: 999px;
-   background: rgba(255, 100, 100, 0.6);
+   background: rgba(var(--danger-rgb), 0.6);
    box-shadow:
       inset 0 0 0 1px rgba(var(--danger-rgb), 0.36),
       0 0 0 3px rgba(var(--danger-rgb), 0.08);
@@ -63,7 +63,7 @@
 }
 
 .day-group__header:hover {
-   background: rgba(255, 255, 255, 0.055);
+   background: rgba(var(--highlight-rgb), 0.055);
    transition: none;
 }
 
@@ -188,7 +188,7 @@
 
 .agenda-class:hover {
    border-color: var(--line-strong);
-   background: rgba(255, 255, 255, 0.055);
+   background: rgba(var(--highlight-rgb), 0.055);
    transition:
       scale 220ms var(--bounce-overshoot),
       background 0s;

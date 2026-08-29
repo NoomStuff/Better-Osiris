@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState, type AnimationEvent } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type AnimationEvent } from "react";
 import { AgendaView } from "./components/AgendaView";
 import { AppToolbar } from "./components/AppToolbar";
 import { GridView } from "./components/GridView";
@@ -11,6 +11,8 @@ import { useAppKeyboardShortcuts } from "./hooks/useAppKeyboardShortcuts";
 import { getPerceivedDay, useAgendaState } from "./hooks/useAgendaState";
 import { useOsirisTokenSettings } from "./hooks/useOsirisTokenSettings";
 import { useRosterTimeZone } from "./hooks/useRosterTimeZone";
+import { useDockedMobileBar } from "./hooks/useDockedMobileBar";
+import { useThemePreference } from "./hooks/useThemePreference";
 import { useViewportMetrics } from "./hooks/useViewportMetrics";
 import { useViewModePreference } from "./hooks/useViewModePreference";
 import { useWeekSwipeNavigation } from "./hooks/useWeekSwipeNavigation";
@@ -39,6 +41,9 @@ export default function App() {
    const [weekOffset, setWeekOffset] = useState(0);
    const [weekTransitionDirection, setWeekTransitionDirection] = useState<WeekTransitionDirection>("default");
    const [viewMode, setViewMode] = useViewModePreference();
+   const [theme, setTheme] = useThemePreference();
+   const appContentRef = useRef<HTMLElement>(null);
+   const isBarDocked = useDockedMobileBar(appContentRef);
    const [gridZoom, setGridZoom] = useState<GridZoom>("hour");
    const [selectedClassId, setSelectedClassId] = useState<string | null>(null);
    const [isSettingsOpen, setIsSettingsOpen] = useState(false);
@@ -316,7 +321,7 @@ export default function App() {
 
    return (
       <div className="shell">
-         <div className="mobile-bottom-bar">
+         <div className="mobile-bottom-bar" data-docked={isBarDocked}>
             <AppToolbar
                viewMode={viewMode}
                gridZoom={gridZoom}
@@ -339,7 +344,7 @@ export default function App() {
             />
          </div>
 
-         <main className="app-content">
+         <main className="app-content" ref={appContentRef}>
             <section
                className={`app-content-frame app-content-frame--${viewMode} app-content-frame--zoom-${frameGridZoom} view-enter`}
                data-empty-week={isVisuallyEmptyWeek}
@@ -371,6 +376,7 @@ export default function App() {
          <ClassDrawer schoolClass={selectedClass} onClose={closeClass} />
          <SettingsDialog
             isOpen={isSettingsOpen}
+            theme={theme}
             isDevToolsEnabled={devPreview.isEnabled}
             perceivedNow={perceivedNow}
             timeOverride={devPreview.timeOverride}
@@ -380,6 +386,7 @@ export default function App() {
             onSaveToken={saveToken}
             onClearToken={clearToken}
             onClose={closeSettings}
+            onChangeTheme={setTheme}
             onToggleDevTools={devPreview.toggle}
             onChangeTimeOverride={devPreview.changeTimeOverride}
             onChangeStatusPreviewMode={devPreview.setStatusPreviewMode}

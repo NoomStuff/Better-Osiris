@@ -25,7 +25,7 @@
    display: inline-flex;
    align-items: center;
    justify-content: center;
-   background: rgba(255, 255, 255, 0.035);
+   background: rgba(var(--highlight-rgb), 0.035);
    color: inherit;
    pointer-events: none;
    transition:

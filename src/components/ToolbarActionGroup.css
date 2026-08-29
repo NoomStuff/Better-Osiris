@@ -9,7 +9,7 @@
    padding: 3px;
    border: 2px solid var(--line);
    border-radius: 11px;
-   background: rgba(255, 255, 255, 0.026);
+   background: rgba(var(--highlight-rgb), 0.026);
    animation: toolbar-action-group-enter 240ms cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 

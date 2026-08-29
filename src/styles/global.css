@@ -1,3 +1,152 @@
+/* Theme variables. Dark is the default theme: its values are the @property initial-values below.
+   Extra themes live in styles/themes/<id>.css and override them under html[data-theme="<id>"].
+   Every color variable is registered so that switching themes can fade it (see .theme-fade).
+   --page-background is deliberately unregistered: it takes any value the background property
+   accepts, so it swaps instantly on a switch while the registered colors fade around it. */
+@property --line {
+   syntax: "<color>";
+   inherits: true;
+   initial-value: rgba(169, 184, 255, 0.14);
+}
+
+@property --line-strong {
+   syntax: "<color>";
+   inherits: true;
+   initial-value: rgba(169, 184, 255, 0.28);
+}
+
+@property --text-dim {
+   syntax: "<color>";
+   inherits: true;
+   initial-value: #97a5c6;
+}
+
+@property --text-muted {
+   syntax: "<color>";
+   inherits: true;
+   initial-value: #7482a6;
+}
+
+@property --text-strong {
+   syntax: "<color>";
+   inherits: true;
+   initial-value: #f3f7ff;
+}
+
+@property --accent {
+   syntax: "<color>";
+   inherits: true;
+   initial-value: #7cc7ff;
+}
+
+@property --accent-rgb {
+   syntax: "<number>#";
+   inherits: true;
+   initial-value: 124, 199, 255;
+}
+
+@property --warning {
+   syntax: "<color>";
+   inherits: true;
+   initial-value: #ffbf69;
+}
+
+@property --warning-rgb {
+   syntax: "<number>#";
+   inherits: true;
+   initial-value: 255, 191, 105;
+}
+
+@property --danger {
+   syntax: "<color>";
+   inherits: true;
+   initial-value: #ff6b81;
+}
+
+@property --danger-rgb {
+   syntax: "<number>#";
+   inherits: true;
+   initial-value: 255, 107, 129;
+}
+
+@property --danger-bright {
+   syntax: "<color>";
+   inherits: true;
+   initial-value: #ffb3be;
+}
+
+@property --surface-rgb {
+   syntax: "<number>#";
+   inherits: true;
+   initial-value: 10, 13, 20;
+}
+
+@property --highlight-rgb {
+   syntax: "<number>#";
+   inherits: true;
+   initial-value: 255, 255, 255;
+}
+
+@property --overlay-surface {
+   syntax: "<color>";
+   inherits: true;
+   initial-value: rgba(8, 11, 18, 0.96);
+}
+
+@property --backdrop {
+   syntax: "<color>";
+   inherits: true;
+   initial-value: rgba(2, 4, 8, 0.54);
+}
+
+@property --backdrop-strong {
+   syntax: "<color>";
+   inherits: true;
+   initial-value: rgba(3, 5, 11, 0.58);
+}
+
+@property --panel-veil {
+   syntax: "<number>";
+   inherits: true;
+   initial-value: 0.38;
+}
+
+@property --frame-veil {
+   syntax: "<number>";
+   inherits: true;
+   initial-value: 0.82;
+}
+
+@property --class-surface {
+   syntax: "<color>";
+   inherits: true;
+   initial-value: rgba(17, 22, 34, 0.96);
+}
+
+@property --class-surface-raised {
+   syntax: "<color>";
+   inherits: true;
+   initial-value: rgba(24, 31, 46, 0.98);
+}
+
+@property --class-border {
+   syntax: "<color>";
+   inherits: true;
+   initial-value: rgba(178, 196, 255, 0.16);
+}
+
+@property --class-border-raised {
+   syntax: "<color>";
+   inherits: true;
+   initial-value: rgba(178, 196, 255, 0.28);
+}
+
+@property --class-surface-cancelled {
+   syntax: "<color>";
+   inherits: true;
+   initial-value: rgba(30, 16, 22, 0.96);
+}
+
 :root {
    color-scheme: dark;
    font-family:
@@ -13,30 +162,35 @@
       sans-serif;
    line-height: 1.4;
    font-weight: 400;
-   color: #f3f7ff;
+   color: var(--text-strong);
 
    font-synthesis: none;
    text-rendering: optimizeLegibility;
    -webkit-font-smoothing: antialiased;
    -moz-osx-font-smoothing: grayscale;
 
-   --line: rgba(169, 184, 255, 0.14);
-   --line-strong: rgba(169, 184, 255, 0.28);
-   --text-dim: #97a5c6;
-   --text-muted: #7482a6;
-   --text-strong: #f3f7ff;
-   --accent: #7cc7ff;
-   --accent-rgb: 124, 199, 255;
-   --warning: #ffbf69;
-   --danger: #ff6b81;
-   --danger-rgb: 255, 107, 129;
-   --danger-bright: #ffb3be;
-   --surface-rgb: 10, 13, 20;
-   --overlay-surface: rgba(8, 11, 18, 0.96);
    /* Combined height of the app toolbar and week bar; the grid frame height math in App.css depends on it. */
    --chrome-height: 127px;
    --shadow: 0 24px 80px rgba(0, 0, 0, 0.35);
    --bounce-overshoot: cubic-bezier(0.2, 3.2, 0.2, 1);
+
+   /* Chrome layer: the page backdrop and the header that sits on it, decoupled from the
+      content surfaces inside the app frame. Cohesive themes inherit the content values;
+      themes that split the two (espresso) override these to keep the header readable
+      against the backdrop and the mobile bar card. */
+   --chrome-strong: var(--text-strong);
+   --chrome-dim: var(--text-dim);
+   --chrome-muted: var(--text-muted);
+   --chrome-accent: var(--accent);
+   --chrome-accent-rgb: var(--accent-rgb);
+   --chrome-warning: var(--warning);
+   --chrome-highlight-rgb: var(--highlight-rgb);
+   --chrome-line: var(--line);
+   --chrome-line-strong: var(--line-strong);
+   --chrome-surface: rgba(var(--surface-rgb), 0.92);
+
+   --page-background:
+      radial-gradient(circle at 50% 0, rgba(44, 68, 173, 0.16), transparent 30%), linear-gradient(180deg, #0e111f 0%, #000000 52%, #0e121d 100%);
 }
 
 *,
@@ -54,7 +208,7 @@ body,
 
 html {
    overflow-x: clip;
-   background-color: #06080e;
+   background: var(--page-background);
 }
 
 body,
@@ -79,7 +233,7 @@ body::before {
    inset: 0;
    z-index: -1;
    pointer-events: none;
-   background: radial-gradient(circle at 50% 0, rgba(44, 68, 173, 0.16), transparent 30%), linear-gradient(180deg, #0e111f 0%, #000000 52%, #0e121d 100%);
+   background: var(--page-background);
 }
 
 #app {
@@ -90,6 +244,10 @@ button {
    border: 0;
    background: transparent;
    color: inherit;
+}
+
+::selection {
+   background: rgba(var(--accent-rgb), 0.32);
 }
 
 :where(button, a, input, select, textarea, [tabindex]):focus-visible {
@@ -145,11 +303,11 @@ button {
    gap: 14px;
    padding: 24px;
    text-align: center;
-   color: var(--text-dim);
+   color: var(--chrome-dim);
 }
 
 .fatal-error-boundary i {
-   color: var(--warning);
+   color: var(--chrome-warning);
    font-size: 3rem;
 }
 
@@ -159,15 +317,15 @@ button {
 }
 
 .fatal-error-boundary h1 {
-   color: var(--text-strong);
+   color: var(--chrome-strong);
 }
 
 .fatal-error-boundary button {
    min-height: 42px;
    padding: 0 16px;
-   border: 2px solid var(--line-strong);
+   border: 2px solid var(--chrome-line-strong);
    border-radius: 10px;
-   background: rgba(var(--accent-rgb), 0.14);
+   background: rgba(var(--chrome-accent-rgb), 0.14);
    cursor: pointer;
 }
 
@@ -208,6 +366,36 @@ button {
    border-radius: 10px;
    background: rgba(var(--accent-rgb), 0.14);
    cursor: pointer;
+}
+
+/* Set while switching themes so the registered variables interpolate instead of snapping.
+   --page-background is unregistered and swaps immediately; everything else eases in. */
+html.theme-fade {
+   transition:
+      --line 400ms ease,
+      --line-strong 400ms ease,
+      --text-dim 400ms ease,
+      --text-muted 400ms ease,
+      --text-strong 400ms ease,
+      --accent 400ms ease,
+      --accent-rgb 400ms ease,
+      --warning 400ms ease,
+      --warning-rgb 400ms ease,
+      --danger 400ms ease,
+      --danger-rgb 400ms ease,
+      --danger-bright 400ms ease,
+      --surface-rgb 400ms ease,
+      --highlight-rgb 400ms ease,
+      --overlay-surface 400ms ease,
+      --backdrop 400ms ease,
+      --backdrop-strong 400ms ease,
+      --panel-veil 400ms ease,
+      --frame-veil 400ms ease,
+      --class-surface 400ms ease,
+      --class-surface-raised 400ms ease,
+      --class-border 400ms ease,
+      --class-border-raised 400ms ease,
+      --class-surface-cancelled 400ms ease;
 }
 
 @media (prefers-reduced-motion: reduce) {

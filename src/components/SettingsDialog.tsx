@@ -4,6 +4,7 @@ import type { OsirisTokenSettings } from "../api/settings";
 import type { DevClassStatusPreviewMode } from "../lib/devStatusPreview";
 import { notifyError, notifySuccess, notifyWarning } from "../lib/notyf";
 import { OSIRIS_BEARER_TOKEN_HELP_URL } from "../lib/osirisTokenHelp";
+import { THEMES, type ThemeId } from "../lib/theme";
 import { ConfirmDialog } from "./ConfirmDialog";
 import { DevToolsSettings } from "./DevToolsSettings";
 import { IconButton } from "./IconButton";
@@ -12,6 +13,7 @@ import "./SettingsDialog.css";
 
 interface SettingsDialogProps {
    isOpen: boolean;
+   theme: ThemeId;
    isDevToolsEnabled: boolean;
    perceivedNow: Date;
    timeOverride: Date | null;
@@ -19,6 +21,7 @@ interface SettingsDialogProps {
    tokenSettings: OsirisTokenSettings | null;
    isTokenLoading: boolean;
    onClose: () => void;
+   onChangeTheme: (theme: ThemeId) => void;
    onSaveToken: (token: string) => Promise<OsirisTokenSettings>;
    onClearToken: () => Promise<OsirisTokenSettings>;
    onToggleDevTools: (enabled: boolean) => void;
@@ -30,6 +33,7 @@ const IS_DEV_SERVER = import.meta.env.DEV;
 
 export function SettingsDialog({
    isOpen,
+   theme,
    isDevToolsEnabled,
    perceivedNow,
    timeOverride,
@@ -37,6 +41,7 @@ export function SettingsDialog({
    tokenSettings,
    isTokenLoading,
    onClose,
+   onChangeTheme,
    onSaveToken,
    onClearToken,
    onToggleDevTools,
@@ -129,6 +134,39 @@ export function SettingsDialog({
             </header>
 
             <div className="settings-dialog__content">
+               <section className="settings-section" aria-labelledby="theme-settings-title">
+                  <div className="settings-section__header">
+                     <h3 id="theme-settings-title">Theme</h3>
+                     <p>Colors for the whole app.</p>
+                  </div>
+
+                  <div className="theme-picker" role="group" aria-label="Color theme">
+                     {THEMES.map((themeOption) => {
+                        const isActive = theme === themeOption.id;
+
+                        return (
+                           <button
+                              type="button"
+                              key={themeOption.id}
+                              className="theme-picker__option"
+                              title={themeOption.label}
+                              aria-pressed={isActive}
+                              data-active={isActive}
+                              onClick={() => onChangeTheme(themeOption.id)}
+                           >
+                              <span
+                                 className="theme-picker__swatch"
+                                 style={{ backgroundColor: themeOption.swatchBackground, color: themeOption.swatchIconColor }}
+                              >
+                                 <i className={themeOption.icon} aria-hidden="true" />
+                              </span>
+                              <span className="theme-picker__label">{themeOption.label}</span>
+                           </button>
+                        );
+                     })}
+                  </div>
+               </section>
+
                <section className="settings-section" aria-labelledby="token-settings-title">
                   <div className="settings-section__header">
                      <h3 id="token-settings-title">Roster access</h3>

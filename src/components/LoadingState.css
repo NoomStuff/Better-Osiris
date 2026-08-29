@@ -11,7 +11,7 @@
    font-weight: 500;
    color: var(--text-dim);
    font-size: 1em;
-   background: rgba(6, 9, 19, 0.4);
+   background: rgba(var(--surface-rgb), 0.4);
    backdrop-filter: blur(1px);
 }
 
@@ -35,7 +35,7 @@
 
 .roster-overlay-state[role="alert"] > i {
    color: var(--warning);
-   filter: drop-shadow(0 10px 22px rgba(255, 207, 106, 0.16));
+   filter: drop-shadow(0 10px 22px rgba(var(--warning-rgb), 0.16));
 }
 
 .roster-overlay-state__spinner {
@@ -97,7 +97,7 @@
    height: 44px;
    border: 2px solid var(--line);
    border-radius: 10px;
-   background: rgba(255, 255, 255, 0.055);
+   background: rgba(var(--highlight-rgb), 0.055);
    color: var(--text-strong);
    padding: 0 12px;
    outline: none;
@@ -105,7 +105,7 @@
 
 .roster-overlay-state__token-row input:focus {
    border-color: rgba(var(--accent-rgb), 0.5);
-   background: rgba(255, 255, 255, 0.075);
+   background: rgba(var(--highlight-rgb), 0.075);
 }
 
 .roster-overlay-state__token-row input:focus-visible {

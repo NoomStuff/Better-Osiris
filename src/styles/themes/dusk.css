@@ -1,0 +1,32 @@
+/* Twilight palette: a dusty rose accent over deep blue-violet night. */
+html[data-theme="dusk"] {
+   color-scheme: dark;
+
+   --page-background:
+      radial-gradient(circle at 50% 0, rgba(224, 138, 155, 0.08), transparent 32%), linear-gradient(180deg, #271e33 0%, #0f0c17 52%, #1c1628 100%);
+
+   --line: rgba(148, 156, 224, 0.14);
+   --line-strong: rgba(148, 156, 224, 0.3);
+   --text-strong: #f4f1fb;
+   --text-dim: #c6bfdc;
+   --text-muted: #9a93b2;
+   --accent: #e08a9b;
+   --accent-rgb: 224, 138, 155;
+   --warning: #e5ba63;
+   --warning-rgb: 229, 186, 99;
+   --danger: #ff5c6c;
+   --danger-rgb: 255, 92, 108;
+   --danger-bright: #ffa3ad;
+   --surface-rgb: 22, 18, 34;
+   --highlight-rgb: 244, 241, 251;
+   --overlay-surface: rgba(24, 20, 36, 0.96);
+   --backdrop: rgba(8, 6, 13, 0.55);
+   --backdrop-strong: rgba(8, 6, 13, 0.6);
+   --panel-veil: 0.42;
+   --class-surface: rgba(35, 29, 52, 0.96);
+   --class-surface-raised: rgba(45, 38, 66, 0.98);
+   --class-border: rgba(148, 156, 224, 0.2);
+   --class-border-raised: rgba(148, 156, 224, 0.36);
+   --class-surface-cancelled: rgba(62, 30, 44, 0.96);
+   --shadow: 0 24px 80px rgba(6, 4, 12, 0.55);
+}
