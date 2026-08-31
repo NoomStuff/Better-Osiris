@@ -298,13 +298,19 @@ export function useWeeks(offset: number, options: UseWeeksOptions = {}) {
    );
    const canGoPrevious = isWeekNavigable(offset - 1);
    const canGoNext = isWeekNavigable(offset + 1);
+   const initialWeeks = Array.from({ length: 5 }, (_, weekOffset) => entries[weekOffset]?.data).filter(
+      (week): week is Week => week !== null && week !== undefined
+   );
+   const areInitialWeeksLoaded = initialWeeks.length === 5;
 
    return {
+      areInitialWeeksLoaded,
       canGoPrevious,
       canGoNext,
       data,
       error,
       isWeekNavigable,
+      initialWeeks,
       loading,
       retryCountdownMs,
       retrying,

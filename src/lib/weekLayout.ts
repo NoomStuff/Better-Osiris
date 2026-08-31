@@ -1,5 +1,5 @@
 import { getIsoWeekday, parseIsoDateToLocal, parseLocalDateTime, shiftIsoDateByDays, toDayKey, type IsoWeekday } from "./date";
-import type { Day, Class, PositionedClass, WeekMeta } from "../types/weeks";
+import type { Day, Class, PositionedClass, Week, WeekMeta } from "../types/weeks";
 
 export const WORKDAY_START = 8 * 60;
 export const WORKDAY_END = 18 * 60;
@@ -19,6 +19,19 @@ export function getVisibleDays(days: Day[], shownWeekdays: readonly IsoWeekday[]
 /** Days that hold classes but are excluded by the shown-days setting; drives the hidden-days warning. */
 export function getHiddenDaysWithClasses(days: Day[], shownWeekdays: readonly IsoWeekday[]): Day[] {
    return days.filter((day) => day.classes.length > 0 && !shownWeekdays.includes(getIsoWeekday(day.key)));
+}
+
+/** Weekdays with at least one class across the supplied weeks. Used by the shown-days smart action. */
+export function getWeekdaysWithClasses(weeks: readonly Week[]): IsoWeekday[] {
+   const weekdays = new Set<IsoWeekday>();
+
+   weeks.forEach((week) => {
+      week.classes.forEach((schoolClass) => {
+         weekdays.add(getIsoWeekday(schoolClass.start.slice(0, 10)));
+      });
+   });
+
+   return ISO_WEEKDAYS.filter((weekday) => weekdays.has(weekday));
 }
 
 export function getPositionedClasses(classes: Class[]): PositionedClass[] {

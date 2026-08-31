@@ -21,13 +21,13 @@ html[data-theme="espresso"] {
    --danger-bright: #9c2b1b;
    --surface-rgb: 252, 247, 238;
    --highlight-rgb: 138, 88, 80;
-   --overlay-surface: rgba(252, 247, 238, 0.97);
+   --overlay-surface: rgba(250, 244, 233, 0.97);
    --backdrop: rgba(26, 16, 8, 0.44);
    --backdrop-strong: rgba(26, 16, 8, 0.5);
    --panel-veil: 0.66;
    --frame-veil: 0.94;
-   --class-surface: rgba(255, 252, 246, 0.9);
-   --class-surface-raised: rgba(255, 252, 247, 1);
+   --class-surface: rgba(251, 247, 241, 0.9);
+   --class-surface-raised: rgb(250, 246, 239);
    --class-border: rgba(80, 55, 30, 0.22);
    --class-border-raised: rgba(80, 55, 30, 0.4);
    --class-surface-cancelled: rgba(191, 63, 44, 0.08);

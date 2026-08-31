@@ -30,7 +30,17 @@
 
 .settings-section__header {
    display: grid;
+   gap: 12px;
+}
+
+.settings-section__copy {
+   display: grid;
    gap: 2px;
+}
+
+.settings-section__header--with-actions {
+   grid-template-columns: minmax(0, 1fr) auto;
+   align-items: start;
 }
 
 .settings-section__header h3 {
@@ -61,6 +71,11 @@
 
 .theme-picker__option {
    width: 76px;
+   padding: 0;
+   cursor: pointer;
+}
+
+.theme-picker__surface {
    display: grid;
    gap: 6px;
    justify-items: center;
@@ -68,26 +83,27 @@
    border: 2px solid var(--line);
    border-radius: 12px;
    background: rgba(var(--highlight-rgb), 0.026);
-   cursor: pointer;
+   pointer-events: none;
    transition:
-      transform 260ms var(--bounce-overshoot),
+      transform 180ms var(--bounce-overshoot),
       border-color 220ms ease-out,
       background-color 220ms ease-out,
       box-shadow 220ms ease-out;
 }
 
-.theme-picker__option:hover {
+.theme-picker__option:hover .theme-picker__surface,
+.theme-picker__option:focus-visible .theme-picker__surface {
    border-color: var(--line-strong);
    background: rgba(var(--highlight-rgb), 0.055);
-   box-shadow: 0 10px 24px rgba(0, 0, 0, 0.22);
-   transform: translateY(-3px);
+   box-shadow: 0 5px 12px rgba(0, 0, 0, 0.14);
+   transform: translateY(-1px);
 }
 
-.theme-picker__option:active {
-   transform: translateY(-1px) scale(0.95);
+.theme-picker__option:active .theme-picker__surface {
+   transform: scale(0.98);
 }
 
-.theme-picker__option[data-active="true"] {
+.theme-picker__option[data-active="true"] .theme-picker__surface {
    border-color: rgba(var(--accent-rgb), 0.45);
    background: rgba(var(--accent-rgb), 0.12);
    box-shadow: inset 0 0 0 1px rgba(var(--accent-rgb), 0.22);
@@ -97,35 +113,35 @@
    the snowflake twirls, the mug tips, the cloud drifts, the leaf flutters, the fire
    flickers, and the cap gets tossed. */
 .theme-picker__option[data-theme-id="dark"] {
-   --theme-icon-animation: theme-icon-rock 700ms ease-in-out;
+   --theme-icon-animation: theme-icon-rock 500ms cubic-bezier(0.2, 0.8, 0.3, 1.12);
 }
 
 .theme-picker__option[data-theme-id="light"] {
-   --theme-icon-animation: theme-icon-spin 550ms cubic-bezier(0.22, 1, 0.36, 1);
+   --theme-icon-animation: theme-icon-spin 700ms cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 .theme-picker__option[data-theme-id="frost"] {
-   --theme-icon-animation: theme-icon-twirl 600ms cubic-bezier(0.22, 1, 0.36, 1);
+   --theme-icon-animation: theme-icon-twirl 620ms linear;
 }
 
 .theme-picker__option[data-theme-id="espresso"] {
-   --theme-icon-animation: theme-icon-tip 650ms ease-in-out;
+   --theme-icon-animation: theme-icon-tip 550ms cubic-bezier(0.2, 0.85, 0.35, 1.2);
 }
 
 .theme-picker__option[data-theme-id="dusk"] {
-   --theme-icon-animation: theme-icon-drift 800ms ease-in-out;
+   --theme-icon-animation: theme-icon-drift 1000ms cubic-bezier(0.22, 0.75, 0.32, 1);
 }
 
 .theme-picker__option[data-theme-id="moss"] {
-   --theme-icon-animation: theme-icon-flutter 750ms ease-in-out;
+   --theme-icon-animation: theme-icon-flutter 500ms cubic-bezier(0.3, 0.5, 0.3, 1);
 }
 
 .theme-picker__option[data-theme-id="ember"] {
-   --theme-icon-animation: theme-icon-flicker 650ms ease-in-out;
+   --theme-icon-animation: theme-icon-flicker 600ms cubic-bezier(0.3, 0.85, 0.45, 1);
 }
 
 .theme-picker__option[data-theme-id="osiris"] {
-   --theme-icon-animation: theme-icon-toss 600ms ease-in-out;
+   --theme-icon-animation: theme-icon-toss 760ms cubic-bezier(0.2, 0.8, 0.3, 1.12);
 }
 
 .theme-picker__option:is(:hover, :focus-visible) .theme-picker__swatch i {
@@ -141,6 +157,15 @@
    border-radius: 10px;
    box-shadow: inset 0 0 0 1px var(--line-strong);
    font-size: 1.05rem;
+}
+
+.theme-picker__swatch i {
+   display: block;
+   transform-origin: center;
+}
+
+.theme-picker__option[data-theme-id="moss"] .theme-picker__swatch i {
+   transform-origin: 28% 88%;
 }
 
 .theme-picker__label {
@@ -163,41 +188,32 @@
    gap: 6px;
 }
 
-.weekday-picker__option {
-   min-height: 40px;
-   border: 2px solid var(--line);
-   border-radius: 10px;
-   background: rgba(var(--highlight-rgb), 0.035);
-   color: var(--text-dim);
-   font-size: 0.76rem;
-   font-weight: 700;
-   cursor: pointer;
-   transition:
-      border-color 200ms ease-out,
-      background-color 200ms ease-out,
-      color 200ms ease-out;
+.settings-section__header--with-actions>.toolbar-action-group {
+   flex: 0 0 144px;
+   min-width: 144px;
 }
 
-.weekday-picker__option:hover {
-   border-color: var(--line-strong);
-   background: rgba(var(--highlight-rgb), 0.06);
+.weekday-picker__option {
+   width: 100%;
+}
+
+.weekday-picker__option .button__surface {
+   width: 100%;
+   min-height: 40px;
+   box-sizing: border-box;
    color: var(--text-strong);
 }
 
-.weekday-picker__option[data-shown="true"] {
+.weekday-picker__option .button__control[data-shown="true"] .button__surface {
    border-color: rgba(var(--accent-rgb), 0.45);
    background: rgba(var(--accent-rgb), 0.14);
    color: var(--accent);
 }
 
-.weekday-picker__option[data-shown="true"]:hover {
+.weekday-picker__option:hover .button__control[data-shown="true"]:not(:disabled) .button__surface,
+.weekday-picker__option .button__control[data-shown="true"]:focus-visible .button__surface {
    border-color: rgba(var(--accent-rgb), 0.65);
    background: rgba(var(--accent-rgb), 0.2);
-}
-
-.weekday-picker__option:disabled {
-   cursor: not-allowed;
-   opacity: 0.45;
 }
 
 @keyframes theme-icon-rock {
@@ -205,12 +221,16 @@
       transform: rotate(0deg);
    }
 
-   30% {
-      transform: rotate(-26deg);
+   28% {
+      transform: rotate(-22deg);
    }
 
-   65% {
-      transform: rotate(14deg);
+   55% {
+      transform: rotate(13deg);
+   }
+
+   75% {
+      transform: rotate(-5deg);
    }
 
    100% {
@@ -219,22 +239,59 @@
 }
 
 @keyframes theme-icon-spin {
-   from {
-      transform: rotate(-150deg) scale(0.8);
+   0% {
+      transform: rotate(-78deg) scale(0.84);
    }
 
-   to {
+   72% {
+      transform: rotate(9deg) scale(1.04);
+   }
+
+   100% {
       transform: rotate(0deg) scale(1);
    }
 }
 
 @keyframes theme-icon-twirl {
-   from {
+
+   0% {
       transform: rotate(0deg);
    }
 
-   to {
-      transform: rotate(360deg);
+   8% {
+      transform: rotate(-18deg) translateX(-1px);
+   }
+
+   20% {
+      transform: rotate(20deg) translateX(1px);
+   }
+
+   32% {
+      transform: rotate(-25deg) translateX(-1px);
+   }
+
+   45% {
+      transform: rotate(21deg) translateX(1px);
+   }
+
+   58% {
+      transform: rotate(-17deg) translateX(-1px);
+   }
+
+   72% {
+      transform: rotate(12deg) translateX(1px);
+   }
+
+   84% {
+      transform: rotate(-5deg);
+   }
+
+   92% {
+      transform: rotate(2deg);
+   }
+
+   100% {
+      transform: rotate(0deg);
    }
 }
 
@@ -243,12 +300,16 @@
       transform: translate(0, 0) rotate(0deg);
    }
 
-   35% {
-      transform: translate(-1px, -3px) rotate(-12deg);
+   38% {
+      transform: translate(-2px, -3px) rotate(-16deg);
    }
 
-   70% {
-      transform: translate(1px, -1px) rotate(6deg);
+   60% {
+      transform: translate(1px, -1px) rotate(9deg);
+   }
+
+   72% {
+      transform: translate(-1px, 0) rotate(-3deg);
    }
 
    100% {
@@ -257,13 +318,24 @@
 }
 
 @keyframes theme-icon-drift {
-   0%,
-   100% {
-      transform: translateY(0);
+   0% {
+      transform: translate(0, 0) rotate(0deg) scale(1, 1);
+   }
+
+   25% {
+      transform: translate(-1px, -4px) rotate(-5deg) scale(0.9, 1.14);
    }
 
    50% {
-      transform: translateY(-4px);
+      transform: translate(1px, 1px) rotate(4deg) scale(1.08, 0.94);
+   }
+
+   75% {
+      transform: translate(0, -1px) rotate(-1deg) scale(0.98, 1.02);
+   }
+
+   100% {
+      transform: translate(0, 0) rotate(0deg) scale(1, 1);
    }
 }
 
@@ -272,16 +344,20 @@
       transform: rotate(0deg);
    }
 
-   25% {
-      transform: rotate(-16deg);
+   24% {
+      transform: rotate(-19deg) translateY(-1px);
    }
 
    50% {
-      transform: rotate(12deg);
+      transform: rotate(15deg) translateY(1px);
    }
 
-   75% {
-      transform: rotate(-7deg);
+   72% {
+      transform: rotate(-9deg);
+   }
+
+   88% {
+      transform: rotate(3deg) translateY(1px);
    }
 
    100% {
@@ -291,39 +367,66 @@
 
 @keyframes theme-icon-flicker {
    0% {
-      transform: scale(1);
+      transform: translateY(0) scale(1, 1);
+   }
+
+   16% {
+      transform: translateY(1px) scale(1.15, 0.84);
    }
 
    30% {
-      transform: scale(1.24);
+      transform: translateY(-3px) scale(0.78, 1.28);
    }
 
-   55% {
-      transform: scale(0.94);
+   44% {
+      transform: translateY(1px) scale(1.17, 0.82);
    }
 
-   80% {
-      transform: scale(1.12);
+   58% {
+      transform: translateY(-1px) scale(0.9, 1.13);
+   }
+
+   72% {
+      transform: translateY(1px) scale(1.1, 0.87);
+   }
+
+   84% {
+      transform: translateY(-1px) scale(0.95, 1.07);
    }
 
    100% {
-      transform: scale(1);
+      transform: translateY(0) scale(1, 1);
    }
 }
 
 @keyframes theme-icon-toss {
    0% {
-      transform: translateY(0) rotate(0deg);
-      animation-timing-function: ease-out;
+      transform: translate(0, 0) rotate(0deg) scale(1, 1);
+   }
+
+   15% {
+      transform: translate(0, 3px) rotate(9deg) scale(1.08, 0.86);
    }
 
    40% {
-      transform: translateY(-7px) rotate(-6deg);
-      animation-timing-function: ease-in;
+      transform: translate(-1px, -5px) rotate(-7deg) scale(0.94, 1.08);
+   }
+
+   52% {
+      transform: translate(0px, -3px) rotate(-6deg) scale(1, 1);
+   }
+
+   70% {
+      transform: translate(1px, 2px) rotate(3deg) scale(1.04, 0.96);
+   }
+
+   82% {
+
+      transform: translate(0, -1px) rotate(1deg) scale(0.97, 1.03);
    }
 
    100% {
-      transform: translateY(0) rotate(0deg);
+      transform: translate(0, 0) rotate(0deg) scale(1, 1);
    }
 }
 
@@ -385,42 +488,6 @@
    justify-content: end;
    gap: 10px;
    margin-top: 2px;
-}
-
-.settings-dialog__button {
-   min-height: 38px;
-   border: 2px solid var(--line);
-   border-radius: 10px;
-   background: rgba(var(--highlight-rgb), 0.035);
-   color: var(--text-strong);
-   padding: 0 14px;
-   cursor: pointer;
-}
-
-.settings-dialog__button:hover:not(:disabled) {
-   border-color: var(--line-strong);
-   background: rgba(var(--highlight-rgb), 0.06);
-}
-
-.settings-dialog__button--primary {
-   border-color: rgba(var(--accent-rgb), 0.45);
-   background: rgba(var(--accent-rgb), 0.14);
-}
-
-.settings-dialog__button--danger {
-   border-color: rgba(var(--danger-rgb), 0.58);
-   background: rgba(var(--danger-rgb), 0.14);
-   color: var(--danger-bright);
-}
-
-.settings-dialog__button--danger:hover:not(:disabled) {
-   border-color: rgba(var(--danger-rgb), 0.76);
-   background: rgba(var(--danger-rgb), 0.22);
-}
-
-.settings-dialog__button:disabled {
-   cursor: not-allowed;
-   opacity: 0.45;
 }
 
 .settings-toggle {

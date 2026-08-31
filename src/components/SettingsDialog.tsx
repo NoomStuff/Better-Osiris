@@ -6,17 +6,21 @@ import type { DevClassStatusPreviewMode } from "../lib/devStatusPreview";
 import { notifyError, notifySuccess, notifyWarning } from "../lib/notyf";
 import { OSIRIS_BEARER_TOKEN_HELP_URL } from "../lib/osirisTokenHelp";
 import { THEMES, type ThemeId } from "../lib/theme";
-import { ISO_WEEKDAYS } from "../lib/weekLayout";
+import { DEFAULT_SHOWN_WEEKDAYS, ISO_WEEKDAYS } from "../lib/weekLayout";
+import { Button } from "./Button";
 import { ConfirmDialog } from "./ConfirmDialog";
 import { DevToolsSettings } from "./DevToolsSettings";
 import { IconButton } from "./IconButton";
 import { OverlayPanel, PANEL_CLOSE_MS } from "./OverlayPanel";
+import { ToolbarActionButtons } from "./ToolbarActionGroup";
 import "./SettingsDialog.css";
 
 interface SettingsDialogProps {
    isOpen: boolean;
    theme: ThemeId;
    shownWeekdays: IsoWeekday[];
+   smartWeekdays: IsoWeekday[];
+   isSmartDaysReady: boolean;
    isDevToolsEnabled: boolean;
    perceivedNow: Date;
    timeOverride: Date | null;
@@ -45,6 +49,8 @@ export function SettingsDialog({
    isOpen,
    theme,
    shownWeekdays,
+   smartWeekdays,
+   isSmartDaysReady,
    isDevToolsEnabled,
    perceivedNow,
    timeOverride,
@@ -121,12 +127,22 @@ export function SettingsDialog({
 
    const toggleWeekday = useCallback(
       (weekday: IsoWeekday) => {
+         if (shownWeekdays.length === 1 && shownWeekdays.includes(weekday)) {
+            return;
+         }
+
          const next = shownWeekdays.includes(weekday) ? shownWeekdays.filter((shown) => shown !== weekday) : [...shownWeekdays, weekday].sort((a, b) => a - b);
 
          onChangeShownWeekdays(next);
       },
       [onChangeShownWeekdays, shownWeekdays]
    );
+
+   const applySmartWeekdays = useCallback(
+      () => onChangeShownWeekdays(smartWeekdays.length > 0 ? smartWeekdays : [...DEFAULT_SHOWN_WEEKDAYS]),
+      [onChangeShownWeekdays, smartWeekdays]
+   );
+   const resetShownWeekdays = useCallback(() => onChangeShownWeekdays([...DEFAULT_SHOWN_WEEKDAYS]), [onChangeShownWeekdays]);
 
    if (!isOpen && !isClosing) {
       return null;
@@ -157,8 +173,10 @@ export function SettingsDialog({
             <div className="settings-dialog__content">
                <section className="settings-section" aria-labelledby="theme-settings-title">
                   <div className="settings-section__header">
-                     <h3 id="theme-settings-title">Theme</h3>
-                     <p>Colors for the whole app.</p>
+                     <div className="settings-section__copy">
+                        <h3 id="theme-settings-title">Theme</h3>
+                        <p>Colors for the whole app.</p>
+                     </div>
                   </div>
 
                   <div className="theme-picker" role="group" aria-label="Color theme">
@@ -176,13 +194,15 @@ export function SettingsDialog({
                               data-theme-id={themeOption.id}
                               onClick={() => onChangeTheme(themeOption.id)}
                            >
-                              <span
-                                 className="theme-picker__swatch"
-                                 style={{ backgroundColor: themeOption.swatchBackground, color: themeOption.swatchIconColor }}
-                              >
-                                 <i className={themeOption.icon} aria-hidden="true" />
+                              <span className="theme-picker__surface">
+                                 <span
+                                    className="theme-picker__swatch"
+                                    style={{ backgroundColor: themeOption.swatchBackground, color: themeOption.swatchIconColor }}
+                                 >
+                                    <i className={themeOption.icon} aria-hidden="true" />
+                                 </span>
+                                 <span className="theme-picker__label">{themeOption.label}</span>
                               </span>
-                              <span className="theme-picker__label">{themeOption.label}</span>
                            </button>
                         );
                      })}
@@ -190,9 +210,24 @@ export function SettingsDialog({
                </section>
 
                <section className="settings-section" aria-labelledby="days-settings-title">
-                  <div className="settings-section__header">
-                     <h3 id="days-settings-title">Shown days</h3>
-                     <p>Which weekdays the agenda and grid display.</p>
+                  <div className="settings-section__header settings-section__header--with-actions">
+                     <div className="settings-section__copy">
+                        <h3 id="days-settings-title">Shown days</h3>
+                        <p>Which weekdays the agenda and grid display.</p>
+                     </div>
+                     <ToolbarActionButtons
+                        label="Shown days actions"
+                        actions={[
+                           {
+                              id: "smart",
+                              label: "Smart",
+                              tooltip: isSmartDaysReady ? "Show weekdays with classes in weeks 0 to 4" : "Loading weeks 0 to 4",
+                              disabled: !isSmartDaysReady,
+                              onPress: applySmartWeekdays,
+                           },
+                           { id: "reset", label: "Reset", tooltip: "Show Monday through Friday", onPress: resetShownWeekdays },
+                        ]}
+                     />
                   </div>
 
                   <div className="weekday-picker" role="group" aria-label="Shown weekdays">
@@ -201,8 +236,7 @@ export function SettingsDialog({
                         const isLastShownDay = isShown && shownWeekdays.length === 1;
 
                         return (
-                           <button
-                              type="button"
+                           <Button
                               key={weekday}
                               className="weekday-picker__option"
                               title={isLastShownDay ? "At least one day must stay shown" : undefined}
@@ -212,7 +246,7 @@ export function SettingsDialog({
                               onClick={() => toggleWeekday(weekday)}
                            >
                               {WEEKDAY_LABELS[weekday - 1]}
-                           </button>
+                           </Button>
                         );
                      })}
                   </div>
@@ -220,8 +254,10 @@ export function SettingsDialog({
 
                <section className="settings-section" aria-labelledby="token-settings-title">
                   <div className="settings-section__header">
-                     <h3 id="token-settings-title">Roster access</h3>
-                     <p>{hasCustomToken || hasBearerToken ? "Roster requests are using your saved bearer token." : "No bearer token is set."}</p>
+                     <div className="settings-section__copy">
+                        <h3 id="token-settings-title">Roster access</h3>
+                        <p>{hasCustomToken || hasBearerToken ? "Roster requests are using your saved bearer token." : "No bearer token is set."}</p>
+                     </div>
                   </div>
 
                   <form className="settings-dialog__form" onSubmit={(event) => void handleSubmit(event)}>
@@ -244,12 +280,11 @@ export function SettingsDialog({
                      </label>
 
                      <div className="settings-dialog__actions">
-                        <button className="settings-dialog__button settings-dialog__button--primary" type="submit" disabled={!canSaveToken}>
+                        <Button variant="primary" type="submit" disabled={!canSaveToken}>
                            Save token
-                        </button>
-                        <button
-                           className="settings-dialog__button settings-dialog__button--danger"
-                           type="button"
+                        </Button>
+                        <Button
+                           variant="danger"
                            disabled={isTokenLoading || !hasCustomToken}
                            onClick={(event) => {
                               event.currentTarget.focus({ preventScroll: true });
@@ -257,7 +292,7 @@ export function SettingsDialog({
                            }}
                         >
                            Reset
-                        </button>
+                        </Button>
                      </div>
                   </form>
                </section>

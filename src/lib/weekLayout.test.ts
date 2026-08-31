@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { afterEach, describe, it } from "node:test";
 import { getMinutesFromMidnight, toDayKey } from "./date.js";
 import { setRosterTimeZone } from "./rosterTimeZone.js";
-import { DEFAULT_SHOWN_WEEKDAYS, getDays, getHiddenDaysWithClasses, getPositionedClasses, getVisibleDays } from "./weekLayout.js";
+import { DEFAULT_SHOWN_WEEKDAYS, getDays, getHiddenDaysWithClasses, getPositionedClasses, getVisibleDays, getWeekdaysWithClasses } from "./weekLayout.js";
 import type { Class } from "../types/weeks";
 
 function createClass(overrides: Partial<Class> = {}): Class {
@@ -186,6 +186,18 @@ void describe("roster layout", () => {
       // Hidden days without classes never count.
       const emptyWeekend = getDays(week, getPositionedClasses([createClass({ id: "friday", start: "2026-06-19T09:00:00", end: "2026-06-19T10:00:00" })]));
       assert.deepEqual(getHiddenDaysWithClasses(emptyWeekend, DEFAULT_SHOWN_WEEKDAYS), []);
+   });
+
+   void it("finds the weekdays used by classes across a group of weeks", () => {
+      const week = { offset: 0, number: 25, start: "2026-06-15", end: "2026-06-21" };
+
+      assert.deepEqual(
+         getWeekdaysWithClasses([
+            { week, classes: [createClass({ start: "2026-06-15T09:00:00" }), createClass({ id: "sunday", start: "2026-06-21T09:00:00" })] },
+            { week: { ...week, offset: 1 }, classes: [createClass({ id: "wednesday", start: "2026-06-17T09:00:00" })] },
+         ]),
+         [1, 3, 7]
+      );
    });
 
    void it("sorts classes within a day chronologically", () => {

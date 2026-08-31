@@ -321,7 +321,7 @@ button {
    color: var(--chrome-strong);
 }
 
-.fatal-error-boundary button {
+.fatal-error-boundary .button__surface {
    min-height: 42px;
    padding: 0 16px;
    border: 2px solid var(--chrome-line-strong);
@@ -360,7 +360,7 @@ button {
    overflow-wrap: anywhere;
 }
 
-.view-error-boundary button {
+.view-error-boundary .button__surface {
    min-height: 42px;
    padding: 0 16px;
    border: 2px solid var(--line-strong);

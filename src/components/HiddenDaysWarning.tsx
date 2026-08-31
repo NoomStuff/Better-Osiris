@@ -1,4 +1,4 @@
-import "./HiddenDaysWarning.css";
+import { WarningBanner } from "./WarningBanner";
 
 interface HiddenDaysWarningProps {
    /** Long weekday names, e.g. ["Saturday", "Sunday"]. */
@@ -20,14 +20,8 @@ export function HiddenDaysWarning({ labels, onShow }: HiddenDaysWarningProps) {
    const dayWord = labels.length === 1 ? "that day is" : "those days are";
 
    return (
-      <aside className="hidden-days-warning" role="status">
-         <i className="fa-solid fa-triangle-exclamation" aria-hidden="true" />
-         <p>
-            Classes are also scheduled on <strong>{dayList}</strong>, but {dayWord} hidden.
-         </p>
-         <button type="button" onClick={onShow}>
-            Show {dayList}
-         </button>
-      </aside>
+      <WarningBanner action={{ label: `Show ${dayList}`, onClick: onShow }}>
+         Classes are also scheduled on <strong>{dayList}</strong>, but {dayWord} hidden.
+      </WarningBanner>
    );
 }

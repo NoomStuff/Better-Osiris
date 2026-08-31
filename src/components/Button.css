@@ -1,0 +1,88 @@
+.button {
+   position: relative;
+   display: inline-flex;
+   color: inherit;
+}
+
+.button__control {
+   width: 100%;
+   padding: 0;
+   color: inherit;
+   cursor: pointer;
+}
+
+.button__surface {
+   display: inline-flex;
+   align-items: center;
+   justify-content: center;
+   min-height: 38px;
+   padding: 0 14px;
+   border: 2px solid var(--line);
+   border-radius: 10px;
+   background: rgba(var(--highlight-rgb), 0.035);
+   color: var(--text-strong);
+   font-size: 0.8rem;
+   font-weight: 700;
+   pointer-events: none;
+   transition:
+      transform 220ms var(--bounce-overshoot),
+      border-color 220ms ease-out,
+      background-color 220ms ease-out,
+      box-shadow 220ms ease-out,
+      color 220ms ease-out;
+}
+
+.button:hover .button__control:not(:disabled) .button__surface,
+.button__control:focus-visible .button__surface {
+   border-color: var(--line-strong);
+   background: rgba(var(--highlight-rgb), 0.06);
+   box-shadow: 0 5px 12px rgba(0, 0, 0, 0.14);
+   transform: translateY(-1px);
+}
+
+.button__control:active:not(:disabled) .button__surface {
+   transform: scale(0.98);
+}
+
+.button__control:disabled {
+   cursor: not-allowed;
+}
+
+.button__control:disabled .button__surface {
+   opacity: 0.45;
+}
+
+.button--primary .button__surface {
+   border-color: rgba(var(--accent-rgb), 0.45);
+   background: rgba(var(--accent-rgb), 0.14);
+}
+
+.button--danger .button__surface {
+   border-color: rgba(var(--danger-rgb), 0.58);
+   background: rgba(var(--danger-rgb), 0.14);
+   color: var(--danger-bright);
+}
+
+.button--danger:hover .button__control:not(:disabled) .button__surface,
+.button--danger .button__control:focus-visible .button__surface {
+   border-color: rgba(var(--danger-rgb), 0.76);
+   background: rgba(var(--danger-rgb), 0.22);
+}
+
+.button--warning .button__surface {
+   border-color: rgba(var(--warning-rgb), 0.5);
+   background: rgba(var(--warning-rgb), 0.14);
+}
+
+.button--warning:hover .button__control:not(:disabled) .button__surface,
+.button--warning .button__control:focus-visible .button__surface {
+   border-color: rgba(var(--warning-rgb), 0.75);
+   background: rgba(var(--warning-rgb), 0.22);
+}
+
+.button--compact .button__surface {
+   min-height: 30px;
+   padding: 0 10px;
+   border-radius: 8px;
+   font-size: 0.72rem;
+}

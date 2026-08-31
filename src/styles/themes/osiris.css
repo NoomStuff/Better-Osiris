@@ -76,7 +76,7 @@ html[data-theme="osiris"] .fatal-error-boundary i {
    color: var(--accent);
 }
 
-html[data-theme="osiris"] .fatal-error-boundary button {
+html[data-theme="osiris"] .fatal-error-boundary .button__surface {
    border-color: var(--line-strong);
    background: rgba(var(--accent-rgb), 0.14);
 }

@@ -1,4 +1,4 @@
-.hidden-days-warning {
+.warning-banner {
    display: flex;
    align-items: center;
    gap: 12px;
@@ -8,16 +8,16 @@
    border-radius: 14px;
    background: rgba(var(--chrome-warning-rgb), 0.1);
    color: var(--chrome-strong);
-   animation: hidden-days-warning-enter 300ms cubic-bezier(0.22, 1, 0.36, 1) both;
+   animation: warning-banner-enter 300ms cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
-.hidden-days-warning > i {
+.warning-banner > i {
    flex-shrink: 0;
    color: var(--chrome-warning);
    font-size: 1rem;
 }
 
-.hidden-days-warning p {
+.warning-banner p {
    flex: 1;
    min-width: 0;
    margin: 0;
@@ -26,33 +26,24 @@
    line-height: 1.4;
 }
 
-.hidden-days-warning p strong {
+.warning-banner p strong {
    color: var(--chrome-strong);
    font-weight: 700;
 }
 
-.hidden-days-warning button {
-   flex-shrink: 0;
-   min-height: 36px;
-   border: 2px solid rgba(var(--chrome-warning-rgb), 0.5);
-   border-radius: 10px;
+.warning-banner .button--warning .button__surface {
+   border-color: rgba(var(--chrome-warning-rgb), 0.5);
    background: rgba(var(--chrome-warning-rgb), 0.14);
    color: var(--chrome-strong);
-   padding: 0 14px;
-   font-size: 0.8rem;
-   font-weight: 700;
-   cursor: pointer;
-   transition:
-      border-color 200ms ease-out,
-      background-color 200ms ease-out;
 }
 
-.hidden-days-warning button:hover {
+.warning-banner .button--warning:hover .button__control:not(:disabled) .button__surface,
+.warning-banner .button--warning .button__control:focus-visible .button__surface {
    border-color: rgba(var(--chrome-warning-rgb), 0.75);
    background: rgba(var(--chrome-warning-rgb), 0.22);
 }
 
-@keyframes hidden-days-warning-enter {
+@keyframes warning-banner-enter {
    from {
       opacity: 0;
       transform: translateY(-6px);
@@ -65,7 +56,7 @@
 }
 
 @media (max-width: 640px) {
-   .hidden-days-warning {
+   .warning-banner {
       flex-wrap: wrap;
       gap: 8px 12px;
       padding: 10px 14px;

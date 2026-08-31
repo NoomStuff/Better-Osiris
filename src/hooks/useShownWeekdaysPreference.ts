@@ -11,7 +11,7 @@ function parseIsoWeekday(value: string): IsoWeekday | null {
 }
 
 function parseStoredWeekdays(stored: string | null): IsoWeekday[] {
-   if (!stored) {
+   if (stored === null) {
       return [...DEFAULT_SHOWN_WEEKDAYS];
    }
 

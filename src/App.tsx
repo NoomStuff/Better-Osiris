@@ -23,7 +23,7 @@ import { applyDevClassStatusPreview } from "./lib/devStatusPreview";
 import { useWeeks } from "./hooks/useWeeks";
 import { dayLabel, getIsoWeekday, toDayKey } from "./lib/date";
 import { getEmptyWeekMessage } from "./lib/flavor";
-import { getHiddenDaysWithClasses } from "./lib/weekLayout";
+import { getHiddenDaysWithClasses, getWeekdaysWithClasses } from "./lib/weekLayout";
 import { ErrorBoundary } from "./components/ErrorBoundary";
 import { notifyError, notifySuccess } from "./lib/notyf";
 import { requestNotificationPermission } from "./lib/classNotifications";
@@ -65,7 +65,20 @@ export default function App() {
       refreshAfterAuthError,
    } = useOsirisTokenSettings();
    useViewportMetrics();
-   const { canGoNext, canGoPrevious, data, error, isWeekNavigable, loading, retryCountdownMs, retrying, refreshing, title } = useWeeks(weekOffset, {
+   const {
+      areInitialWeeksLoaded,
+      canGoNext,
+      canGoPrevious,
+      data,
+      error,
+      initialWeeks,
+      isWeekNavigable,
+      loading,
+      retryCountdownMs,
+      retrying,
+      refreshing,
+      title,
+   } = useWeeks(weekOffset, {
       enabled: !isTokenSettingsLoading && hasBearerToken && rosterTimeZone.isKnown,
       clearCache: (!isTokenSettingsLoading && !hasBearerToken) || rosterTimeZone.hasTimeZoneChanged,
       resetKey: weeksResetKey,
@@ -109,6 +122,7 @@ export default function App() {
    );
 
    const hiddenDays = useMemo(() => getHiddenDaysWithClasses(allDays, shownWeekdays), [allDays, shownWeekdays]);
+   const smartWeekdays = useMemo(() => getWeekdaysWithClasses(initialWeeks), [initialWeeks]);
 
    const showHiddenDays = useCallback(() => {
       setShownWeekdays((current) => [...new Set([...current, ...hiddenDays.map((day) => getIsoWeekday(day.key))])].sort((a, b) => a - b));
@@ -391,6 +405,8 @@ export default function App() {
             isOpen={isSettingsOpen}
             theme={theme}
             shownWeekdays={shownWeekdays}
+            smartWeekdays={smartWeekdays}
+            isSmartDaysReady={areInitialWeeksLoaded}
             isDevToolsEnabled={devPreview.isEnabled}
             perceivedNow={perceivedNow}
             timeOverride={devPreview.timeOverride}

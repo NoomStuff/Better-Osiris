@@ -1,5 +1,6 @@
 import type { DevClassStatusPreviewMode } from "../lib/devStatusPreview";
 import { DEV_CLASS_STATUS_PREVIEW_MODES } from "../lib/devStatusPreview";
+import { Button } from "./Button";
 
 const DAY_MINUTES = 24 * 60;
 const TIME_SLIDER_STEP_MINUTES = 15;
@@ -55,8 +56,10 @@ export function DevToolsSettings({
    return (
       <section className="settings-section" aria-labelledby="devtools-settings-title">
          <div className="settings-section__header">
-            <h3 id="devtools-settings-title">Devtools</h3>
-            <p>Local-only roster testing tools. These controls are not available in production.</p>
+            <div className="settings-section__copy">
+               <h3 id="devtools-settings-title">Devtools</h3>
+               <p>Local-only roster testing tools. These controls are not available in production.</p>
+            </div>
          </div>
 
          <label className="settings-toggle">
@@ -101,12 +104,10 @@ export function DevToolsSettings({
                </div>
 
                <div className="settings-dialog__actions">
-                  <button className="settings-dialog__button" type="button" onClick={() => onChangeTimeOverride(new Date())}>
-                     Use current time
-                  </button>
-                  <button className="settings-dialog__button" type="button" disabled={!timeOverride} onClick={() => onChangeTimeOverride(null)}>
+                  <Button onClick={() => onChangeTimeOverride(new Date())}>Use current time</Button>
+                  <Button disabled={!timeOverride} onClick={() => onChangeTimeOverride(null)}>
                      Clear override
-                  </button>
+                  </Button>
                </div>
 
                <div className="devtools-option">

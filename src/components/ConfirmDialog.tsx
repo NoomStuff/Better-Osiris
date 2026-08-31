@@ -1,4 +1,5 @@
 import { OverlayPanel } from "./OverlayPanel";
+import { Button } from "./Button";
 import "./ConfirmDialog.css";
 
 interface ConfirmDialogProps {
@@ -45,18 +46,12 @@ export function ConfirmDialog({
             </header>
 
             <div className="confirm-dialog__actions">
-               <button className="confirm-dialog__button" type="button" disabled={isConfirming} onClick={onCancel}>
+               <Button disabled={isConfirming} onClick={onCancel}>
                   {cancelLabel}
-               </button>
-               <button
-                  className="confirm-dialog__button confirm-dialog__button--confirm"
-                  type="button"
-                  data-variant={variant}
-                  disabled={isConfirming}
-                  onClick={onConfirm}
-               >
+               </Button>
+               <Button variant={variant === "danger" ? "danger" : "primary"} disabled={isConfirming} onClick={onConfirm}>
                   {isConfirming ? "Working..." : confirmLabel}
-               </button>
+               </Button>
             </div>
          </div>
       </OverlayPanel>

@@ -1,5 +1,6 @@
 import { Component, type ErrorInfo, type ReactNode } from "react";
 import { notifyError } from "../lib/notyf";
+import { Button } from "./Button";
 
 interface ErrorBoundaryProps {
    children: ReactNode;
@@ -32,9 +33,7 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
                <i className="fa-solid fa-triangle-exclamation" aria-hidden="true" />
                <p>This view could not be rendered.</p>
                <small>{this.state.errorMessage}</small>
-               <button type="button" onClick={() => this.setState({ errorMessage: null })}>
-                  Try again
-               </button>
+               <Button onClick={() => this.setState({ errorMessage: null })}>Try again</Button>
             </div>
          );
       }
@@ -44,9 +43,7 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
             <i className="fa-solid fa-triangle-exclamation" aria-hidden="true" />
             <h1>Better Osiris could not continue.</h1>
             <p>{this.state.errorMessage}</p>
-            <button type="button" onClick={() => window.location.reload()}>
-               Reload app
-            </button>
+            <Button onClick={() => window.location.reload()}>Reload app</Button>
          </main>
       );
    }
