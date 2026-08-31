@@ -39,6 +39,7 @@ html[data-theme="espresso"] {
    --chrome-accent: #e8a15c;
    --chrome-accent-rgb: 232, 161, 92;
    --chrome-warning: #d9a04a;
+   --chrome-warning-rgb: 217, 160, 74;
    --chrome-highlight-rgb: 244, 236, 223;
    --chrome-line: rgba(240, 220, 190, 0.14);
    --chrome-line-strong: rgba(240, 220, 190, 0.28);

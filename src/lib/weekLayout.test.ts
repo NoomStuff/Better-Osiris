@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { afterEach, describe, it } from "node:test";
 import { getMinutesFromMidnight, toDayKey } from "./date.js";
 import { setRosterTimeZone } from "./rosterTimeZone.js";
-import { getDays, getPositionedClasses, getVisibleDays } from "./weekLayout.js";
+import { DEFAULT_SHOWN_WEEKDAYS, getDays, getHiddenDaysWithClasses, getPositionedClasses, getVisibleDays } from "./weekLayout.js";
 import type { Class } from "../types/weeks";
 
 function createClass(overrides: Partial<Class> = {}): Class {
@@ -152,7 +152,7 @@ void describe("roster layout", () => {
       const groups = getDays(week, positioned);
 
       assert.deepEqual(
-         getVisibleDays(groups).map((group) => group.key),
+         getVisibleDays(groups, DEFAULT_SHOWN_WEEKDAYS).map((group) => group.key),
          ["2026-06-15", "2026-06-16", "2026-06-17", "2026-06-18", "2026-06-19"]
       );
       assert.deepEqual(
@@ -163,6 +163,29 @@ void describe("roster layout", () => {
          getVisibleDays(groups, [6]).map((group) => group.key),
          ["2026-06-20"]
       );
+   });
+
+   void it("flags hidden days that still hold classes", () => {
+      const week = { offset: 0, number: 25, start: "2026-06-15", end: "2026-06-21" };
+      const positioned = getPositionedClasses([
+         createClass({ id: "friday", start: "2026-06-19T09:00:00", end: "2026-06-19T10:00:00" }),
+         createClass({ id: "saturday", start: "2026-06-20T09:00:00", end: "2026-06-20T10:00:00" }),
+         createClass({ id: "sunday", start: "2026-06-21T09:00:00", end: "2026-06-21T10:00:00" }),
+      ]);
+      const groups = getDays(week, positioned);
+
+      assert.deepEqual(
+         getHiddenDaysWithClasses(groups, DEFAULT_SHOWN_WEEKDAYS).map((group) => group.key),
+         ["2026-06-20", "2026-06-21"]
+      );
+      assert.deepEqual(getHiddenDaysWithClasses(groups, [1, 2, 3, 4, 5, 6, 7]), []);
+      assert.deepEqual(
+         getHiddenDaysWithClasses(groups, [6]).map((group) => group.key),
+         ["2026-06-19", "2026-06-21"]
+      );
+      // Hidden days without classes never count.
+      const emptyWeekend = getDays(week, getPositionedClasses([createClass({ id: "friday", start: "2026-06-19T09:00:00", end: "2026-06-19T10:00:00" })]));
+      assert.deepEqual(getHiddenDaysWithClasses(emptyWeekend, DEFAULT_SHOWN_WEEKDAYS), []);
    });
 
    void it("sorts classes within a day chronologically", () => {

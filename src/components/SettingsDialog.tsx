@@ -1,10 +1,12 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { SyntheticEvent } from "react";
 import type { OsirisTokenSettings } from "../api/settings";
+import type { IsoWeekday } from "../lib/date";
 import type { DevClassStatusPreviewMode } from "../lib/devStatusPreview";
 import { notifyError, notifySuccess, notifyWarning } from "../lib/notyf";
 import { OSIRIS_BEARER_TOKEN_HELP_URL } from "../lib/osirisTokenHelp";
 import { THEMES, type ThemeId } from "../lib/theme";
+import { ISO_WEEKDAYS } from "../lib/weekLayout";
 import { ConfirmDialog } from "./ConfirmDialog";
 import { DevToolsSettings } from "./DevToolsSettings";
 import { IconButton } from "./IconButton";
@@ -14,6 +16,7 @@ import "./SettingsDialog.css";
 interface SettingsDialogProps {
    isOpen: boolean;
    theme: ThemeId;
+   shownWeekdays: IsoWeekday[];
    isDevToolsEnabled: boolean;
    perceivedNow: Date;
    timeOverride: Date | null;
@@ -22,6 +25,7 @@ interface SettingsDialogProps {
    isTokenLoading: boolean;
    onClose: () => void;
    onChangeTheme: (theme: ThemeId) => void;
+   onChangeShownWeekdays: (weekdays: IsoWeekday[]) => void;
    onSaveToken: (token: string) => Promise<OsirisTokenSettings>;
    onClearToken: () => Promise<OsirisTokenSettings>;
    onToggleDevTools: (enabled: boolean) => void;
@@ -31,9 +35,16 @@ interface SettingsDialogProps {
 
 const IS_DEV_SERVER = import.meta.env.DEV;
 
+// January 1st 2024 is a Monday, so ISO weekday N is that month's Nth day. The names are
+// timezone-independent and must not touch the roster zone: the dialog can mount before the
+// server has declared it.
+const WEEKDAY_LABEL_FORMAT = new Intl.DateTimeFormat("en-GB", { weekday: "short", timeZone: "UTC" });
+const WEEKDAY_LABELS: readonly string[] = ISO_WEEKDAYS.map((weekday) => WEEKDAY_LABEL_FORMAT.format(new Date(Date.UTC(2024, 0, weekday))));
+
 export function SettingsDialog({
    isOpen,
    theme,
+   shownWeekdays,
    isDevToolsEnabled,
    perceivedNow,
    timeOverride,
@@ -42,6 +53,7 @@ export function SettingsDialog({
    isTokenLoading,
    onClose,
    onChangeTheme,
+   onChangeShownWeekdays,
    onSaveToken,
    onClearToken,
    onToggleDevTools,
@@ -107,6 +119,15 @@ export function SettingsDialog({
    const closeResetConfirm = useCallback(() => setIsResetConfirmOpen(false), []);
    const confirmClear = useCallback(() => void handleClear(), [handleClear]);
 
+   const toggleWeekday = useCallback(
+      (weekday: IsoWeekday) => {
+         const next = shownWeekdays.includes(weekday) ? shownWeekdays.filter((shown) => shown !== weekday) : [...shownWeekdays, weekday].sort((a, b) => a - b);
+
+         onChangeShownWeekdays(next);
+      },
+      [onChangeShownWeekdays, shownWeekdays]
+   );
+
    if (!isOpen && !isClosing) {
       return null;
    }
@@ -152,6 +173,7 @@ export function SettingsDialog({
                               title={themeOption.label}
                               aria-pressed={isActive}
                               data-active={isActive}
+                              data-theme-id={themeOption.id}
                               onClick={() => onChangeTheme(themeOption.id)}
                            >
                               <span
@@ -161,6 +183,35 @@ export function SettingsDialog({
                                  <i className={themeOption.icon} aria-hidden="true" />
                               </span>
                               <span className="theme-picker__label">{themeOption.label}</span>
+                           </button>
+                        );
+                     })}
+                  </div>
+               </section>
+
+               <section className="settings-section" aria-labelledby="days-settings-title">
+                  <div className="settings-section__header">
+                     <h3 id="days-settings-title">Shown days</h3>
+                     <p>Which weekdays the agenda and grid display.</p>
+                  </div>
+
+                  <div className="weekday-picker" role="group" aria-label="Shown weekdays">
+                     {ISO_WEEKDAYS.map((weekday) => {
+                        const isShown = shownWeekdays.includes(weekday);
+                        const isLastShownDay = isShown && shownWeekdays.length === 1;
+
+                        return (
+                           <button
+                              type="button"
+                              key={weekday}
+                              className="weekday-picker__option"
+                              title={isLastShownDay ? "At least one day must stay shown" : undefined}
+                              aria-pressed={isShown}
+                              data-shown={isShown}
+                              disabled={isLastShownDay}
+                              onClick={() => toggleWeekday(weekday)}
+                           >
+                              {WEEKDAY_LABELS[weekday - 1]}
                            </button>
                         );
                      })}

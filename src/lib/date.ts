@@ -141,10 +141,13 @@ export function getRosterWeekBounds(date: Date, offset: number) {
    return { start, end: shiftIsoDateByDays(start, 4) };
 }
 
+/** ISO weekday number: 1 = Monday … 7 = Sunday. */
+export type IsoWeekday = 1 | 2 | 3 | 4 | 5 | 6 | 7;
+
 /** ISO weekday number of a date key: 1 = Monday … 7 = Sunday. */
-export function getIsoWeekday(isoDate: string) {
+export function getIsoWeekday(isoDate: string): IsoWeekday {
    const day = new Date(`${isoDate}T00:00:00Z`).getUTCDay();
-   return day === 0 ? 7 : day;
+   return (day === 0 ? 7 : day) as IsoWeekday;
 }
 
 function createDateInRosterZone(year: number, month: number, day: number, hour: number, minute: number, second: number) {

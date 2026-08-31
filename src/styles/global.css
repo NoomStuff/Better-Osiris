@@ -184,6 +184,7 @@
    --chrome-accent: var(--accent);
    --chrome-accent-rgb: var(--accent-rgb);
    --chrome-warning: var(--warning);
+   --chrome-warning-rgb: var(--warning-rgb);
    --chrome-highlight-rgb: var(--highlight-rgb);
    --chrome-line: var(--line);
    --chrome-line-strong: var(--line-strong);

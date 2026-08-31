@@ -3,6 +3,7 @@ import { AgendaView } from "./components/AgendaView";
 import { AppToolbar } from "./components/AppToolbar";
 import { GridView } from "./components/GridView";
 import { ClassDrawer } from "./components/ClassDrawer";
+import { HiddenDaysWarning } from "./components/HiddenDaysWarning";
 import { BearerTokenState, ErrorState, LoadingState, WeekOverlayState } from "./components/LoadingState";
 import { SettingsDialog } from "./components/SettingsDialog";
 import { WeekNavigator } from "./components/WeekNavigator";
@@ -12,6 +13,7 @@ import { getPerceivedDay, useAgendaState } from "./hooks/useAgendaState";
 import { useOsirisTokenSettings } from "./hooks/useOsirisTokenSettings";
 import { useRosterTimeZone } from "./hooks/useRosterTimeZone";
 import { useDockedMobileBar } from "./hooks/useDockedMobileBar";
+import { useShownWeekdaysPreference } from "./hooks/useShownWeekdaysPreference";
 import { useThemePreference } from "./hooks/useThemePreference";
 import { useViewportMetrics } from "./hooks/useViewportMetrics";
 import { useViewModePreference } from "./hooks/useViewModePreference";
@@ -19,8 +21,9 @@ import { useWeekSwipeNavigation } from "./hooks/useWeekSwipeNavigation";
 import { getAdjacentGridZoom, GRID_ZOOM_ORDER } from "./lib/appView";
 import { applyDevClassStatusPreview } from "./lib/devStatusPreview";
 import { useWeeks } from "./hooks/useWeeks";
-import { toDayKey } from "./lib/date";
+import { dayLabel, getIsoWeekday, toDayKey } from "./lib/date";
 import { getEmptyWeekMessage } from "./lib/flavor";
+import { getHiddenDaysWithClasses } from "./lib/weekLayout";
 import { ErrorBoundary } from "./components/ErrorBoundary";
 import { notifyError, notifySuccess } from "./lib/notyf";
 import { requestNotificationPermission } from "./lib/classNotifications";
@@ -42,6 +45,7 @@ export default function App() {
    const [weekTransitionDirection, setWeekTransitionDirection] = useState<WeekTransitionDirection>("default");
    const [viewMode, setViewMode] = useViewModePreference();
    const [theme, setTheme] = useThemePreference();
+   const [shownWeekdays, setShownWeekdays] = useShownWeekdaysPreference();
    const appContentRef = useRef<HTMLElement>(null);
    const isBarDocked = useDockedMobileBar(appContentRef);
    const [gridZoom, setGridZoom] = useState<GridZoom>("hour");
@@ -97,11 +101,18 @@ export default function App() {
       void refreshAfterAuthError();
    }, [error?.isAuthRelated, refreshAfterAuthError]);
 
-   const { animateAgenda, collapseAllDays, expandAllDays, resetAgenda, toggleDay, visibleDays, visibleExpandedDays } = useAgendaState(
+   const { allDays, animateAgenda, collapseAllDays, expandAllDays, resetAgenda, toggleDay, visibleDays, visibleExpandedDays } = useAgendaState(
       displayedData,
       weekOffset,
-      perceivedDay
+      perceivedDay,
+      shownWeekdays
    );
+
+   const hiddenDays = useMemo(() => getHiddenDaysWithClasses(allDays, shownWeekdays), [allDays, shownWeekdays]);
+
+   const showHiddenDays = useCallback(() => {
+      setShownWeekdays((current) => [...new Set([...current, ...hiddenDays.map((day) => getIsoWeekday(day.key))])].sort((a, b) => a - b));
+   }, [hiddenDays, setShownWeekdays]);
 
    const updateWeekOffset = useCallback(
       (updater: number | ((current: number) => number), transitionDirection: WeekTransitionDirection = "default") => {
@@ -345,6 +356,8 @@ export default function App() {
          </div>
 
          <main className="app-content" ref={appContentRef}>
+            {hiddenDays.length > 0 ? <HiddenDaysWarning labels={hiddenDays.map((day) => dayLabel.format(day.date))} onShow={showHiddenDays} /> : null}
+
             <section
                className={`app-content-frame app-content-frame--${viewMode} app-content-frame--zoom-${frameGridZoom} view-enter`}
                data-empty-week={isVisuallyEmptyWeek}
@@ -377,6 +390,7 @@ export default function App() {
          <SettingsDialog
             isOpen={isSettingsOpen}
             theme={theme}
+            shownWeekdays={shownWeekdays}
             isDevToolsEnabled={devPreview.isEnabled}
             perceivedNow={perceivedNow}
             timeOverride={devPreview.timeOverride}
@@ -387,6 +401,7 @@ export default function App() {
             onClearToken={clearToken}
             onClose={closeSettings}
             onChangeTheme={setTheme}
+            onChangeShownWeekdays={setShownWeekdays}
             onToggleDevTools={devPreview.toggle}
             onChangeTimeOverride={devPreview.changeTimeOverride}
             onChangeStatusPreviewMode={devPreview.setStatusPreviewMode}

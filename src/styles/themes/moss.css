@@ -39,6 +39,7 @@ html[data-theme="moss"] {
    --chrome-accent: #9cc97e;
    --chrome-accent-rgb: 156, 201, 126;
    --chrome-warning: #c9b458;
+   --chrome-warning-rgb: 201, 180, 88;
    --chrome-highlight-rgb: 237, 243, 230;
    --chrome-line: rgba(220, 235, 210, 0.14);
    --chrome-line-strong: rgba(220, 235, 210, 0.28);

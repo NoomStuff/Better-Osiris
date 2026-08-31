@@ -38,6 +38,7 @@ html[data-theme="osiris"] {
    --chrome-accent: #7fd8d8;
    --chrome-accent-rgb: 127, 216, 216;
    --chrome-warning: #f0c56a;
+   --chrome-warning-rgb: 240, 197, 106;
    --chrome-highlight-rgb: 255, 255, 255;
    --chrome-line: rgba(255, 255, 255, 0.18);
    --chrome-line-strong: rgba(255, 255, 255, 0.36);
