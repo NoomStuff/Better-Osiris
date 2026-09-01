@@ -1,0 +1,47 @@
+/* Bloom: mint roster panels and blush cards framed by deep berry chrome. */
+html[data-theme="bloom"] {
+   color-scheme: light;
+
+   --page-canvas: #4a1630;
+   --page-background:
+      radial-gradient(ellipse at 18% -12%, rgba(243, 152, 180, 0.24), transparent 34%),
+      radial-gradient(ellipse at 94% 110%, rgba(13, 103, 98, 0.2), transparent 36%), linear-gradient(150deg, #6c2044 0%, #42142c 58%, #24101e 100%);
+
+   --line: rgba(47, 74, 61, 0.2);
+   --line-strong: rgba(104, 24, 61, 0.38);
+   --text-strong: #21342d;
+   --text-dim: #465b51;
+   --text-muted: #667970;
+   --accent: #7b1948;
+   --accent-rgb: 123, 25, 72;
+   --warning: #a24a0b;
+   --warning-rgb: 162, 74, 11;
+   --danger: #bd3542;
+   --danger-rgb: 189, 53, 66;
+   --danger-bright: #982534;
+   --surface-rgb: 211, 232, 217;
+   --highlight-rgb: 123, 25, 72;
+   --overlay-surface: rgba(231, 242, 234, 0.99);
+   --backdrop: rgba(37, 11, 25, 0.48);
+   --backdrop-strong: rgba(37, 11, 25, 0.56);
+   --panel-veil: 0.86;
+   --frame-veil: 0.96;
+   --class-surface: rgba(255, 239, 244, 0.96);
+   --class-surface-raised: rgba(255, 249, 251, 1);
+   --class-border: rgba(104, 24, 61, 0.2);
+   --class-border-raised: rgba(123, 25, 72, 0.46);
+   --class-surface-cancelled: rgba(189, 53, 66, 0.1);
+   --shadow: 0 24px 76px rgba(41, 10, 27, 0.34);
+
+   --chrome-strong: #fff7fa;
+   --chrome-dim: #e9c8d3;
+   --chrome-muted: #bd91a2;
+   --chrome-accent: #ff9fbd;
+   --chrome-accent-rgb: 255, 159, 189;
+   --chrome-warning: #9de0bc;
+   --chrome-warning-rgb: 157, 224, 188;
+   --chrome-highlight-rgb: 255, 247, 250;
+   --chrome-line: rgba(255, 225, 235, 0.18);
+   --chrome-line-strong: rgba(255, 159, 189, 0.38);
+   --chrome-surface: rgba(75, 19, 47, 0.95);
+}

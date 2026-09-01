@@ -1,0 +1,33 @@
+/* Paper: warm newsprint, dark editorial rules, and a restrained vermilion accent. */
+html[data-theme="paper"] {
+   color-scheme: light;
+
+   --page-canvas: #d8c9a8;
+   --page-background:
+      radial-gradient(ellipse at 18% -8%, rgba(255, 250, 230, 0.72), transparent 30%), linear-gradient(145deg, #e7dabd 0%, #d5c4a0 52%, #c6b38f 100%);
+
+   --line: rgba(29, 25, 19, 0.28);
+   --line-strong: rgba(29, 25, 19, 0.58);
+   --text-strong: #1b1813;
+   --text-dim: #403a30;
+   --text-muted: #625a4c;
+   --accent: #a3261e;
+   --accent-rgb: 163, 38, 30;
+   --warning: #315d87;
+   --warning-rgb: 49, 93, 135;
+   --danger: #b6002c;
+   --danger-rgb: 182, 0, 44;
+   --danger-bright: #8e0021;
+   --surface-rgb: 239, 230, 207;
+   --highlight-rgb: 29, 25, 19;
+   --overlay-surface: rgba(250, 243, 224, 0.99);
+   --backdrop: rgba(40, 33, 24, 0.48);
+   --backdrop-strong: rgba(40, 33, 24, 0.54);
+   --panel-veil: 0.58;
+   --class-surface: rgba(255, 249, 232, 0.98);
+   --class-surface-raised: rgba(255, 253, 243, 1);
+   --class-border: rgba(29, 25, 19, 0.3);
+   --class-border-raised: rgba(163, 38, 30, 0.56);
+   --class-surface-cancelled: rgba(182, 0, 44, 0.08);
+   --shadow: 0 20px 62px rgba(64, 49, 29, 0.24);
+}

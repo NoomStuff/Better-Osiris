@@ -71,13 +71,19 @@
 .theme-picker {
    display: flex;
    flex-wrap: wrap;
+   justify-content: center;
    gap: 8px;
 }
 
 .theme-picker__option {
-   width: 76px;
+   width: 70px;
    padding: 0;
    cursor: pointer;
+}
+
+.theme-picker--animate .theme-picker__option {
+   animation: theme-picker-option-enter 280ms cubic-bezier(0.22, 1, 0.36, 1) both;
+   animation-delay: calc(var(--theme-index) * 28ms);
 }
 
 .theme-picker__surface {
@@ -114,9 +120,8 @@
    box-shadow: inset 0 0 0 1px rgba(var(--accent-rgb), 0.22);
 }
 
-/* Every theme's icon plays its own flourish on hover: the moon rocks, the sun spins up,
-   the snowflake twirls, the mug tips, the cloud drifts, the leaf flutters, the fire
-   flickers, and the cap gets tossed. */
+/* Equivalent themes share an icon and flourish so a pair reads as the same theme at
+   different times of day. */
 .theme-picker__option[data-theme-id="dark"] {
    --theme-icon-animation: theme-icon-rock 500ms cubic-bezier(0.2, 0.8, 0.3, 1.12);
 }
@@ -125,24 +130,49 @@
    --theme-icon-animation: theme-icon-spin 700ms cubic-bezier(0.22, 1, 0.36, 1);
 }
 
-.theme-picker__option[data-theme-id="frost"] {
+.theme-picker__option[data-theme-id="frost"],
+.theme-picker__option[data-theme-id="thaw"] {
    --theme-icon-animation: theme-icon-twirl 620ms linear;
 }
 
-.theme-picker__option[data-theme-id="espresso"] {
+.theme-picker__option[data-theme-id="espresso"],
+.theme-picker__option[data-theme-id="latte"] {
    --theme-icon-animation: theme-icon-tip 550ms cubic-bezier(0.2, 0.85, 0.35, 1.2);
 }
 
-.theme-picker__option[data-theme-id="dusk"] {
+.theme-picker__option[data-theme-id="dusk"],
+.theme-picker__option[data-theme-id="dawn"] {
    --theme-icon-animation: theme-icon-drift 1000ms cubic-bezier(0.22, 0.75, 0.32, 1);
 }
 
-.theme-picker__option[data-theme-id="moss"] {
+.theme-picker__option[data-theme-id="moss"],
+.theme-picker__option[data-theme-id="ivy"] {
    --theme-icon-animation: theme-icon-flutter 500ms cubic-bezier(0.3, 0.5, 0.3, 1);
 }
 
-.theme-picker__option[data-theme-id="ember"] {
+.theme-picker__option[data-theme-id="ember"],
+.theme-picker__option[data-theme-id="flare"] {
    --theme-icon-animation: theme-icon-flicker 600ms cubic-bezier(0.3, 0.85, 0.45, 1);
+}
+
+.theme-picker__option[data-theme-id="abyss"] {
+   --theme-icon-animation: theme-icon-wave 760ms cubic-bezier(0.22, 0.8, 0.32, 1);
+}
+
+.theme-picker__option[data-theme-id="contrast"] {
+   --theme-icon-animation: theme-icon-snap 520ms cubic-bezier(0.2, 0.9, 0.3, 1.2);
+}
+
+.theme-picker__option[data-theme-id="bloom"] {
+   --theme-icon-animation: theme-icon-unfurl 640ms cubic-bezier(0.2, 0.8, 0.3, 1.14);
+}
+
+.theme-picker__option[data-theme-id="paper"] {
+   --theme-icon-animation: theme-icon-page-turn 620ms cubic-bezier(0.2, 0.8, 0.3, 1.12);
+}
+
+.theme-picker__option[data-theme-id="noir"] {
+   --theme-icon-animation: theme-icon-hat-tip 620ms cubic-bezier(0.2, 0.8, 0.3, 1.15);
 }
 
 .theme-picker__option[data-theme-id="osiris"] {
@@ -169,7 +199,8 @@
    transform-origin: center;
 }
 
-.theme-picker__option[data-theme-id="moss"] .theme-picker__swatch i {
+.theme-picker__option[data-theme-id="moss"] .theme-picker__swatch i,
+.theme-picker__option[data-theme-id="ivy"] .theme-picker__swatch i {
    transform-origin: 28% 88%;
 }
 
@@ -193,7 +224,7 @@
    gap: 6px;
 }
 
-.settings-section__header--with-actions > .toolbar-action-group {
+.settings-section__header--with-actions > .action-group {
    flex: 0 0 168px;
    min-width: 168px;
 }
@@ -219,6 +250,18 @@
 .weekday-picker__option .button__control[data-shown="true"]:focus-visible .button__surface {
    border-color: rgba(var(--accent-rgb), 0.65);
    background: rgba(var(--accent-rgb), 0.2);
+}
+
+@keyframes theme-picker-option-enter {
+   from {
+      opacity: 0;
+      transform: translateY(7px) scale(0.96);
+   }
+
+   to {
+      opacity: 1;
+      transform: translateY(0) scale(1);
+   }
 }
 
 @keyframes theme-icon-rock {
@@ -400,6 +443,108 @@
 
    100% {
       transform: translateY(0) scale(1, 1);
+   }
+}
+
+@keyframes theme-icon-wave {
+   0% {
+      transform: translateX(0) rotate(0deg);
+   }
+
+   24% {
+      transform: translateX(-3px) rotate(-7deg) scaleY(1.08);
+   }
+
+   50% {
+      transform: translateX(3px) rotate(7deg) scaleY(0.94);
+   }
+
+   75% {
+      transform: translateX(-1px) rotate(-3deg) scaleY(1.03);
+   }
+
+   100% {
+      transform: translateX(0) rotate(0deg);
+   }
+}
+
+@keyframes theme-icon-snap {
+   0% {
+      transform: rotate(0deg) scale(1);
+   }
+
+   35% {
+      transform: rotate(180deg) scale(0.84);
+   }
+
+   68% {
+      transform: rotate(355deg) scale(1.12);
+   }
+
+   100% {
+      transform: rotate(360deg) scale(1);
+   }
+}
+
+@keyframes theme-icon-unfurl {
+   0% {
+      transform: rotate(-8deg) scale(0.86);
+   }
+
+   36% {
+      transform: rotate(7deg) scale(1.14);
+   }
+
+   64% {
+      transform: rotate(-3deg) scale(1.04);
+   }
+
+   100% {
+      transform: rotate(0deg) scale(1);
+   }
+}
+
+@keyframes theme-icon-page-turn {
+   0% {
+      transform: rotate(0deg) scaleX(1);
+   }
+
+   34% {
+      transform: translateX(-2px) rotate(-5deg) scaleX(0.72);
+   }
+
+   62% {
+      transform: translateX(1px) rotate(4deg) scaleX(1.1);
+   }
+
+   82% {
+      transform: rotate(-2deg) scaleX(0.97);
+   }
+
+   100% {
+      transform: rotate(0deg) scaleX(1);
+   }
+}
+
+@keyframes theme-icon-hat-tip {
+   0% {
+      transform: translate(0, 0) rotate(0deg);
+   }
+
+   30% {
+      transform: translate(2px, -3px) rotate(11deg);
+   }
+
+   58% {
+      transform: translate(1px, -1px) rotate(5deg);
+   }
+
+   80% {
+      transform: translate(-1px, 1px) rotate(-3deg);
+   }
+
+   100% {
+      transform: translate(0, 0) rotate(0deg);
    }
 }
 

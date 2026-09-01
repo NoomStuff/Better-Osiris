@@ -1,0 +1,36 @@
+/* Film noir: strict monochrome, silver on black, no tint anywhere. Only the status
+   colors keep their hues so cancelled and changed lessons stay readable at a glance. */
+html[data-theme="noir"] {
+   color-scheme: dark;
+
+   --page-canvas: #000000;
+   --page-background:
+      radial-gradient(ellipse at 22% -8%, rgba(255, 255, 255, 0.08), transparent 24%),
+      radial-gradient(ellipse at 78% -12%, rgba(255, 255, 255, 0.045), transparent 28%),
+      linear-gradient(180deg, #151515 0%, #070707 34%, #000000 62%, #000000 100%);
+
+   --line: rgba(255, 255, 255, 0.13);
+   --line-strong: rgba(255, 255, 255, 0.28);
+   --text-strong: #f0f0f0;
+   --text-dim: #c7c7c7;
+   --text-muted: #949494;
+   --accent: #ebebeb;
+   --accent-rgb: 235, 235, 235;
+   --warning: #d9b264;
+   --warning-rgb: 217, 178, 100;
+   --danger: #e06066;
+   --danger-rgb: 224, 96, 102;
+   --danger-bright: #ffa5ab;
+   --surface-rgb: 4, 4, 4;
+   --highlight-rgb: 240, 240, 240;
+   --overlay-surface: rgba(8, 8, 8, 0.98);
+   --backdrop: rgba(0, 0, 0, 0.56);
+   --backdrop-strong: rgba(0, 0, 0, 0.6);
+   --panel-veil: 0.42;
+   --class-surface: rgba(16, 16, 16, 0.98);
+   --class-surface-raised: rgba(27, 27, 27, 0.99);
+   --class-border: rgba(255, 255, 255, 0.15);
+   --class-border-raised: rgba(255, 255, 255, 0.3);
+   --class-surface-cancelled: rgba(58, 28, 30, 0.96);
+   --shadow: 0 28px 90px rgba(0, 0, 0, 0.8);
+}

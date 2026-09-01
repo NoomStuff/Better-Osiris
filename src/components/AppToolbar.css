@@ -39,6 +39,14 @@
    gap: 8px;
 }
 
+/* The shared action groups (zoom selector, agenda buttons) flex to a compact fixed band
+   inside the toolbar; elsewhere they size to their container. */
+.app-toolbar .action-group {
+   flex: 1 1 auto;
+   min-width: 140px;
+   max-width: 180px;
+}
+
 .app-toolbar__divider {
    width: 1px;
    height: 28px;

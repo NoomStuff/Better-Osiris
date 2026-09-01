@@ -1,10 +1,10 @@
-/* Twilight palette: a dusty rose accent over deep blue-violet night. */
+/* Blue-hour twilight: an indigo horizon with dusty rose light left in the clouds. */
 html[data-theme="dusk"] {
    color-scheme: dark;
 
-   --page-canvas: #271e33;
+   --page-canvas: #24233f;
    --page-background:
-      radial-gradient(circle at 50% 0, rgba(224, 138, 155, 0.08), transparent 32%), linear-gradient(180deg, #271e33 0%, #0f0c17 52%, #1c1628 100%);
+      radial-gradient(ellipse at 75% 8%, rgba(231, 139, 162, 0.18), transparent 34%), linear-gradient(180deg, #343653 0%, #17172b 52%, #10101d 100%);
 
    --line: rgba(148, 156, 224, 0.14);
    --line-strong: rgba(148, 156, 224, 0.3);
@@ -18,16 +18,16 @@ html[data-theme="dusk"] {
    --danger: #ff5c6c;
    --danger-rgb: 255, 92, 108;
    --danger-bright: #ffa3ad;
-   --surface-rgb: 22, 18, 34;
+   --surface-rgb: 22, 21, 40;
    --highlight-rgb: 244, 241, 251;
-   --overlay-surface: rgba(24, 20, 36, 0.96);
+   --overlay-surface: rgba(27, 25, 47, 0.97);
    --backdrop: rgba(8, 6, 13, 0.55);
    --backdrop-strong: rgba(8, 6, 13, 0.6);
    --panel-veil: 0.42;
-   --class-surface: rgba(35, 29, 52, 0.96);
-   --class-surface-raised: rgba(45, 38, 66, 0.98);
+   --class-surface: rgba(38, 36, 64, 0.96);
+   --class-surface-raised: rgba(49, 46, 78, 0.98);
    --class-border: rgba(148, 156, 224, 0.2);
    --class-border-raised: rgba(148, 156, 224, 0.36);
    --class-surface-cancelled: rgba(62, 30, 44, 0.96);
-   --shadow: 0 24px 80px rgba(6, 4, 12, 0.55);
+   --shadow: 0 24px 76px rgba(5, 5, 15, 0.56);
 }

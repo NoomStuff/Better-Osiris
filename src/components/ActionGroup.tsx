@@ -3,9 +3,9 @@ import { useDelayedTooltip } from "../hooks/useDelayedTooltip";
 import { useShortcutActivation } from "../hooks/useShortcutActivation";
 import { TooltipContent, type TooltipPlacement } from "./Tooltip";
 import { getTooltipAnchorName } from "../lib/tooltipAnchor";
-import "./ToolbarActionGroup.css";
+import "./ActionGroup.css";
 
-export interface ToolbarActionOption<T extends string> {
+export interface ActionOption<T extends string> {
    id: T;
    label: string;
    tooltip: string;
@@ -14,7 +14,7 @@ export interface ToolbarActionOption<T extends string> {
    activationId?: string;
 }
 
-export interface ToolbarCommandAction {
+export interface ActionCommand {
    id: string;
    label: string;
    tooltip: string;
@@ -24,19 +24,19 @@ export interface ToolbarCommandAction {
    onPress: () => void;
 }
 
-interface ToolbarActionSelectorProps<T extends string> {
+interface ActionSelectorProps<T extends string> {
    label: string;
-   options: readonly ToolbarActionOption<T>[];
+   options: readonly ActionOption<T>[];
    value: T;
    onChange: (value: T) => void;
 }
 
-interface ToolbarActionButtonsProps {
+interface ActionButtonsProps {
    label: string;
-   actions: readonly ToolbarCommandAction[];
+   actions: readonly ActionCommand[];
 }
 
-interface ToolbarActionItemProps {
+interface ActionItemProps {
    label: string;
    tooltip: string;
    shortcut?: string | undefined;
@@ -50,22 +50,22 @@ interface ToolbarActionItemProps {
    onPress: () => void;
 }
 
-type ToolbarActionCountStyle = CSSProperties & {
-   "--toolbar-action-count": number;
+type ActionGroupCountStyle = CSSProperties & {
+   "--action-count": number;
 };
 
-type SelectorStyle = ToolbarActionCountStyle & {
-   "--toolbar-action-index": number;
+type ActionSelectorStyle = ActionGroupCountStyle & {
+   "--action-index": number;
 };
 
-export function ToolbarActionSelector<T extends string>({ label, options, value, onChange }: ToolbarActionSelectorProps<T>) {
+export function ActionSelector<T extends string>({ label, options, value, onChange }: ActionSelectorProps<T>) {
    const selectedIndex = Math.max(
       0,
       options.findIndex((option) => option.id === value)
    );
-   const style: SelectorStyle = {
-      "--toolbar-action-count": options.length,
-      "--toolbar-action-index": selectedIndex,
+   const style: ActionSelectorStyle = {
+      "--action-count": options.length,
+      "--action-index": selectedIndex,
    };
 
    const handleKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
@@ -95,9 +95,9 @@ export function ToolbarActionSelector<T extends string>({ label, options, value,
    };
 
    return (
-      <div className="toolbar-action-group toolbar-action-group--selector" role="radiogroup" aria-label={label} style={style} onKeyDown={handleKeyDown}>
+      <div className="action-group action-group--selector" role="radiogroup" aria-label={label} style={style} onKeyDown={handleKeyDown}>
          {options.map((option) => (
-            <ToolbarActionItem
+            <ActionItem
                key={option.id}
                label={option.label}
                tooltip={option.tooltip}
@@ -116,13 +116,13 @@ export function ToolbarActionSelector<T extends string>({ label, options, value,
    );
 }
 
-export function ToolbarActionButtons({ label, actions }: ToolbarActionButtonsProps) {
-   const style: ToolbarActionCountStyle = { "--toolbar-action-count": actions.length };
+export function ActionButtons({ label, actions }: ActionButtonsProps) {
+   const style: ActionGroupCountStyle = { "--action-count": actions.length };
 
    return (
-      <div className="toolbar-action-group toolbar-action-group--buttons" role="group" aria-label={label} style={style}>
+      <div className="action-group action-group--buttons" role="group" aria-label={label} style={style}>
          {actions.map((action) => (
-            <ToolbarActionItem
+            <ActionItem
                key={action.id}
                label={action.label}
                tooltip={action.tooltip}
@@ -137,7 +137,7 @@ export function ToolbarActionButtons({ label, actions }: ToolbarActionButtonsPro
    );
 }
 
-function ToolbarActionItem({
+function ActionItem({
    label,
    tooltip,
    shortcut,
@@ -149,7 +149,7 @@ function ToolbarActionItem({
    optionId,
    tooltipPlacement,
    onPress,
-}: ToolbarActionItemProps) {
+}: ActionItemProps) {
    const tooltipId = useId();
    const { hideTooltip, isTooltipEnabled, isTooltipOpen, showTooltip, showTooltipForFocus } = useDelayedTooltip({ disabled });
    const isShortcutActive = useShortcutActivation(activationId);
@@ -178,7 +178,7 @@ function ToolbarActionItem({
 
    return (
       <button
-         className="toolbar-action-group__item"
+         className="action-group__item"
          type="button"
          role={role}
          aria-checked={role === "radio" ? selected : undefined}

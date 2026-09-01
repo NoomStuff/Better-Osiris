@@ -1,48 +1,34 @@
-/* Green sibling of espresso: soft leaf-paper content on a dark forest desk.
-   Content colors style the roster surfaces; chrome colors keep the header readable
-   against the dark backdrop and the mobile bar. */
+/* Forest floor at night: wet pine shadows, olive panels, and young-leaf highlights. */
 html[data-theme="moss"] {
-   color-scheme: light;
+   color-scheme: dark;
 
    --page-canvas: #1d2719;
    --page-background:
-      radial-gradient(circle at 50% 0, rgba(150, 200, 120, 0.07), transparent 32%), linear-gradient(180deg, #1d2719 0%, #0b0f0a 52%, #151d12 100%);
+      radial-gradient(ellipse at 15% -8%, rgba(180, 211, 116, 0.14), transparent 32%),
+      radial-gradient(ellipse at 88% 100%, rgba(91, 66, 34, 0.18), transparent 38%), linear-gradient(155deg, #1d2b18 0%, #0a1008 54%, #17140c 100%);
 
-   --line: rgba(50, 70, 40, 0.2);
-   --line-strong: rgba(44, 92, 66, 0.38);
-   --text-strong: #1c2717;
-   --text-dim: #47573f;
-   --text-muted: #64745a;
-   --accent: #3a7927;
-   --accent-rgb: 58, 121, 39;
-   --warning: #c67e03;
-   --warning-rgb: 198, 126, 3;
-   --danger: #b8442e;
-   --danger-rgb: 184, 68, 46;
-   --danger-bright: #932e1d;
-   --surface-rgb: 244, 248, 238;
-   --highlight-rgb: 64, 152, 60;
-   --overlay-surface: rgba(244, 248, 238, 0.97);
-   --backdrop: rgba(12, 18, 12, 0.44);
-   --backdrop-strong: rgba(12, 18, 12, 0.5);
-   --panel-veil: 0.66;
-   --frame-veil: 0.94;
-   --class-surface: rgba(249, 252, 244, 0.9);
-   --class-surface-raised: rgba(252, 254, 248, 1);
-   --class-border: rgba(50, 70, 40, 0.2);
-   --class-border-raised: rgba(50, 70, 40, 0.38);
-   --class-surface-cancelled: rgba(184, 68, 46, 0.08);
-   --shadow: 0 24px 80px rgba(15, 25, 12, 0.3);
-
-   --chrome-strong: #edf3e6;
-   --chrome-dim: #c2cfb8;
-   --chrome-muted: #94a68b;
-   --chrome-accent: #9cc97e;
-   --chrome-accent-rgb: 156, 201, 126;
-   --chrome-warning: #c9b458;
-   --chrome-warning-rgb: 201, 180, 88;
-   --chrome-highlight-rgb: 237, 243, 230;
-   --chrome-line: rgba(220, 235, 210, 0.14);
-   --chrome-line-strong: rgba(220, 235, 210, 0.28);
-   --chrome-surface: rgba(16, 22, 15, 0.92);
+   --line: rgba(170, 200, 150, 0.14);
+   --line-strong: rgba(170, 200, 150, 0.3);
+   --text-strong: #edf3e2;
+   --text-dim: #c0ceb0;
+   --text-muted: #91a383;
+   --accent: #94c96e;
+   --accent-rgb: 148, 201, 110;
+   --warning: #d4b04e;
+   --warning-rgb: 212, 176, 78;
+   --danger: #dd6a55;
+   --danger-rgb: 221, 106, 85;
+   --danger-bright: #ffa690;
+   --surface-rgb: 8, 23, 17;
+   --highlight-rgb: 237, 243, 226;
+   --overlay-surface: rgba(22, 29, 18, 0.96);
+   --backdrop: rgba(5, 9, 5, 0.55);
+   --backdrop-strong: rgba(5, 9, 5, 0.6);
+   --panel-veil: 0.42;
+   --class-surface: rgba(39, 47, 29, 0.96);
+   --class-surface-raised: rgba(51, 56, 37, 0.98);
+   --class-border: rgba(148, 201, 110, 0.18);
+   --class-border-raised: rgba(148, 201, 110, 0.32);
+   --class-surface-cancelled: rgba(64, 34, 28, 0.96);
+   --shadow: 0 24px 80px rgba(4, 9, 3, 0.5);
 }

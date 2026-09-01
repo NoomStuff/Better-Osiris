@@ -3,7 +3,7 @@ html[data-theme="light"] {
 
    --page-canvas: #f9fbfe;
    --page-background:
-      radial-gradient(circle at 50% 0, rgba(88, 124, 214, 0.12), transparent 32%), linear-gradient(180deg, #f9fbfe 0%, #e9edf4 52%, #eff2f7 100%);
+      radial-gradient(circle at 50% 0, rgba(88, 124, 214, 0.12), transparent 32%), linear-gradient(180deg, #e6edf7 0%, #c9cdeb 52%, #b7a1e0 100%);
 
    --line: rgba(28, 42, 84, 0.17);
    --line-strong: rgba(24, 53, 148, 0.34);

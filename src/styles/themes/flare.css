@@ -1,0 +1,46 @@
+/* Ember in daylight: pale ash panels against a hot rust and sunlight backdrop. */
+html[data-theme="flare"] {
+   color-scheme: light;
+
+   --page-canvas: #923718;
+   --page-background:
+      radial-gradient(ellipse at 50% -8%, rgba(255, 210, 105, 0.5), transparent 34%), linear-gradient(160deg, #ad491f 0%, #7b2817 52%, #45151a 100%);
+
+   --line: rgba(79, 60, 50, 0.18);
+   --line-strong: rgba(148, 53, 18, 0.36);
+   --text-strong: #2c2521;
+   --text-dim: #5e5149;
+   --text-muted: #74675f;
+   --accent: #91340f;
+   --accent-rgb: 145, 52, 15;
+   --warning: #4d5ea8;
+   --warning-rgb: 77, 94, 168;
+   --danger: #a82935;
+   --danger-rgb: 168, 41, 53;
+   --danger-bright: #851a29;
+   --surface-rgb: 239, 234, 228;
+   --highlight-rgb: 135, 62, 31;
+   --overlay-surface: rgba(246, 241, 235, 0.98);
+   --backdrop: rgba(58, 26, 12, 0.42);
+   --backdrop-strong: rgba(58, 26, 12, 0.46);
+   --panel-veil: 0.74;
+   --frame-veil: 0.96;
+   --class-surface: rgba(249, 246, 241, 0.94);
+   --class-surface-raised: rgba(255, 252, 247, 0.99);
+   --class-border: rgba(111, 70, 48, 0.2);
+   --class-border-raised: rgba(145, 52, 15, 0.38);
+   --class-surface-cancelled: rgba(168, 41, 53, 0.09);
+   --shadow: 0 28px 88px rgba(61, 18, 13, 0.36);
+
+   --chrome-strong: #fff8eb;
+   --chrome-dim: #f4d1b4;
+   --chrome-muted: #dca27c;
+   --chrome-accent: #ffd27e;
+   --chrome-accent-rgb: 255, 210, 126;
+   --chrome-warning: #9ccfff;
+   --chrome-warning-rgb: 156, 207, 255;
+   --chrome-highlight-rgb: 255, 248, 235;
+   --chrome-line: rgba(255, 224, 191, 0.2);
+   --chrome-line-strong: rgba(255, 205, 156, 0.42);
+   --chrome-surface: rgba(118, 39, 23, 0.94);
+}

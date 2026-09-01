@@ -1,48 +1,46 @@
-/* Warm paper content on a dark espresso desk: the theme splits chrome from content.
-   Content colors style the roster surfaces; chrome colors keep the header readable
-   against the dark backdrop and the mobile bar. */
+/* Dark roast: neutral charcoal roster panels on a deep mahogany coffeehouse backdrop. */
 html[data-theme="espresso"] {
-   color-scheme: light;
+   color-scheme: dark;
 
-   --page-canvas: #2a1c10;
+   --page-canvas: #35191d;
    --page-background:
-      radial-gradient(circle at 50% 0, rgba(255, 170, 90, 0.08), transparent 32%), linear-gradient(180deg, #2a1c10 0%, #120b06 52%, #221509 100%);
+      radial-gradient(ellipse at 50% -8%, rgba(218, 116, 76, 0.22), transparent 38%), linear-gradient(155deg, #421e22 0%, #221317 48%, #120e11 100%);
 
-   --line: rgba(80, 55, 30, 0.2);
-   --line-strong: rgba(152, 78, 25, 0.38);
-   --text-strong: #26190d;
-   --text-dim: #5f4b36;
-   --text-muted: #6d5b44;
-   --accent: #bc5308;
-   --accent-rgb: 188, 83, 8;
-   --warning: #764dab;
-   --warning-rgb: 118, 77, 171;
-   --danger: #bf3f2c;
-   --danger-rgb: 191, 63, 44;
-   --danger-bright: #9c2b1b;
-   --surface-rgb: 252, 247, 238;
-   --highlight-rgb: 138, 88, 80;
-   --overlay-surface: rgba(250, 244, 233, 0.97);
-   --backdrop: rgba(26, 16, 8, 0.44);
-   --backdrop-strong: rgba(26, 16, 8, 0.5);
-   --panel-veil: 0.66;
-   --frame-veil: 0.94;
-   --class-surface: rgba(251, 247, 241, 0.9);
-   --class-surface-raised: rgb(250, 246, 239);
-   --class-border: rgba(80, 55, 30, 0.22);
-   --class-border-raised: rgba(80, 55, 30, 0.4);
-   --class-surface-cancelled: rgba(191, 63, 44, 0.08);
-   --shadow: 0 24px 80px rgba(30, 18, 8, 0.3);
+   --line: rgba(225, 218, 210, 0.13);
+   --line-strong: rgba(232, 151, 119, 0.3);
+   --text-strong: #f2efea;
+   --text-dim: #c9c4bc;
+   --text-muted: #9c9892;
+   --accent: #ed8a63;
+   --accent-rgb: 237, 138, 99;
+   --warning: #c4a7e7;
+   --warning-rgb: 196, 167, 231;
+   --danger: #e76b73;
+   --danger-rgb: 231, 107, 115;
+   --danger-bright: #ffadb2;
+   --surface-rgb: 29, 30, 32;
+   --highlight-rgb: 242, 239, 234;
+   --overlay-surface: rgba(34, 35, 38, 0.97);
+   --backdrop: rgba(17, 6, 8, 0.58);
+   --backdrop-strong: rgba(17, 6, 8, 0.64);
+   --panel-veil: 0.56;
+   --frame-veil: 0.9;
+   --class-surface: rgba(48, 49, 52, 0.96);
+   --class-surface-raised: rgba(59, 60, 63, 0.98);
+   --class-border: rgba(237, 138, 99, 0.18);
+   --class-border-raised: rgba(237, 138, 99, 0.34);
+   --class-surface-cancelled: rgba(67, 31, 34, 0.97);
+   --shadow: 0 28px 90px rgba(14, 7, 9, 0.58);
 
-   --chrome-strong: #f4ecdf;
-   --chrome-dim: #d3c5b2;
-   --chrome-muted: #ab9a84;
-   --chrome-accent: #e8a15c;
-   --chrome-accent-rgb: 232, 161, 92;
-   --chrome-warning: #d9a04a;
-   --chrome-warning-rgb: 217, 160, 74;
-   --chrome-highlight-rgb: 244, 236, 223;
-   --chrome-line: rgba(240, 220, 190, 0.14);
-   --chrome-line-strong: rgba(240, 220, 190, 0.28);
-   --chrome-surface: rgba(26, 17, 10, 0.92);
+   --chrome-strong: #fff3ea;
+   --chrome-dim: #debfb5;
+   --chrome-muted: #ad8b85;
+   --chrome-accent: #ffad7d;
+   --chrome-accent-rgb: 255, 173, 125;
+   --chrome-warning: #d8c0f2;
+   --chrome-warning-rgb: 216, 192, 242;
+   --chrome-highlight-rgb: 255, 243, 234;
+   --chrome-line: rgba(255, 211, 190, 0.14);
+   --chrome-line-strong: rgba(255, 183, 148, 0.32);
+   --chrome-surface: rgba(55, 23, 27, 0.94);
 }

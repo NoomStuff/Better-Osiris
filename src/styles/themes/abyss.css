@@ -1,0 +1,34 @@
+/* Deep water: midnight navy, submerged teal, and a clear bioluminescent edge. */
+html[data-theme="abyss"] {
+   color-scheme: dark;
+
+   --page-canvas: #061c2a;
+   --page-background:
+      radial-gradient(ellipse at 18% -10%, rgba(55, 210, 202, 0.18), transparent 30%),
+      radial-gradient(ellipse at 90% 92%, rgba(20, 79, 128, 0.28), transparent 40%), linear-gradient(160deg, #092b3c 0%, #051824 48%, #020b13 100%);
+
+   --line: rgba(117, 218, 220, 0.16);
+   --line-strong: rgba(93, 225, 212, 0.34);
+   --text-strong: #efffff;
+   --text-dim: #b5d7d9;
+   --text-muted: #7ea9ae;
+   --accent: #5de1d4;
+   --accent-rgb: 93, 225, 212;
+   --warning: #ffd166;
+   --warning-rgb: 255, 209, 102;
+   --danger: #ff657a;
+   --danger-rgb: 255, 101, 122;
+   --danger-bright: #ffb0bb;
+   --surface-rgb: 5, 24, 34;
+   --highlight-rgb: 239, 255, 255;
+   --overlay-surface: rgba(7, 30, 41, 0.97);
+   --backdrop: rgba(1, 8, 14, 0.6);
+   --backdrop-strong: rgba(1, 8, 14, 0.66);
+   --panel-veil: 0.44;
+   --class-surface: rgba(10, 43, 56, 0.97);
+   --class-surface-raised: rgba(14, 57, 72, 0.99);
+   --class-border: rgba(93, 225, 212, 0.2);
+   --class-border-raised: rgba(93, 225, 212, 0.4);
+   --class-surface-cancelled: rgba(61, 24, 39, 0.97);
+   --shadow: 0 28px 88px rgba(0, 7, 13, 0.68);
+}

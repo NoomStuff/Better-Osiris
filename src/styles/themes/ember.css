@@ -1,33 +1,35 @@
-/* Smoldering palette: ember-orange coals over wine-charcoal, playing in reds and purples. */
+/* Fire after midnight: hot orange over charred aubergine and a cold blue edge. */
 html[data-theme="ember"] {
    color-scheme: dark;
 
-   --page-canvas: #2a1a16;
+   --page-canvas: #1b0b18;
    --page-background:
-      radial-gradient(circle at 50% 0, rgba(224, 82, 100, 0.08), transparent 32%), linear-gradient(180deg, #2a1a16 0%, #140b12 52%, #1e1018 100%);
+      radial-gradient(ellipse at 48% -8%, rgba(255, 122, 50, 0.28), transparent 32%),
+      radial-gradient(ellipse at 10% 100%, rgba(116, 35, 108, 0.24), transparent 40%),
+      radial-gradient(ellipse at 96% 88%, rgba(36, 82, 145, 0.2), transparent 34%), linear-gradient(160deg, #351019 0%, #170b19 48%, #070c15 100%);
 
-   --line: rgba(232, 165, 155, 0.14);
-   --line-strong: rgba(232, 165, 155, 0.3);
-   --text-strong: #f5eee8;
-   --text-dim: #cfc2c0;
-   --text-muted: #a3949a;
-   --accent: #e56b3c;
-   --accent-rgb: 229, 107, 60;
-   --warning: #f5d467;
-   --warning-rgb: 245, 212, 103;
-   --danger: #e0455a;
-   --danger-rgb: 224, 69, 90;
-   --danger-bright: #ff9fb0;
-   --surface-rgb: 22, 16, 18;
-   --highlight-rgb: 245, 238, 238;
-   --overlay-surface: rgba(26, 18, 21, 0.96);
-   --backdrop: rgba(8, 4, 6, 0.55);
-   --backdrop-strong: rgba(8, 4, 6, 0.6);
-   --panel-veil: 0.42;
-   --class-surface: rgba(42, 32, 38, 0.96);
-   --class-surface-raised: rgba(54, 41, 48, 0.98);
-   --class-border: rgba(186, 132, 214, 0.16);
-   --class-border-raised: rgba(186, 132, 214, 0.3);
-   --class-surface-cancelled: rgba(74, 26, 42, 0.96);
-   --shadow: 0 24px 80px rgba(5, 2, 4, 0.5);
+   --line: rgba(235, 170, 132, 0.14);
+   --line-strong: rgba(255, 120, 66, 0.34);
+   --text-strong: #fff2e9;
+   --text-dim: #ddc3b5;
+   --text-muted: #ac8c7c;
+   --accent: #ff7547;
+   --accent-rgb: 255, 117, 71;
+   --warning: #c4a7ff;
+   --warning-rgb: 196, 167, 255;
+   --danger: #ff5361;
+   --danger-rgb: 255, 83, 97;
+   --danger-bright: #ffabb2;
+   --surface-rgb: 24, 14, 24;
+   --highlight-rgb: 255, 242, 233;
+   --overlay-surface: rgba(30, 17, 29, 0.97);
+   --backdrop: rgba(13, 3, 2, 0.58);
+   --backdrop-strong: rgba(13, 3, 2, 0.64);
+   --panel-veil: 0.5;
+   --class-surface: rgba(46, 25, 35, 0.96);
+   --class-surface-raised: rgba(59, 31, 46, 0.98);
+   --class-border: rgba(255, 117, 71, 0.2);
+   --class-border-raised: rgba(255, 117, 71, 0.38);
+   --class-surface-cancelled: rgba(78, 22, 24, 0.97);
+   --shadow: 0 26px 84px rgba(7, 2, 12, 0.64);
 }

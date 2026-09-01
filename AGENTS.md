@@ -30,4 +30,4 @@ Logic is shared, presentation is not. Grouping, positioning, diff detection, and
 - **Agenda view**: the vertical reading list of collapsible day groups.
 - **Grid view**: the weekly timetable. Weekdays as columns, time as rows.
 - **(Bearer) Token**: the user's OSIRIS bearer credential used to fetch the roster from the official API.
-- **Theme**: a color scheme for the whole app. One CSS file in `src/styles/themes` overriding the theme variables, plus one entry in the theme registry (`src/lib/theme.ts`). Colors come in two layers: content (the surfaces inside the app frame) and chrome (the page backdrop and the header on it). Cohesive themes only set content and let the `--chrome-*` aliases follow; split themes override the chrome layer. Night (id `dark`) is the default and lives in the variable initial-values.
+- **Theme**: a color scheme for the whole app. One CSS file in `src/styles/themes` overriding the theme variables, plus one entry in the theme registry (`src/lib/theme.ts`).

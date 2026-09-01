@@ -2,7 +2,7 @@ import { memo } from "react";
 import { APP_SHORTCUT_LABELS } from "../lib/appShortcuts";
 import type { GridZoom, ViewMode } from "../types/weeks";
 import { IconButton } from "./IconButton";
-import { ToolbarActionButtons, ToolbarActionSelector, type ToolbarActionOption } from "./ToolbarActionGroup";
+import { ActionButtons, ActionSelector, type ActionOption } from "./ActionGroup";
 import "./AppToolbar.css";
 
 interface AppToolbarProps {
@@ -16,7 +16,7 @@ interface AppToolbarProps {
    onOpenSettings: () => void;
 }
 
-const zoomOptions: ToolbarActionOption<GridZoom>[] = [
+const zoomOptions: ActionOption<GridZoom>[] = [
    { id: "hour", label: "1h", tooltip: "Use 1 hour grid rows", shortcut: "Ctrl + 1", activationId: "zoom-hour" },
    { id: "half", label: "30m", tooltip: "Use 30 minute grid rows", shortcut: "Ctrl + 2", activationId: "zoom-half" },
    { id: "quarter", label: "15m", tooltip: "Use 15 minute grid rows", shortcut: "Ctrl + 3", activationId: "zoom-quarter" },
@@ -45,9 +45,9 @@ export const AppToolbar = memo(function AppToolbar({
 
          <div className="app-toolbar__actions">
             {viewMode === "grid" ? (
-               <ToolbarActionSelector label="Timeline zoom" options={zoomOptions} value={gridZoom} onChange={onChangeGridZoom} key="view-grid" />
+               <ActionSelector label="Timeline zoom" options={zoomOptions} value={gridZoom} onChange={onChangeGridZoom} key="view-grid" />
             ) : (
-               <ToolbarActionButtons
+               <ActionButtons
                   label="Agenda sections"
                   actions={[
                      {

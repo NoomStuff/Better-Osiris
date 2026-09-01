@@ -1,0 +1,47 @@
+/* Mild snowfall: warm nacre roster panels set inside a quiet, storm-blue chilly frame. */
+html[data-theme="thaw"] {
+   color-scheme: light;
+
+   --page-canvas: #40545f;
+   --page-background:
+      radial-gradient(ellipse at 16% -8%, rgba(238, 218, 199, 0.22), transparent 30%),
+      radial-gradient(ellipse at 90% 96%, rgba(77, 131, 139, 0.22), transparent 38%), linear-gradient(150deg, #586c75 0%, #354a55 48%, #253841 100%);
+
+   --line: rgba(64, 69, 68, 0.2);
+   --line-strong: rgba(0, 108, 120, 0.4);
+   --text-strong: #262a29;
+   --text-dim: #555d5b;
+   --text-muted: #707875;
+   --accent: #006c78;
+   --accent-rgb: 0, 108, 120;
+   --warning: #9d466d;
+   --warning-rgb: 157, 70, 109;
+   --danger: #b7334d;
+   --danger-rgb: 183, 51, 77;
+   --danger-bright: #912239;
+   --surface-rgb: 235, 230, 220;
+   --highlight-rgb: 0, 108, 120;
+   --overlay-surface: rgba(246, 242, 234, 0.99);
+   --backdrop: rgba(25, 39, 44, 0.46);
+   --backdrop-strong: rgba(25, 39, 44, 0.52);
+   --panel-veil: 0.7;
+   --frame-veil: 0.95;
+   --class-surface: rgba(255, 250, 240, 0.97);
+   --class-surface-raised: rgba(255, 254, 249, 1);
+   --class-border: rgba(64, 69, 68, 0.2);
+   --class-border-raised: rgba(0, 108, 120, 0.4);
+   --class-surface-cancelled: rgba(183, 51, 77, 0.08);
+   --shadow: 0 26px 82px rgba(27, 41, 46, 0.34);
+
+   --chrome-strong: #fff9f1;
+   --chrome-dim: #ded8cd;
+   --chrome-muted: #b7b3aa;
+   --chrome-accent: #9ee7e2;
+   --chrome-accent-rgb: 158, 231, 226;
+   --chrome-warning: #f0b4ce;
+   --chrome-warning-rgb: 240, 180, 206;
+   --chrome-highlight-rgb: 255, 249, 241;
+   --chrome-line: rgba(246, 239, 228, 0.18);
+   --chrome-line-strong: rgba(246, 239, 228, 0.36);
+   --chrome-surface: rgba(55, 74, 84, 0.94);
+}

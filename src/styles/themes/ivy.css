@@ -1,0 +1,48 @@
+/* Ivy, green sibling of latte: soft leaf-paper content on a dark forest desk.
+   Content colors style the roster surfaces; chrome colors keep the header readable
+   against the dark backdrop and the mobile bar. */
+html[data-theme="ivy"] {
+   color-scheme: light;
+
+   --page-canvas: #1d2719;
+   --page-background:
+      radial-gradient(circle at 50% 0, rgba(150, 200, 120, 0.07), transparent 32%), linear-gradient(180deg, #1d2719 0%, #0b0f0a 52%, #151d12 100%);
+
+   --line: rgba(50, 70, 40, 0.2);
+   --line-strong: rgba(44, 92, 66, 0.38);
+   --text-strong: #1c2717;
+   --text-dim: #47573f;
+   --text-muted: #64745a;
+   --accent: #2c661d;
+   --accent-rgb: 44, 102, 29;
+   --warning: #c67e03;
+   --warning-rgb: 198, 126, 3;
+   --danger: #b8442e;
+   --danger-rgb: 184, 68, 46;
+   --danger-bright: #932e1d;
+   --surface-rgb: 237, 243, 231;
+   --highlight-rgb: 64, 152, 60;
+   --overlay-surface: rgba(241, 246, 236, 0.98);
+   --backdrop: rgba(12, 18, 12, 0.44);
+   --backdrop-strong: rgba(12, 18, 12, 0.5);
+   --panel-veil: 0.66;
+   --frame-veil: 0.94;
+   --class-surface: rgba(246, 242, 228, 0.94);
+   --class-surface-raised: rgba(255, 251, 237, 1);
+   --class-border: rgba(50, 70, 40, 0.2);
+   --class-border-raised: rgba(44, 102, 29, 0.4);
+   --class-surface-cancelled: rgba(184, 68, 46, 0.08);
+   --shadow: 0 24px 80px rgba(15, 25, 12, 0.3);
+
+   --chrome-strong: #edf3e6;
+   --chrome-dim: #c2cfb8;
+   --chrome-muted: #94a68b;
+   --chrome-accent: #9cc97e;
+   --chrome-accent-rgb: 156, 201, 126;
+   --chrome-warning: #e8b865;
+   --chrome-warning-rgb: 232, 184, 101;
+   --chrome-highlight-rgb: 237, 243, 230;
+   --chrome-line: rgba(220, 235, 210, 0.14);
+   --chrome-line-strong: rgba(220, 235, 210, 0.28);
+   --chrome-surface: rgba(16, 22, 15, 0.92);
+}

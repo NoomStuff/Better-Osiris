@@ -1,18 +1,18 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import type { SyntheticEvent } from "react";
+import type { CSSProperties, SyntheticEvent } from "react";
 import type { OsirisTokenSettings } from "../api/settings";
 import type { IsoWeekday } from "../lib/date";
 import type { DevClassStatusPreviewMode } from "../lib/devStatusPreview";
 import { notifyError, notifySuccess, notifyWarning } from "../lib/notyf";
 import { OSIRIS_BEARER_TOKEN_HELP_URL } from "../lib/osirisTokenHelp";
-import { THEMES, type ThemeId } from "../lib/theme";
+import { getThemeMode, THEMES_BY_MODE, type ThemeId, type ThemeMode } from "../lib/theme";
 import { DEFAULT_SHOWN_WEEKDAYS, ISO_WEEKDAYS } from "../lib/weekLayout";
+import { ActionButtons, ActionSelector, type ActionOption } from "./ActionGroup";
 import { Button } from "./Button";
 import { ConfirmDialog } from "./ConfirmDialog";
 import { DevToolsSettings } from "./DevToolsSettings";
 import { IconButton } from "./IconButton";
 import { OverlayPanel, PANEL_CLOSE_MS } from "./OverlayPanel";
-import { ToolbarActionButtons } from "./ToolbarActionGroup";
 import { ToggleSwitch } from "./ToggleSwitch";
 import "./SettingsDialog.css";
 
@@ -44,6 +44,11 @@ interface SettingsDialogProps {
 }
 
 const IS_DEV_SERVER = import.meta.env.DEV;
+
+const THEME_MODE_OPTIONS: readonly ActionOption<ThemeMode>[] = [
+   { id: "dark", label: "Dark", tooltip: "Browse dark themes" },
+   { id: "light", label: "Light", tooltip: "Browse light themes" },
+];
 
 // January 1st 2024 is a Monday, so ISO weekday N is that month's Nth day. The names are
 // timezone-independent and must not touch the roster zone: the dialog can mount before the
@@ -80,6 +85,9 @@ export function SettingsDialog({
    const [token, setToken] = useState("");
    const [isClosing, setIsClosing] = useState(false);
    const [isResetConfirmOpen, setIsResetConfirmOpen] = useState(false);
+   const [themeMode, setThemeMode] = useState<ThemeMode>(() => getThemeMode(theme));
+   const [animateThemePicker, setAnimateThemePicker] = useState(false);
+   const visibleThemes = THEMES_BY_MODE[themeMode];
    const closeTimerRef = useRef<number | null>(null);
    const hasCustomToken = tokenSettings?.hasCustomToken === true;
    const hasBearerToken = tokenSettings?.hasBearerToken === true;
@@ -100,10 +108,12 @@ export function SettingsDialog({
       setIsClosing(true);
       closeTimerRef.current = window.setTimeout(() => {
          setToken("");
+         setThemeMode(getThemeMode(theme));
+         setAnimateThemePicker(false);
          setIsClosing(false);
          onClose();
       }, PANEL_CLOSE_MS);
-   }, [isClosing, onClose]);
+   }, [isClosing, onClose, theme]);
 
    useEffect(() => {
       return () => {
@@ -142,6 +152,17 @@ export function SettingsDialog({
 
    const closeResetConfirm = useCallback(() => setIsResetConfirmOpen(false), []);
    const confirmClear = useCallback(() => void handleClear(), [handleClear]);
+   const changeThemeMode = useCallback(
+      (nextMode: ThemeMode) => {
+         if (nextMode === themeMode) {
+            return;
+         }
+
+         setAnimateThemePicker(true);
+         setThemeMode(nextMode);
+      },
+      [themeMode]
+   );
 
    const toggleWeekday = useCallback(
       (weekday: IsoWeekday) => {
@@ -207,15 +228,16 @@ export function SettingsDialog({
                </section>
 
                <section className="settings-section" aria-labelledby="theme-settings-title">
-                  <div className="settings-section__header">
+                  <div className="settings-section__header settings-section__header--with-actions">
                      <div className="settings-section__copy">
                         <h3 id="theme-settings-title">Theme</h3>
                         <p>Colors for the whole app.</p>
                      </div>
+                     <ActionSelector label="Theme modes" options={THEME_MODE_OPTIONS} value={themeMode} onChange={changeThemeMode} />
                   </div>
 
-                  <div className="theme-picker" role="group" aria-label="Color theme">
-                     {THEMES.map((themeOption) => {
+                  <div key={themeMode} className={`theme-picker${animateThemePicker ? " theme-picker--animate" : ""}`} role="group" aria-label="Color theme">
+                     {visibleThemes.map((themeOption, index) => {
                         const isActive = theme === themeOption.id;
 
                         return (
@@ -227,12 +249,13 @@ export function SettingsDialog({
                               aria-pressed={isActive}
                               data-active={isActive}
                               data-theme-id={themeOption.id}
+                              style={{ "--theme-index": index } as CSSProperties}
                               onClick={() => onChangeTheme(themeOption.id)}
                            >
                               <span className="theme-picker__surface">
                                  <span
                                     className="theme-picker__swatch"
-                                    style={{ backgroundColor: themeOption.swatchBackground, color: themeOption.swatchIconColor }}
+                                    style={{ background: themeOption.swatchBackground, color: themeOption.swatchIconColor }}
                                  >
                                     <i className={themeOption.icon} aria-hidden="true" />
                                  </span>
@@ -250,7 +273,7 @@ export function SettingsDialog({
                         <h3 id="days-settings-title">Shown days</h3>
                         <p>Which weekdays the agenda and grid display.</p>
                      </div>
-                     <ToolbarActionButtons
+                     <ActionButtons
                         label="Shown days actions"
                         actions={[
                            {

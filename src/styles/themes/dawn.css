@@ -1,0 +1,46 @@
+/* Dusk at sunrise: blush-gray paper floating over a lavender and peach horizon. */
+html[data-theme="dawn"] {
+   color-scheme: light;
+
+   --page-canvas: #514862;
+   --page-background:
+      radial-gradient(ellipse at 50% 105%, rgba(255, 177, 132, 0.42), transparent 46%), linear-gradient(180deg, #4d4969 0%, #716477 52%, #b77e76 100%);
+
+   --line: rgba(79, 61, 80, 0.18);
+   --line-strong: rgba(121, 55, 85, 0.36);
+   --text-strong: #302936;
+   --text-dim: #5c5262;
+   --text-muted: #736878;
+   --accent: #8d3158;
+   --accent-rgb: 141, 49, 88;
+   --warning: #3f6eaa;
+   --warning-rgb: 63, 110, 170;
+   --danger: #aa2e4a;
+   --danger-rgb: 170, 46, 74;
+   --danger-bright: #871c37;
+   --surface-rgb: 241, 236, 234;
+   --highlight-rgb: 126, 64, 93;
+   --overlay-surface: rgba(246, 241, 239, 0.98);
+   --backdrop: rgba(46, 28, 52, 0.42);
+   --backdrop-strong: rgba(46, 28, 52, 0.46);
+   --panel-veil: 0.72;
+   --frame-veil: 0.95;
+   --class-surface: rgba(250, 246, 243, 0.95);
+   --class-surface-raised: rgba(255, 251, 248, 0.99);
+   --class-border: rgba(103, 72, 91, 0.2);
+   --class-border-raised: rgba(117, 49, 81, 0.38);
+   --class-surface-cancelled: rgba(170, 46, 74, 0.09);
+   --shadow: 0 26px 82px rgba(39, 29, 48, 0.32);
+
+   --chrome-strong: #fff8f4;
+   --chrome-dim: #eadbe0;
+   --chrome-muted: #c3afb8;
+   --chrome-accent: #ffc09b;
+   --chrome-accent-rgb: 255, 192, 155;
+   --chrome-warning: #9ed8ff;
+   --chrome-warning-rgb: 158, 216, 255;
+   --chrome-highlight-rgb: 255, 248, 244;
+   --chrome-line: rgba(255, 239, 236, 0.18);
+   --chrome-line-strong: rgba(255, 211, 198, 0.38);
+   --chrome-surface: rgba(70, 61, 87, 0.93);
+}

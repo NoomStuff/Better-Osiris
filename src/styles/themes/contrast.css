@@ -1,0 +1,33 @@
+/* High contrast at night: hard black, white type, and unmistakable signal colors. */
+html[data-theme="contrast"] {
+   color-scheme: dark;
+
+   --page-canvas: #000000;
+   --page-background:
+      radial-gradient(ellipse at 50% -12%, rgba(215, 255, 63, 0.04), transparent 30%), linear-gradient(180deg, #080a04 0%, #000000 54%, #030303 100%);
+
+   --line: rgba(255, 255, 255, 0.34);
+   --line-strong: rgba(255, 255, 255, 0.68);
+   --text-strong: #ffffff;
+   --text-dim: #ededed;
+   --text-muted: #c5c5c5;
+   --accent: #5ad9ff;
+   --accent-rgb: 90, 217, 255;
+   --warning: #d7ff3f;
+   --warning-rgb: 215, 255, 63;
+   --danger: #ff4d8d;
+   --danger-rgb: 255, 77, 141;
+   --danger-bright: #ffb0cc;
+   --surface-rgb: 7, 7, 8;
+   --highlight-rgb: 255, 255, 255;
+   --overlay-surface: rgba(8, 8, 9, 0.99);
+   --backdrop: rgba(0, 0, 0, 0.72);
+   --backdrop-strong: rgba(0, 0, 0, 0.78);
+   --panel-veil: 0.28;
+   --class-surface: rgba(20, 20, 21, 0.99);
+   --class-surface-raised: rgba(31, 31, 32, 1);
+   --class-border: rgba(255, 255, 255, 0.38);
+   --class-border-raised: rgba(215, 255, 63, 0.72);
+   --class-surface-cancelled: rgba(56, 8, 27, 0.99);
+   --shadow: 0 28px 90px rgba(0, 0, 0, 0.86);
+}

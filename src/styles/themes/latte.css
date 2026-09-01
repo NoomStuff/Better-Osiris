@@ -1,0 +1,48 @@
+/* Latte: warm paper content that sits on a dark espresso desk. The theme splits chrome
+   from content: content colors style the roster surfaces; chrome colors keep the header
+   readable against the dark backdrop and the mobile bar. */
+html[data-theme="latte"] {
+   color-scheme: light;
+
+   --page-canvas: #2a1c10;
+   --page-background:
+      radial-gradient(circle at 50% 0, rgba(255, 170, 90, 0.08), transparent 32%), linear-gradient(180deg, #2a1c10 0%, #120b06 52%, #221509 100%);
+
+   --line: rgba(80, 55, 30, 0.2);
+   --line-strong: rgba(152, 78, 25, 0.38);
+   --text-strong: #26190d;
+   --text-dim: #5f4b36;
+   --text-muted: #6d5b44;
+   --accent: #913b00;
+   --accent-rgb: 145, 59, 0;
+   --warning: #764dab;
+   --warning-rgb: 118, 77, 171;
+   --danger: #bf3f2c;
+   --danger-rgb: 191, 63, 44;
+   --danger-bright: #9c2b1b;
+   --surface-rgb: 242, 237, 229;
+   --highlight-rgb: 138, 88, 80;
+   --overlay-surface: rgba(246, 241, 233, 0.98);
+   --backdrop: rgba(26, 16, 8, 0.44);
+   --backdrop-strong: rgba(26, 16, 8, 0.5);
+   --panel-veil: 0.66;
+   --frame-veil: 0.94;
+   --class-surface: rgba(250, 247, 241, 0.92);
+   --class-surface-raised: rgb(255, 251, 245);
+   --class-border: rgba(80, 55, 30, 0.22);
+   --class-border-raised: rgba(145, 59, 0, 0.4);
+   --class-surface-cancelled: rgba(191, 63, 44, 0.08);
+   --shadow: 0 24px 80px rgba(30, 18, 8, 0.3);
+
+   --chrome-strong: #f4ecdf;
+   --chrome-dim: #d3c5b2;
+   --chrome-muted: #ab9a84;
+   --chrome-accent: #e8a15c;
+   --chrome-accent-rgb: 232, 161, 92;
+   --chrome-warning: #cbb7f0;
+   --chrome-warning-rgb: 203, 183, 240;
+   --chrome-highlight-rgb: 244, 236, 223;
+   --chrome-line: rgba(240, 220, 190, 0.14);
+   --chrome-line-strong: rgba(240, 220, 190, 0.28);
+   --chrome-surface: rgba(26, 17, 10, 0.92);
+}

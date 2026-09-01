@@ -11,6 +11,7 @@ test.beforeEach(async ({ page }) => {
    const errors: string[] = [];
    pageErrors.set(page, errors);
    page.on("pageerror", (error) => errors.push(error.stack ?? error.message));
+   await page.emulateMedia({ colorScheme: "dark" });
    await installFixedClock(page);
    await mockAppApis(page);
 });
@@ -491,6 +492,7 @@ test("the mobile shell uses a solid theme canvas and stable popup text sizing", 
    await page.getByRole("button", { name: "Open settings" }).click();
    const description = page.locator(".settings-section__header p").first();
    const initialFontSize = await description.evaluate((element) => getComputedStyle(element).fontSize);
+   await page.getByRole("radio", { name: "Light", exact: true }).click();
    await page.getByRole("button", { name: "Light", exact: true }).click();
    await expect.poll(() => page.locator('meta[name="theme-color"]').getAttribute("content")).toBe("#f9fbfe");
    await page.setViewportSize({ width: 844, height: 390 });
@@ -504,6 +506,27 @@ test("the mobile shell uses a solid theme canvas and stable popup text sizing", 
    await page.setViewportSize({ width: 844, height: 390 });
    await page.setViewportSize({ width: 390, height: 844 });
    await expect.poll(() => classFieldValue.evaluate((element) => getComputedStyle(element).fontSize)).toBe(initialFieldFontSize);
+});
+
+test("a fresh theme follows the system color scheme", async ({ page }) => {
+   await page.emulateMedia({ colorScheme: "light" });
+   await page.goto("/");
+
+   await expect(page.locator("html")).toHaveAttribute("data-theme", "light");
+   await expect(page.locator('meta[name="theme-color"]')).toHaveAttribute("content", "#f9fbfe");
+});
+
+test("the theme picker returns to the active theme when reopened", async ({ page }) => {
+   await page.goto("/");
+   await page.getByRole("button", { name: "Open settings" }).click();
+   await page.getByRole("radio", { name: "Light", exact: true }).click();
+   await expect(page.getByRole("button", { name: "Light", exact: true })).toBeVisible();
+
+   await page.locator(".settings-dialog__header").getByRole("button", { name: "Close settings" }).click();
+   await page.getByRole("button", { name: "Open settings" }).click();
+
+   await expect(page.getByRole("radio", { name: "Dark", exact: true })).toHaveAttribute("aria-checked", "true");
+   await expect(page.getByRole("button", { name: "Dark", exact: true })).toHaveAttribute("aria-pressed", "true");
 });
 
 test("time indicators are visible and positioned for the fixed current time", async ({ page }) => {
@@ -574,6 +597,42 @@ test("core timetable and dialog surfaces pass automated accessibility checks", a
    await page.getByRole("button", { name: "Open settings" }).click();
    const dialogResults = await new AxeBuilder({ page }).include(".settings-dialog").withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"]).analyze();
    expect(dialogResults.violations).toEqual([]);
+});
+
+test("every theme keeps text contrast and status colors distinct", async ({ page, browserName }) => {
+   test.skip(browserName !== "chromium", "One browser is enough for deterministic computed-color checks.");
+
+   const themesByMode = {
+      Dark: ["Dark", "Frost", "Espresso", "Moss", "Dusk", "Ember", "Abyss", "Noir", "Contrast"],
+      Light: ["Light", "Thaw", "Latte", "Ivy", "Dawn", "Flare", "Bloom", "Paper", "Osiris"],
+   } as const;
+
+   await page.goto("/");
+   await page.getByRole("button", { name: "Open settings" }).click();
+
+   for (const [mode, themes] of Object.entries(themesByMode)) {
+      await page.getByRole("radio", { name: mode, exact: true }).click();
+
+      for (const theme of themes) {
+         await page.getByRole("button", { name: theme, exact: true }).click();
+         const results = await new AxeBuilder({ page }).include(".settings-dialog").withRules(["color-contrast"]).analyze();
+         expect(results.violations, `${theme} should pass text contrast checks`).toEqual([]);
+
+         const semanticColors = await page.evaluate(() => {
+            const style = getComputedStyle(document.documentElement);
+            const parseRgb = (property: string) => style.getPropertyValue(property).split(",").map(Number);
+            return {
+               content: [parseRgb("--accent-rgb"), parseRgb("--warning-rgb")],
+               chrome: [parseRgb("--chrome-accent-rgb"), parseRgb("--chrome-warning-rgb")],
+            };
+         });
+
+         for (const [scope, [accent, warning]] of Object.entries(semanticColors)) {
+            const distance = Math.hypot(...accent.map((channel, index) => channel - warning[index]));
+            expect(distance, `${theme} ${scope} warning should be visibly different from its accent`).toBeGreaterThanOrEqual(70);
+         }
+      }
+   }
 });
 
 test("desktop grid and mobile agenda match their visual baselines", async ({ page, browserName }) => {

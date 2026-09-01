@@ -1,10 +1,10 @@
-/* Cool nord-inspired palette: light slate-navy surfaces with a muted cyan accent. */
+/* Frosted steel: cold blue-gray slabs with crisp cyan edges and a fogged backdrop. */
 html[data-theme="frost"] {
    color-scheme: dark;
 
-   --page-canvas: #323949;
+   --page-canvas: #1f2b3a;
    --page-background:
-      radial-gradient(circle at 50% 0, rgba(136, 192, 208, 0.08), transparent 32%), linear-gradient(180deg, #323949 0%, #212633 52%, #2a3040 100%);
+      radial-gradient(ellipse at 20% -5%, rgba(177, 221, 231, 0.16), transparent 34%), linear-gradient(145deg, #35485b 0%, #1c2634 46%, #111923 100%);
 
    --line: rgba(150, 165, 190, 0.16);
    --line-strong: rgba(150, 165, 190, 0.32);
@@ -18,16 +18,16 @@ html[data-theme="frost"] {
    --danger: #d87c87;
    --danger-rgb: 216, 124, 135;
    --danger-bright: #ecc2c7;
-   --surface-rgb: 38, 43, 58;
+   --surface-rgb: 27, 36, 50;
    --highlight-rgb: 229, 234, 242;
-   --overlay-surface: rgba(38, 43, 58, 0.96);
+   --overlay-surface: rgba(31, 42, 57, 0.97);
    --backdrop: rgba(17, 20, 28, 0.55);
    --backdrop-strong: rgba(17, 20, 28, 0.6);
-   --panel-veil: 0.42;
-   --class-surface: rgba(49, 56, 72, 0.96);
-   --class-surface-raised: rgba(59, 66, 82, 0.98);
+   --panel-veil: 0.5;
+   --class-surface: rgba(43, 56, 74, 0.96);
+   --class-surface-raised: rgba(54, 69, 88, 0.98);
    --class-border: rgba(136, 192, 208, 0.2);
    --class-border-raised: rgba(136, 192, 208, 0.34);
    --class-surface-cancelled: rgba(60, 42, 48, 0.96);
-   --shadow: 0 24px 80px rgba(14, 18, 26, 0.45);
+   --shadow: 0 20px 64px rgba(7, 13, 20, 0.5);
 }
