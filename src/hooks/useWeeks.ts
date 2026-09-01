@@ -5,16 +5,17 @@ import { clearWeekBrowserCache } from "../lib/weekCache";
 import { getRosterTimeZone, isRosterTimeZoneKnown, setRosterTimeZone } from "../lib/rosterTimeZone";
 import { toWeekLoadError } from "../lib/weekLoadError";
 import { getDisplayWeeksFromPayload, getInitialWeekEntries } from "../lib/weekPayload";
-import { readSessionClassDiffs } from "../lib/weekPersistence";
-import { canNavigateToWeek, getAdjacentBatchStarts, getBatchOffsets, getBatchStart, getDerivedWeekTitle } from "../lib/weekPolicy";
+import { readSessionClassDiffs, storeSessionClassDiffs } from "../lib/weekPersistence";
+import { canNavigateToWeek, createWeekEntry, getAdjacentBatchStarts, getBatchOffsets, getBatchStart, getDerivedWeekTitle } from "../lib/weekPolicy";
 import { rosterWeekReducer } from "../lib/weekReducer";
+import { shiftIsoDateByDays } from "../lib/date";
 import { MAX_WEEK_OFFSET } from "../../shared/weeks";
-import type { Week } from "../types/weeks";
+import type { Week, WeekBatch } from "../types/weeks";
 
 interface UseWeeksOptions {
    enabled?: boolean;
    clearCache?: boolean;
-   resetKey?: number;
+   resetKey?: number | string;
 }
 
 const LOAD_ERROR_TOAST_MESSAGE = "Something went wrong while loading the roster.";
@@ -153,6 +154,13 @@ export function useWeeks(offset: number, options: UseWeeksOptions = {}) {
                   return;
                }
 
+               const incomingCurrentWeek = payload.weeks.find((week) => week.week.offset === 0);
+               const previousCurrentWeek = latestRawWeeksRef.current.get(0) ?? entriesRef.current[0]?.data;
+               if (incomingCurrentWeek && previousCurrentWeek && incomingCurrentWeek.week.start !== previousCurrentWeek.week.start) {
+                  adoptCalendarRollover(previousCurrentWeek, payload);
+                  return;
+               }
+
                hasShownLoadErrorToastRef.current = false;
                const displayWeeks = getDisplayWeeksFromPayload(payload, entriesRef.current, latestRawWeeksRef.current, sessionLessonDiffs);
                dispatch({ type: "fetch-succeeded", weeks: displayWeeks });
@@ -202,11 +210,7 @@ export function useWeeks(offset: number, options: UseWeeksOptions = {}) {
 
       loadBatchRef.current = loadBatch;
 
-      // A payload declaring a different zone than the one in memory (e.g. a deploy changed ROSTER_TIME_ZONE
-      // mid-session) means every cached wall time was interpreted under the wrong zone: drop everything and refetch.
-      const adoptRosterTimeZone = (timeZone: string) => {
-         setRosterTimeZone(timeZone);
-         clearWeekBrowserCache();
+      const resetInMemoryState = () => {
          requestGenerationRef.current += 1;
          entriesRef.current = {};
          requestsRef.current.forEach(({ controller }) => controller.abort());
@@ -217,8 +221,36 @@ export function useWeeks(offset: number, options: UseWeeksOptions = {}) {
          retryTimersRef.current.forEach((timerId) => window.clearTimeout(timerId));
          retryTimersRef.current.clear();
          sessionLessonDiffs.clear();
+      };
+
+      // A payload declaring a different zone than the one in memory (e.g. a deploy changed ROSTER_TIME_ZONE
+      // mid-session) means every cached wall time was interpreted under the wrong zone: drop everything and refetch.
+      const adoptRosterTimeZone = (timeZone: string) => {
+         setRosterTimeZone(timeZone);
+         clearWeekBrowserCache();
+         resetInMemoryState();
          dispatch({ type: "reset" });
          loadBatchRef.current(getBatchStart(activeOffsetRef.current), { force: true });
+      };
+
+      const adoptCalendarRollover = (previousCurrentWeek: Week, payload: WeekBatch) => {
+         resetInMemoryState();
+         storeSessionClassDiffs(sessionLessonDiffs);
+
+         const isConsecutiveWeek = shiftIsoDateByDays(previousCurrentWeek.week.start, 7) === payload.weeks.find((week) => week.week.offset === 0)?.week.start;
+         const previousWeek = isConsecutiveWeek ? { ...previousCurrentWeek, week: { ...previousCurrentWeek.week, offset: -1 } } : null;
+         const preservedEntries = previousWeek ? { [-1]: createWeekEntry(previousWeek) } : {};
+         entriesRef.current = preservedEntries;
+
+         const displayWeeks = getDisplayWeeksFromPayload(payload, preservedEntries, latestRawWeeksRef.current, sessionLessonDiffs);
+         const replacementWeeks = previousWeek ? [previousWeek, ...displayWeeks] : displayWeeks;
+         entriesRef.current = Object.fromEntries(replacementWeeks.map((week) => [week.week.offset, createWeekEntry(week)]));
+         dispatch({ type: "replace-weeks", weeks: replacementWeeks });
+
+         const activeBatchStart = getBatchStart(activeOffsetRef.current);
+         if (!payload.weeks.some((week) => getBatchStart(week.week.offset) === activeBatchStart)) {
+            loadBatchRef.current(activeBatchStart, { force: true });
+         }
       };
 
       const activeEntry = entriesRef.current[offset];

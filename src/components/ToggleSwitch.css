@@ -1,0 +1,103 @@
+.toggle-switch {
+   --toggle-switch-spring: cubic-bezier(0.22, 1.7, 0.36, 1);
+
+   display: inline-grid;
+   flex: 0 0 auto;
+   place-items: center;
+   width: 58px;
+   height: 44px;
+   padding: 5px;
+   color: var(--text-muted);
+   cursor: pointer;
+}
+
+.toggle-switch__track {
+   position: relative;
+   width: 48px;
+   height: 28px;
+   border: 2px solid var(--line-strong);
+   border-radius: 999px;
+   background: rgba(var(--highlight-rgb), 0.045);
+   transition:
+      border-color 220ms ease-out,
+      background-color 220ms ease-out,
+      box-shadow 220ms ease-out;
+}
+
+.toggle-switch__thumb {
+   position: absolute;
+   top: 3px;
+   left: 3px;
+   display: grid;
+   place-items: center;
+   width: 18px;
+   height: 18px;
+   border-radius: 50%;
+   background: var(--text-muted);
+   box-shadow: 0 2px 5px rgba(0, 0, 0, 0.28);
+   transform: translateX(0);
+   transition:
+      transform 340ms var(--toggle-switch-spring),
+      background-color 220ms ease-out,
+      box-shadow 220ms ease-out;
+}
+
+.toggle-switch__mark {
+   width: 5px;
+   height: 5px;
+   border-radius: 50%;
+   background: rgba(var(--surface-rgb), 0.72);
+   opacity: 0;
+   transform: scale(0.35);
+   transition:
+      opacity 160ms ease-out,
+      transform 280ms var(--toggle-switch-spring);
+}
+
+.toggle-switch[data-checked="true"] .toggle-switch__track {
+   border-color: rgba(var(--accent-rgb), 0.62);
+   background: rgba(var(--accent-rgb), 0.2);
+   box-shadow: inset 0 0 0 1px rgba(var(--accent-rgb), 0.08);
+}
+
+.toggle-switch[data-checked="true"] .toggle-switch__thumb {
+   background: var(--accent);
+   box-shadow: 0 3px 8px rgba(var(--accent-rgb), 0.3);
+   transform: translateX(20px);
+}
+
+.toggle-switch[data-checked="true"] .toggle-switch__mark {
+   opacity: 1;
+   transform: scale(1);
+}
+
+.toggle-switch:is(:hover, :focus-visible):not(:disabled) .toggle-switch__track {
+   border-color: var(--line-strong);
+   background: rgba(var(--highlight-rgb), 0.08);
+}
+
+.toggle-switch[data-checked="true"]:is(:hover, :focus-visible):not(:disabled) .toggle-switch__track {
+   border-color: rgba(var(--accent-rgb), 0.82);
+   background: rgba(var(--accent-rgb), 0.27);
+}
+
+.toggle-switch:active:not(:disabled) .toggle-switch__thumb {
+   width: 21px;
+}
+
+.toggle-switch[data-checked="true"]:active:not(:disabled) .toggle-switch__thumb {
+   transform: translateX(17px);
+}
+
+.toggle-switch:disabled {
+   cursor: not-allowed;
+   opacity: 0.48;
+}
+
+@media (prefers-reduced-motion: reduce) {
+   .toggle-switch__track,
+   .toggle-switch__thumb,
+   .toggle-switch__mark {
+      transition: none;
+   }
+}

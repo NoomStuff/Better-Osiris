@@ -10,6 +10,7 @@ import { WeekNavigator } from "./components/WeekNavigator";
 import { useDevPreview } from "./hooks/useDevPreview";
 import { useAppKeyboardShortcuts } from "./hooks/useAppKeyboardShortcuts";
 import { getPerceivedDay, useAgendaState } from "./hooks/useAgendaState";
+import { useClassNotificationsPreference } from "./hooks/useClassNotificationsPreference";
 import { useOsirisTokenSettings } from "./hooks/useOsirisTokenSettings";
 import { useRosterTimeZone } from "./hooks/useRosterTimeZone";
 import { useDockedMobileBar } from "./hooks/useDockedMobileBar";
@@ -26,7 +27,6 @@ import { getEmptyWeekMessage } from "./lib/flavor";
 import { getHiddenDaysWithClasses, getWeekdaysWithClasses } from "./lib/weekLayout";
 import { ErrorBoundary } from "./components/ErrorBoundary";
 import { notifyError, notifySuccess } from "./lib/notyf";
-import { requestNotificationPermission } from "./lib/classNotifications";
 import type { GridZoom, Class, WeekMeta, ViewMode } from "./types/weeks";
 import "./styles/App.css";
 
@@ -53,6 +53,7 @@ export default function App() {
    const [isSettingsOpen, setIsSettingsOpen] = useState(false);
    const [bearerTokenInput, setBearerTokenInput] = useState("");
    const devPreview = useDevPreview();
+   const classNotifications = useClassNotificationsPreference();
    const rosterTimeZone = useRosterTimeZone();
    const {
       settings: tokenSettings,
@@ -80,8 +81,8 @@ export default function App() {
       title,
    } = useWeeks(weekOffset, {
       enabled: !isTokenSettingsLoading && hasBearerToken && rosterTimeZone.isKnown,
-      clearCache: (!isTokenSettingsLoading && !hasBearerToken) || rosterTimeZone.hasTimeZoneChanged,
-      resetKey: weeksResetKey,
+      clearCache: !isTokenSettingsLoading && !hasBearerToken,
+      resetKey: `${weeksResetKey}:${rosterTimeZone.cacheResetKey}`,
    });
    const perceivedNow = devPreview.perceivedNow;
    const perceivedDayKey = rosterTimeZone.isKnown ? toDayKey(perceivedNow) : null;
@@ -101,10 +102,6 @@ export default function App() {
 
       return error.detail;
    }, [error, tokenSettings?.hasCustomToken]);
-
-   useEffect(() => {
-      requestNotificationPermission();
-   }, []);
 
    useEffect(() => {
       if (!error?.isAuthRelated) {
@@ -403,6 +400,10 @@ export default function App() {
          <ClassDrawer schoolClass={selectedClass} onClose={closeClass} />
          <SettingsDialog
             isOpen={isSettingsOpen}
+            areNotificationsBlocked={classNotifications.isBlocked}
+            areNotificationsEnabled={classNotifications.enabled}
+            areNotificationsSupported={classNotifications.isSupported}
+            areNotificationsUpdating={classNotifications.isUpdating}
             theme={theme}
             shownWeekdays={shownWeekdays}
             smartWeekdays={smartWeekdays}
@@ -416,6 +417,7 @@ export default function App() {
             onSaveToken={saveToken}
             onClearToken={clearToken}
             onClose={closeSettings}
+            onChangeNotifications={(enabled) => void classNotifications.setEnabled(enabled)}
             onChangeTheme={setTheme}
             onChangeShownWeekdays={setShownWeekdays}
             onToggleDevTools={devPreview.toggle}

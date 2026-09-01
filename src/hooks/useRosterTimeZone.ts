@@ -4,7 +4,7 @@ import { getRosterTimeZone, isRosterTimeZoneKnown, setRosterTimeZone } from "../
 
 export function useRosterTimeZone() {
    const [declaredTimeZone, setDeclaredTimeZone] = useState<string | null>(() => (isRosterTimeZoneKnown() ? getRosterTimeZone() : null));
-   const [hasTimeZoneChanged, setHasTimeZoneChanged] = useState(false);
+   const [cacheResetKey, setCacheResetKey] = useState(0);
    const [configError, setConfigError] = useState<string | null>(null);
    const [isInitialLoading, setIsInitialLoading] = useState(true);
 
@@ -19,7 +19,7 @@ export function useRosterTimeZone() {
 
             if (setRosterTimeZone(config.timeZone)) {
                // Cached roster data was hydrated under a different zone and is now untrustworthy.
-               setHasTimeZoneChanged(true);
+               setCacheResetKey((current) => current + 1);
             }
             setDeclaredTimeZone(config.timeZone);
          })
@@ -42,7 +42,7 @@ export function useRosterTimeZone() {
    return {
       configError,
       declaredTimeZone,
-      hasTimeZoneChanged,
+      cacheResetKey,
       isKnown: isRosterTimeZoneKnown(),
       isInitialLoading,
    };

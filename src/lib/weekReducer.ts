@@ -4,6 +4,7 @@ import { createWeekEntry, isSameWeekData, type WeekEntries } from "./weekPolicy"
 
 export type RosterWeekAction =
    | { type: "reset" }
+   | { type: "replace-weeks"; weeks: Week[] }
    | { type: "fetch-started"; offsets: number[]; force: boolean; passive: boolean }
    | { type: "fetch-succeeded"; weeks: Week[] }
    | { type: "passive-fetch-failed"; offsets: number[]; error: WeekLoadError }
@@ -12,6 +13,10 @@ export type RosterWeekAction =
 export function rosterWeekReducer(entries: WeekEntries, action: RosterWeekAction): WeekEntries {
    if (action.type === "reset") {
       return {};
+   }
+
+   if (action.type === "replace-weeks") {
+      return Object.fromEntries(action.weeks.map((week) => [week.week.offset, createWeekEntry(week)]));
    }
 
    const next = { ...entries };

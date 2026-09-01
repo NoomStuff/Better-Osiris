@@ -50,8 +50,11 @@ interface ToolbarActionItemProps {
    onPress: () => void;
 }
 
-type SelectorStyle = CSSProperties & {
+type ToolbarActionCountStyle = CSSProperties & {
    "--toolbar-action-count": number;
+};
+
+type SelectorStyle = ToolbarActionCountStyle & {
    "--toolbar-action-index": number;
 };
 
@@ -114,8 +117,10 @@ export function ToolbarActionSelector<T extends string>({ label, options, value,
 }
 
 export function ToolbarActionButtons({ label, actions }: ToolbarActionButtonsProps) {
+   const style: ToolbarActionCountStyle = { "--toolbar-action-count": actions.length };
+
    return (
-      <div className="toolbar-action-group toolbar-action-group--buttons" role="group" aria-label={label}>
+      <div className="toolbar-action-group toolbar-action-group--buttons" role="group" aria-label={label} style={style}>
          {actions.map((action) => (
             <ToolbarActionItem
                key={action.id}

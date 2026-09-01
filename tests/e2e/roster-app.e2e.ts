@@ -104,6 +104,14 @@ test("keeps a saved roster view over the viewport default", async ({ page }) => 
    await expect(page.getByRole("button", { name: "Grid view" })).toHaveAttribute("aria-pressed", "true");
 });
 
+test("reloads cleanly when the server changes the roster time zone", async ({ page }) => {
+   await page.addInitScript(() => window.localStorage.setItem("roster-time-zone-v1", "America/New_York"));
+   await page.goto("/");
+
+   await expect(page.getByRole("button", { name: "SOURCE_TITLE_0_1" })).toBeVisible();
+   await expect.poll(() => page.evaluate(() => window.localStorage.getItem("roster-time-zone-v1"))).toBe("Europe/Amsterdam");
+});
+
 test("previous week is disabled when no locally cached last week is available", async ({ page }) => {
    await page.route("**/api/roster/weeks?*", async (route) => {
       const url = new URL(route.request().url());
@@ -171,7 +179,11 @@ test("settings dialog opens, resets token state, and closes", async ({ page }) =
    await expect(page.getByRole("link", { name: "How to get one" })).toHaveAttribute("href", OSIRIS_BEARER_TOKEN_HELP_URL);
    await expect(page.getByRole("button", { name: "Save token" })).toBeDisabled();
 
-   await page.getByRole("button", { name: "Reset" }).click();
+   await page.getByRole("button", { name: "All", exact: true }).click();
+   await expect(page.getByRole("group", { name: "Shown weekdays" }).getByRole("button", { name: "Sun", exact: true })).toHaveAttribute("aria-pressed", "true");
+
+   const rosterAccess = page.getByRole("region", { name: "Roster access" });
+   await rosterAccess.getByRole("button", { name: "Reset" }).click();
    await expect(page.getByRole("alertdialog", { name: "Reset bearer token?" })).toBeVisible();
    await page.getByRole("button", { name: "Reset token" }).click();
    await expect(page.getByRole("alertdialog", { name: "Reset bearer token?" })).toBeHidden();
@@ -194,14 +206,39 @@ test("only the topmost dialog handles Escape and focus stays contained", async (
    await page.keyboard.press("Tab");
    await expect(closeSettingsButton).toBeFocused();
 
-   await page.getByRole("button", { name: "Reset" }).click();
+   const resetTokenButton = settings.getByRole("region", { name: "Roster access" }).getByRole("button", { name: "Reset" });
+   await resetTokenButton.click();
    const confirmation = page.getByRole("alertdialog", { name: "Reset bearer token?" });
    await expect(confirmation).toBeVisible();
    await page.keyboard.press("Escape");
 
    await expect(confirmation).toBeHidden();
    await expect(settings).toBeVisible();
-   await expect(page.getByRole("button", { name: "Reset" })).toBeFocused();
+   await expect(resetTokenButton).toBeFocused();
+});
+
+test("class change notifications are an explicit saved preference", async ({ page }) => {
+   await page.addInitScript(() => {
+      Object.defineProperty(window, "Notification", {
+         configurable: true,
+         value: {
+            permission: "granted",
+            requestPermission: () => Promise.resolve("granted"),
+         },
+      });
+   });
+   await page.goto("/");
+   await page.getByRole("button", { name: "Open settings" }).click();
+
+   const toggle = page.getByRole("switch", { name: "Notify me about class changes" });
+   await expect(toggle).toHaveAttribute("aria-checked", "false");
+   await toggle.click();
+   await expect(toggle).toHaveAttribute("aria-checked", "true");
+   await expect.poll(() => page.evaluate(() => window.localStorage.getItem("roster-class-notifications"))).toBe("true");
+
+   await toggle.click();
+   await expect(toggle).toHaveAttribute("aria-checked", "false");
+   await expect.poll(() => page.evaluate(() => window.localStorage.getItem("roster-class-notifications"))).toBe("false");
 });
 
 test("saving a replacement token refreshes roster data without reloading the page", async ({ page }) => {
@@ -274,7 +311,7 @@ test("an aborted credential request cannot restore stale roster data", async ({ 
 
    await page.goto("/");
    await page.getByRole("button", { name: "Open settings" }).click();
-   await page.getByRole("button", { name: "Reset" }).click();
+   await page.getByRole("region", { name: "Roster access" }).getByRole("button", { name: "Reset" }).click();
    await page.getByRole("button", { name: "Reset token" }).click();
    await expect(page.getByText("No bearer token is set.")).toBeVisible();
 

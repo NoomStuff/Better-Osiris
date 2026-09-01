@@ -43,6 +43,11 @@
    align-items: start;
 }
 
+.settings-section__header--with-control {
+   grid-template-columns: minmax(0, 1fr) auto;
+   align-items: center;
+}
+
 .settings-section__header h3 {
    margin: 0;
    color: var(--text-strong);
@@ -188,9 +193,9 @@
    gap: 6px;
 }
 
-.settings-section__header--with-actions>.toolbar-action-group {
-   flex: 0 0 144px;
-   min-width: 144px;
+.settings-section__header--with-actions > .toolbar-action-group {
+   flex: 0 0 168px;
+   min-width: 168px;
 }
 
 .weekday-picker__option {
@@ -253,7 +258,6 @@
 }
 
 @keyframes theme-icon-twirl {
-
    0% {
       transform: rotate(0deg);
    }
@@ -421,7 +425,6 @@
    }
 
    82% {
-
       transform: translate(0, -1px) rotate(1deg) scale(0.97, 1.03);
    }
 

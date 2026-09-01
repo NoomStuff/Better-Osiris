@@ -1,18 +1,40 @@
 import { dayLabel, parseLocalDateTime, timeLabel } from "./date";
 import type { SessionClassDiff } from "./classDiffs";
+import { readBrowserStorage, writeBrowserStorage } from "./browserStorage";
 
 let permissionRequest: Promise<NotificationPermission> | null = null;
+export const CLASS_NOTIFICATIONS_STORAGE_KEY = "roster-class-notifications";
 
-export function requestNotificationPermission() {
-   if (typeof window === "undefined" || !("Notification" in window) || window.Notification.permission !== "default") {
-      return;
+export type ClassNotificationPermission = NotificationPermission | "unsupported";
+
+export function getClassNotificationPermission(): ClassNotificationPermission {
+   return typeof window === "undefined" || !("Notification" in window) ? "unsupported" : window.Notification.permission;
+}
+
+export function getClassNotificationsEnabled() {
+   return readBrowserStorage("localStorage", CLASS_NOTIFICATIONS_STORAGE_KEY) === "true";
+}
+
+export function setClassNotificationsEnabled(enabled: boolean) {
+   writeBrowserStorage("localStorage", CLASS_NOTIFICATIONS_STORAGE_KEY, String(enabled));
+}
+
+export async function requestNotificationPermission(): Promise<ClassNotificationPermission> {
+   const permission = getClassNotificationPermission();
+   if (permission !== "default") {
+      return permission;
    }
 
    permissionRequest ??= window.Notification.requestPermission().catch(() => "default");
+   try {
+      return await permissionRequest;
+   } finally {
+      permissionRequest = null;
+   }
 }
 
 export function notifyClassDiffs(diffs: SessionClassDiff[]) {
-   if (typeof window === "undefined" || !("Notification" in window) || window.Notification.permission !== "granted") {
+   if (!getClassNotificationsEnabled() || getClassNotificationPermission() !== "granted") {
       return;
    }
 

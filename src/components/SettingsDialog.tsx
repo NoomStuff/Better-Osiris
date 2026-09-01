@@ -13,10 +13,15 @@ import { DevToolsSettings } from "./DevToolsSettings";
 import { IconButton } from "./IconButton";
 import { OverlayPanel, PANEL_CLOSE_MS } from "./OverlayPanel";
 import { ToolbarActionButtons } from "./ToolbarActionGroup";
+import { ToggleSwitch } from "./ToggleSwitch";
 import "./SettingsDialog.css";
 
 interface SettingsDialogProps {
    isOpen: boolean;
+   areNotificationsBlocked: boolean;
+   areNotificationsEnabled: boolean;
+   areNotificationsSupported: boolean;
+   areNotificationsUpdating: boolean;
    theme: ThemeId;
    shownWeekdays: IsoWeekday[];
    smartWeekdays: IsoWeekday[];
@@ -28,6 +33,7 @@ interface SettingsDialogProps {
    tokenSettings: OsirisTokenSettings | null;
    isTokenLoading: boolean;
    onClose: () => void;
+   onChangeNotifications: (enabled: boolean) => void;
    onChangeTheme: (theme: ThemeId) => void;
    onChangeShownWeekdays: (weekdays: IsoWeekday[]) => void;
    onSaveToken: (token: string) => Promise<OsirisTokenSettings>;
@@ -47,6 +53,10 @@ const WEEKDAY_LABELS: readonly string[] = ISO_WEEKDAYS.map((weekday) => WEEKDAY_
 
 export function SettingsDialog({
    isOpen,
+   areNotificationsBlocked,
+   areNotificationsEnabled,
+   areNotificationsSupported,
+   areNotificationsUpdating,
    theme,
    shownWeekdays,
    smartWeekdays,
@@ -58,6 +68,7 @@ export function SettingsDialog({
    tokenSettings,
    isTokenLoading,
    onClose,
+   onChangeNotifications,
    onChangeTheme,
    onChangeShownWeekdays,
    onSaveToken,
@@ -73,6 +84,13 @@ export function SettingsDialog({
    const hasCustomToken = tokenSettings?.hasCustomToken === true;
    const hasBearerToken = tokenSettings?.hasBearerToken === true;
    const canSaveToken = token.trim().length > 0 && !isTokenLoading;
+   const notificationDetail = !areNotificationsSupported
+      ? "This browser does not support timetable notifications."
+      : areNotificationsBlocked
+        ? "Notifications are blocked in your browser settings."
+        : areNotificationsEnabled
+          ? "You'll get alerts when this week's classes change."
+          : "Get an alert when this week's classes change.";
 
    const closeSettings = useCallback(() => {
       if (isClosing) {
@@ -142,7 +160,8 @@ export function SettingsDialog({
       () => onChangeShownWeekdays(smartWeekdays.length > 0 ? smartWeekdays : [...DEFAULT_SHOWN_WEEKDAYS]),
       [onChangeShownWeekdays, smartWeekdays]
    );
-   const resetShownWeekdays = useCallback(() => onChangeShownWeekdays([...DEFAULT_SHOWN_WEEKDAYS]), [onChangeShownWeekdays]);
+   const showMondayToFriday = useCallback(() => onChangeShownWeekdays([...DEFAULT_SHOWN_WEEKDAYS]), [onChangeShownWeekdays]);
+   const showAllWeekdays = useCallback(() => onChangeShownWeekdays([...ISO_WEEKDAYS]), [onChangeShownWeekdays]);
 
    if (!isOpen && !isClosing) {
       return null;
@@ -171,6 +190,23 @@ export function SettingsDialog({
             </header>
 
             <div className="settings-dialog__content">
+               <section className="settings-section" aria-labelledby="notification-settings-title">
+                  <div className="settings-section__header settings-section__header--with-control">
+                     <div className="settings-section__copy">
+                        <h3 id="notification-settings-title">Notifications</h3>
+                        <p id="notification-settings-detail">{notificationDetail}</p>
+                     </div>
+                     <ToggleSwitch
+                        checked={areNotificationsEnabled}
+                        label="Notify me about class changes"
+                        aria-describedby="notification-settings-detail"
+                        aria-busy={areNotificationsUpdating}
+                        disabled={!areNotificationsSupported || areNotificationsBlocked || areNotificationsUpdating}
+                        onCheckedChange={onChangeNotifications}
+                     />
+                  </div>
+               </section>
+
                <section className="settings-section" aria-labelledby="theme-settings-title">
                   <div className="settings-section__header">
                      <div className="settings-section__copy">
@@ -225,7 +261,8 @@ export function SettingsDialog({
                               disabled: !isSmartDaysReady,
                               onPress: applySmartWeekdays,
                            },
-                           { id: "reset", label: "Reset", tooltip: "Show Monday through Friday", onPress: resetShownWeekdays },
+                           { id: "default", label: "Default", tooltip: "Show Monday through Friday", onPress: showMondayToFriday },
+                           { id: "all", label: "All", tooltip: "Show every day", onPress: showAllWeekdays },
                         ]}
                      />
                   </div>

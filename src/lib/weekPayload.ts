@@ -33,7 +33,11 @@ export function getDisplayWeeksFromPayload(
 
    for (const weekData of payload.weeks) {
       const comparisonBase = latestRawWeeks.get(weekData.week.offset) ?? entries[weekData.week.offset]?.data ?? null;
-      if (comparisonBase && !isSameWeekData(comparisonBase, weekData)) {
+      if (comparisonBase && comparisonBase.week.start !== weekData.week.start) {
+         const previousDiffCount = countDiffs(sessionLessonDiffs);
+         sessionLessonDiffs.delete(weekData.week.offset);
+         sessionDiffsChanged ||= previousDiffCount !== countDiffs(sessionLessonDiffs);
+      } else if (comparisonBase && !isSameWeekData(comparisonBase, weekData)) {
          const previousDiffCount = countDiffs(sessionLessonDiffs);
          const recordedDiffs = recordSessionClassDiffs(comparisonBase, weekData, sessionLessonDiffs);
          sessionDiffsChanged ||= recordedDiffs.length > 0 || previousDiffCount !== countDiffs(sessionLessonDiffs);
