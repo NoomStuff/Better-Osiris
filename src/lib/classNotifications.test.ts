@@ -22,6 +22,13 @@ void describe("roster desktop notification messages", () => {
       assert.deepEqual(getClassNotificationBodies([diff]), ["Web Development changed: B12 → C04"]);
    });
 
+   void it("describes a newly added schoolClass", () => {
+      const schoolClass = createClass({ status: "added" });
+      const diff = { schoolClass, status: "added" } satisfies SessionClassDiff;
+
+      assert.deepEqual(getClassNotificationBodies([diff]), ["Web Development was added: Tuesday 10:30"]);
+   });
+
    void it("groups multiple changes by status", () => {
       const diffs = [
          createDiff("cancelled"),

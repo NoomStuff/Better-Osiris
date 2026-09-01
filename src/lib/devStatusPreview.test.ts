@@ -10,21 +10,26 @@ void describe("dev roster status preview", () => {
       assert.equal(applyDevClassStatusPreview(week, "none"), week);
    });
 
-   void it("can preview changed, cancelled, and mixed status states", () => {
+   void it("can preview added, changed, cancelled, and mixed status states", () => {
       const week = createWeek();
 
       assert.deepEqual(
+         applyDevClassStatusPreview(week, "added")?.classes.map((schoolClass) => schoolClass.status),
+         ["added", "scheduled", "scheduled"]
+      );
+      assert.deepEqual(
          applyDevClassStatusPreview(week, "changed")?.classes.map((schoolClass) => schoolClass.status),
-         ["changed", "scheduled"]
+         ["changed", "scheduled", "scheduled"]
       );
       assert.deepEqual(
          applyDevClassStatusPreview(week, "cancelled")?.classes.map((schoolClass) => schoolClass.status),
-         ["cancelled", "scheduled"]
+         ["cancelled", "scheduled", "scheduled"]
       );
       assert.deepEqual(
          applyDevClassStatusPreview(week, "mixed")?.classes.map((schoolClass) => schoolClass.status),
-         ["changed", "cancelled"]
+         ["changed", "cancelled", "scheduled"]
       );
+      assert.equal(applyDevClassStatusPreview(week, "added")?.classes[0]?.previous, undefined);
       assert.equal(applyDevClassStatusPreview(week, "changed")?.classes[0]?.previous?.room, "B12");
    });
 });
@@ -37,7 +42,7 @@ function createWeek(): Week {
          start: "2026-06-15",
          end: "2026-06-19",
       },
-      classes: [createClass("one"), createClass("two")],
+      classes: [createClass("one"), createClass("two"), createClass("three")],
    };
 }
 

@@ -58,4 +58,8 @@ export function applyTheme(theme: ThemeId, options: { animate?: boolean } = {}) 
    }
 
    root.setAttribute("data-theme", theme);
+   const themeColor = getComputedStyle(root).getPropertyValue("--page-canvas").trim();
+   if (themeColor) {
+      document.querySelector<HTMLMetaElement>('meta[name="theme-color"]')?.setAttribute("content", themeColor);
+   }
 }

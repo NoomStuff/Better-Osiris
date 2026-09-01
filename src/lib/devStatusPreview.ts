@@ -1,9 +1,11 @@
 import type { Class, ClassSnapshot, Week } from "../types/weeks";
+import { toClassSnapshot } from "./classSnapshot";
 
-export type DevClassStatusPreviewMode = "none" | "changed" | "cancelled" | "mixed";
+export type DevClassStatusPreviewMode = "none" | "added" | "changed" | "cancelled" | "mixed";
 
 export const DEV_CLASS_STATUS_PREVIEW_MODES = [
    { id: "none", label: "None" },
+   { id: "added", label: "Added" },
    { id: "changed", label: "Changed" },
    { id: "cancelled", label: "Cancelled" },
    { id: "mixed", label: "Mixed" },
@@ -25,6 +27,10 @@ export function applyDevClassStatusPreview(data: Week | null, mode: DevClassStat
 }
 
 function applyPreviewStatus(schoolClass: Class, index: number, mode: DevClassStatusPreviewMode): Class {
+   if (mode === "added" && index === 0) {
+      return createAddedPreview(schoolClass);
+   }
+
    if (mode === "changed" && index === 0) {
       return createChangedPreview(schoolClass);
    }
@@ -44,6 +50,10 @@ function applyPreviewStatus(schoolClass: Class, index: number, mode: DevClassSta
    }
 
    return schoolClass;
+}
+
+function createAddedPreview(schoolClass: Class): Class {
+   return { ...toClassSnapshot(schoolClass), status: "added" };
 }
 
 function createChangedPreview(schoolClass: Class): Class {

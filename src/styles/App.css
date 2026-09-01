@@ -1,7 +1,8 @@
 #app {
    --app-padding: 20px;
    min-height: 100vh;
-   padding: var(--app-padding);
+   padding: max(var(--app-padding), env(safe-area-inset-top)) max(var(--app-padding), env(safe-area-inset-right))
+      max(var(--app-padding), env(safe-area-inset-bottom)) max(var(--app-padding), env(safe-area-inset-left));
 }
 
 .app-content {

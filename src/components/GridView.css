@@ -223,7 +223,7 @@
    scale: 0.975;
 }
 
-.grid-class.status-changed {
+.grid-class:is(.status-added, .status-changed) {
    border-left-color: var(--warning);
 }
 

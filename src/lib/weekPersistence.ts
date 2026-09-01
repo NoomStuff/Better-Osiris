@@ -193,12 +193,16 @@ export function storeSessionClassDiffs(weekDiffs: SessionClassDiffsByWeek) {
 function parseSessionClassDiff(value: unknown, path: string): SessionClassDiff {
    const record = readRecord(value, path);
    const status = record["status"];
-   if (status !== "changed" && status !== "cancelled") {
+   if (status !== "added" && status !== "changed" && status !== "cancelled") {
       throw new Error(`${path} has an invalid status.`);
+   }
+   const previousClass = record["previousClass"];
+   if (status !== "added" && previousClass === undefined) {
+      throw new Error(`${path} is missing its previous class.`);
    }
    return {
       schoolClass: parseClass(record["schoolClass"], `${path}.schoolClass`),
-      previousClass: parseClass(record["previousClass"], `${path}.previousClass`),
+      ...(previousClass === undefined ? {} : { previousClass: parseClass(previousClass, `${path}.previousClass`) }),
       status,
    };
 }

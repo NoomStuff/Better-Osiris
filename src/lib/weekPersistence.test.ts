@@ -126,6 +126,20 @@ void describe("roster persistence", () => {
       assert.equal(restoredDiff.status, "changed");
    });
 
+   void it("round-trips an added session schoolClass without a previous snapshot", () => {
+      installStorage();
+      const schoolClass = createClass({ status: "added" });
+      const diffs = new Map([[0, new Map([["class-1", { schoolClass, status: "added" as const }]])]]);
+
+      storeSessionClassDiffs(diffs);
+      const restored = readSessionClassDiffs().get(0)?.get("class-1");
+
+      assert.ok(restored);
+      assert.equal(restored.status, "added");
+      assert.equal(restored.previousClass, undefined);
+      assert.deepEqual(restored.schoolClass, schoolClass);
+   });
+
    void it("discards unreadable session diffs and clears storage", () => {
       const { sessionStorage } = installStorage();
       sessionStorage.setItem(SESSION_CLASS_DIFFS_KEY, '{"0":[{"status":"exploded"}]}');

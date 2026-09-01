@@ -1,6 +1,7 @@
 html[data-theme="light"] {
    color-scheme: light;
 
+   --page-canvas: #f9fbfe;
    --page-background:
       radial-gradient(circle at 50% 0, rgba(88, 124, 214, 0.12), transparent 32%), linear-gradient(180deg, #f9fbfe 0%, #e9edf4 52%, #eff2f7 100%);
 

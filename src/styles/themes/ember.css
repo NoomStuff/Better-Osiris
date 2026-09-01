@@ -2,6 +2,7 @@
 html[data-theme="ember"] {
    color-scheme: dark;
 
+   --page-canvas: #2a1a16;
    --page-background:
       radial-gradient(circle at 50% 0, rgba(224, 82, 100, 0.08), transparent 32%), linear-gradient(180deg, #2a1a16 0%, #140b12 52%, #1e1018 100%);
 

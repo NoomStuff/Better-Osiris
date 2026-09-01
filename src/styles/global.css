@@ -168,6 +168,8 @@
    text-rendering: optimizeLegibility;
    -webkit-font-smoothing: antialiased;
    -moz-osx-font-smoothing: grayscale;
+   -webkit-text-size-adjust: 100%;
+   text-size-adjust: 100%;
 
    /* Combined height of the app toolbar and week bar; the grid frame height math in App.css depends on it. */
    --chrome-height: 127px;
@@ -190,6 +192,7 @@
    --chrome-line-strong: var(--line-strong);
    --chrome-surface: rgba(var(--surface-rgb), 0.92);
 
+   --page-canvas: #0e111f;
    --page-background:
       radial-gradient(circle at 50% 0, rgba(44, 68, 173, 0.16), transparent 30%), linear-gradient(180deg, #0e111f 0%, #000000 52%, #0e121d 100%);
 }
@@ -209,7 +212,7 @@ body,
 
 html {
    overflow-x: clip;
-   background: var(--page-background);
+   background: var(--page-canvas);
 }
 
 body,

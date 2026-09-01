@@ -179,7 +179,7 @@ test("settings dialog opens, resets token state, and closes", async ({ page }) =
    await expect(page.getByRole("link", { name: "How to get one" })).toHaveAttribute("href", OSIRIS_BEARER_TOKEN_HELP_URL);
    await expect(page.getByRole("button", { name: "Save token" })).toBeDisabled();
 
-   await page.getByRole("button", { name: "All", exact: true }).click();
+   await page.getByRole("group", { name: "Shown weekdays" }).getByRole("button", { name: "Sun", exact: true }).click();
    await expect(page.getByRole("group", { name: "Shown weekdays" }).getByRole("button", { name: "Sun", exact: true })).toHaveAttribute("aria-pressed", "true");
 
    const rosterAccess = page.getByRole("region", { name: "Roster access" });
@@ -433,6 +433,77 @@ test("devtools can preview changed and cancelled schoolClass states", async ({ p
    await page.getByRole("button", { name: /SOURCE_TITLE_0_2/ }).click();
    await expect(page.locator(".class-panel__status--cancelled")).toHaveText("cancelled");
    await expect(page.locator(".class-panel__details dt", { hasText: "Status" })).toHaveCount(0);
+});
+
+test("devtools can preview an added schoolClass state", async ({ page }) => {
+   await page.goto("/");
+
+   await page.getByRole("button", { name: "Agenda view" }).click();
+   await page.getByRole("button", { name: "Open settings" }).click();
+   await page.getByLabel("Enable devtools").check();
+   await page.getByRole("button", { name: "Added", exact: true }).click();
+   await page.locator(".settings-dialog__header").getByRole("button", { name: "Close settings" }).click();
+
+   await expect(page.locator(".agenda-class.status-added")).toHaveCount(1);
+   await page.getByRole("button", { name: /SOURCE_TITLE_0_1/ }).click();
+   await expect(page.locator(".class-panel__status--added")).toHaveText("added");
+   await expect(page.locator(".class-panel__change-values")).toHaveCount(0);
+});
+
+test("tooltips work inside preferences and do not reopen after focus restoration", async ({ page }) => {
+   await page.setViewportSize({ width: 1280, height: 720 });
+   await page.goto("/");
+
+   const settingsButton = page.getByRole("button", { name: "Open settings" });
+   await settingsButton.hover();
+   await expect(page.locator('.control-tooltip[data-open="true"]')).toContainText("Open settings");
+   await settingsButton.click();
+
+   const defaultDaysButton = page.getByRole("button", { name: "Default", exact: true });
+   await defaultDaysButton.hover();
+   const preferencesTooltip = page.locator('.settings-dialog .control-tooltip[data-open="true"]');
+   await expect(preferencesTooltip).toContainText("Show Monday through Friday");
+   await expect(preferencesTooltip).toBeVisible();
+
+   await page.locator(".settings-dialog__header").getByRole("button", { name: "Close settings" }).click();
+   await expect(page.getByRole("dialog", { name: "Preferences" })).toBeHidden();
+   await page.waitForTimeout(600);
+   await expect(page.locator('.control-tooltip[data-open="true"]')).toHaveCount(0);
+});
+
+test("the mobile shell uses a solid theme canvas and stable popup text sizing", async ({ page }) => {
+   await page.setViewportSize({ width: 390, height: 844 });
+   await page.goto("/");
+
+   const mobilePlatformStyles = await page.evaluate(() => ({
+      canvas: getComputedStyle(document.documentElement).backgroundColor,
+      pageBackground: getComputedStyle(document.body, "::before").backgroundImage,
+      viewport: document.querySelector<HTMLMetaElement>('meta[name="viewport"]')?.content,
+      themeColor: document.querySelector<HTMLMetaElement>('meta[name="theme-color"]')?.content,
+   }));
+   expect(mobilePlatformStyles.canvas).toBe("rgb(14, 17, 31)");
+   expect(mobilePlatformStyles.pageBackground).toContain("gradient");
+   expect(mobilePlatformStyles.viewport).toContain("minimum-scale=1");
+   expect(mobilePlatformStyles.viewport).not.toContain("user-scalable=no");
+   expect(mobilePlatformStyles.viewport).toContain("viewport-fit=cover");
+   expect(mobilePlatformStyles.themeColor).toBe("#0e111f");
+
+   await page.getByRole("button", { name: "Open settings" }).click();
+   const description = page.locator(".settings-section__header p").first();
+   const initialFontSize = await description.evaluate((element) => getComputedStyle(element).fontSize);
+   await page.getByRole("button", { name: "Light", exact: true }).click();
+   await expect.poll(() => page.locator('meta[name="theme-color"]').getAttribute("content")).toBe("#f9fbfe");
+   await page.setViewportSize({ width: 844, height: 390 });
+   await page.setViewportSize({ width: 390, height: 844 });
+   await expect.poll(() => description.evaluate((element) => getComputedStyle(element).fontSize)).toBe(initialFontSize);
+
+   await page.locator(".settings-dialog__header").getByRole("button", { name: "Close settings" }).click();
+   await page.getByRole("button", { name: /SOURCE_TITLE_0_1/ }).click();
+   const classFieldValue = page.locator(".class-panel__details dd").first();
+   const initialFieldFontSize = await classFieldValue.evaluate((element) => getComputedStyle(element).fontSize);
+   await page.setViewportSize({ width: 844, height: 390 });
+   await page.setViewportSize({ width: 390, height: 844 });
+   await expect.poll(() => classFieldValue.evaluate((element) => getComputedStyle(element).fontSize)).toBe(initialFieldFontSize);
 });
 
 test("time indicators are visible and positioned for the fixed current time", async ({ page }) => {

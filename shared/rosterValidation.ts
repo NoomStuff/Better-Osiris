@@ -106,7 +106,7 @@ function parseClassSnapshot(record: Record<string, unknown>, path: string): Clas
 }
 
 function readClassStatus(value: unknown, path: string): ClassStatus {
-   if (value === "scheduled" || value === "changed" || value === "cancelled") {
+   if (value === "scheduled" || value === "added" || value === "changed" || value === "cancelled") {
       return value;
    }
    throw invalid(path, "a known schoolClass status");

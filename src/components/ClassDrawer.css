@@ -70,6 +70,7 @@
    text-transform: uppercase;
 }
 
+.class-panel__status--added,
 .class-panel__status--changed {
    color: var(--warning);
    background: rgba(var(--warning-rgb), 0.1);

@@ -2,6 +2,7 @@
 html[data-theme="dusk"] {
    color-scheme: dark;
 
+   --page-canvas: #271e33;
    --page-background:
       radial-gradient(circle at 50% 0, rgba(224, 138, 155, 0.08), transparent 32%), linear-gradient(180deg, #271e33 0%, #0f0c17 52%, #1c1628 100%);
 

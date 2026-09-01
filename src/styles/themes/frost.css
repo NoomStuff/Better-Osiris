@@ -2,6 +2,7 @@
 html[data-theme="frost"] {
    color-scheme: dark;
 
+   --page-canvas: #323949;
    --page-background:
       radial-gradient(circle at 50% 0, rgba(136, 192, 208, 0.08), transparent 32%), linear-gradient(180deg, #323949 0%, #212633 52%, #2a3040 100%);
 

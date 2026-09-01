@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useLayoutEffect, useRef } from "react";
 import { triggerShortcutActivation } from "./useShortcutActivation";
 
 export interface KeyboardShortcut {
@@ -18,7 +18,7 @@ export function useKeyboardShortcuts(shortcuts: readonly KeyboardShortcut[], ena
    // The listener reads the latest shortcuts when a key lands, so it only has to be attached once.
    const shortcutsRef = useRef(shortcuts);
 
-   useEffect(() => {
+   useLayoutEffect(() => {
       shortcutsRef.current = shortcuts;
    });
 

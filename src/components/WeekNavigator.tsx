@@ -54,7 +54,7 @@ export const WeekNavigator = memo(function WeekNavigator({
    const weekPosition = weekOffset < 0 ? "past" : weekOffset > 0 ? "future" : "current";
    const tooltipId = useId();
    const anchorName = getTooltipAnchorName(tooltipId);
-   const { hideTooltip, isTooltipEnabled, isTooltipOpen, showTooltip } = useDelayedTooltip();
+   const { hideTooltip, isTooltipEnabled, isTooltipOpen, showTooltip, showTooltipForFocus } = useDelayedTooltip();
    const isShortcutActive = useShortcutActivation("current-week");
    const weekTooltip = isCurrentWeek ? "Reset the current week view" : "Jump back to the current week";
 
@@ -66,8 +66,13 @@ export const WeekNavigator = memo(function WeekNavigator({
       hideTooltip();
    };
 
-   const handleFocus = (_event: FocusEvent<HTMLButtonElement>) => {
-      showTooltip();
+   const handleFocus = (event: FocusEvent<HTMLButtonElement>) => {
+      showTooltipForFocus(event.currentTarget);
+   };
+
+   const handleCurrentWeek = () => {
+      hideTooltip();
+      onCurrentWeek();
    };
 
    const handleBlur = (_event: FocusEvent<HTMLButtonElement>) => {
@@ -94,11 +99,12 @@ export const WeekNavigator = memo(function WeekNavigator({
                type="button"
                aria-describedby={isTooltipEnabled ? tooltipId : undefined}
                data-current={isCurrentWeek}
+               data-tooltip-open={isTooltipOpen ? "true" : undefined}
                data-shortcut-active={isShortcutActive ? "true" : undefined}
                data-week-position={weekPosition}
                style={{ anchorName }}
                onBlur={handleBlur}
-               onClick={onCurrentWeek}
+               onClick={handleCurrentWeek}
                onFocus={handleFocus}
                onMouseEnter={handleMouseEnter}
                onMouseLeave={handleMouseLeave}

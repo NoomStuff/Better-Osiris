@@ -4,6 +4,7 @@
 html[data-theme="osiris"] {
    color-scheme: light;
 
+   --page-canvas: #f5f3f8;
    --page-background:
       radial-gradient(circle at 50% 0, rgba(94, 33, 112, 0.07), transparent 32%), linear-gradient(180deg, #f5f3f8 0%, #eae8ef 52%, #efeef3 100%);
 

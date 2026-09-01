@@ -2,6 +2,7 @@ import {
    useEffect,
    useId,
    useRef,
+   useState,
    type HTMLAttributes,
    type KeyboardEvent as ReactKeyboardEvent,
    type ReactNode,
@@ -9,6 +10,7 @@ import {
    type TouchEvent,
 } from "react";
 import { createPortal } from "react-dom";
+import { TooltipPortalProvider } from "./Tooltip";
 import "./OverlayPanel.css";
 
 const overlayStack: string[] = [];
@@ -79,6 +81,7 @@ export function OverlayPanel({
    const overlayId = useId();
    const surfaceRef = useRef<HTMLElement | null>(null);
    const rootRef = useRef<HTMLDivElement | null>(null);
+   const [tooltipRoot, setTooltipRoot] = useState<HTMLDivElement | null>(null);
    const returnFocusRef = useRef<HTMLElement | null>(document.activeElement instanceof HTMLElement ? document.activeElement : null);
    const touchStartYRef = useRef<number | null>(null);
    useOverlayLifecycle(overlayId, rootRef, surfaceRef, returnFocusRef, closeOnEscape, onClose);
@@ -138,35 +141,38 @@ export function OverlayPanel({
    };
 
    return createPortal(
-      <div
-         {...rootProps}
-         className={rootClassName}
-         data-overlay-id={overlayId}
-         ref={rootRef}
-         role="presentation"
-         data-closing={isClosing ? "true" : undefined}
-         onTouchStart={handleTouchStart}
-         onTouchEnd={handleTouchEnd}
-      >
-         <button className={backdropClassNames} type="button" aria-label={closeLabel} onClick={onClose} />
-         <section
-            {...surfaceProps}
-            className={surfaceClassNames}
-            role={dialogRole}
-            aria-modal="true"
-            aria-labelledby={labelledBy}
-            aria-label={label}
-            ref={surfaceRef}
-            tabIndex={-1}
-            onClick={(event) => {
-               event.stopPropagation();
-               surfaceProps?.onClick?.(event);
-            }}
-            onKeyDown={handleSurfaceKeyDown}
+      <TooltipPortalProvider target={tooltipRoot}>
+         <div
+            {...rootProps}
+            className={rootClassName}
+            data-overlay-id={overlayId}
+            ref={rootRef}
+            role="presentation"
+            data-closing={isClosing ? "true" : undefined}
+            onTouchStart={handleTouchStart}
+            onTouchEnd={handleTouchEnd}
          >
-            {children}
-         </section>
-      </div>,
+            <button className={backdropClassNames} type="button" aria-label={closeLabel} onClick={onClose} />
+            <section
+               {...surfaceProps}
+               className={surfaceClassNames}
+               role={dialogRole}
+               aria-modal="true"
+               aria-labelledby={labelledBy}
+               aria-label={label}
+               ref={surfaceRef}
+               tabIndex={-1}
+               onClick={(event) => {
+                  event.stopPropagation();
+                  surfaceProps?.onClick?.(event);
+               }}
+               onKeyDown={handleSurfaceKeyDown}
+            >
+               {children}
+            </section>
+            <div className="overlay-panel__tooltips" ref={setTooltipRoot} />
+         </div>
+      </TooltipPortalProvider>,
       document.body
    );
 }

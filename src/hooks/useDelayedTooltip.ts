@@ -101,10 +101,20 @@ export function useDelayedTooltip({ disabled = false, enabled = true }: DelayedT
       }, delay);
    }, [clearTooltipTimer, isTooltipEnabled]);
 
+   const showTooltipForFocus = useCallback(
+      (target: HTMLElement) => {
+         if (target.matches(":focus-visible")) {
+            showTooltip();
+         }
+      },
+      [showTooltip]
+   );
+
    return {
       hideTooltip,
       isTooltipEnabled,
       isTooltipOpen: isTooltipEnabled && isTooltipOpen,
       showTooltip,
+      showTooltipForFocus,
    };
 }

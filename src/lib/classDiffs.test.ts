@@ -54,6 +54,33 @@ void describe("session roster diff states", () => {
       assert.equal(display.classes.find((schoolClass) => schoolClass.id === "new-id")?.previous?.start, "2026-06-16T09:00:00");
    });
 
+   void it("marks unmatched new classes as added without inventing a previous snapshot", () => {
+      const previous = createWeek([createClass({ id: "existing" })]);
+      const added = createClass({ id: "new-class", title: "Databases", subject: "SQL" });
+      const next = createWeek([createClass({ id: "existing" }), added]);
+      const diffs: SessionClassDiffsByWeek = new Map();
+
+      const recorded = recordSessionClassDiffs(previous, next, diffs);
+      const displayed = applySessionClassDiffs(next, diffs).classes.find((schoolClass) => schoolClass.id === added.id);
+
+      assert.equal(recorded.find((diff) => diff.schoolClass.id === added.id)?.status, "added");
+      assert.equal(displayed?.status, "added");
+      assert.equal(displayed.previous, undefined);
+   });
+
+   void it("clears an added diff when the class disappears again", () => {
+      const original = createWeek([]);
+      const added = createWeek([createClass({ id: "new-class" })]);
+      const diffs: SessionClassDiffsByWeek = new Map();
+
+      recordSessionClassDiffs(original, added, diffs);
+      const recorded = recordSessionClassDiffs(added, original, diffs);
+
+      assert.deepEqual(recorded, []);
+      assert.equal(diffs.size, 0);
+      assert.deepEqual(applySessionClassDiffs(original, diffs).classes, []);
+   });
+
    void it("preserves the first original snapshot across multiple edits", () => {
       const first = createWeek([createClass({ room: "A101" })]);
       const second = createWeek([createClass({ room: "B202" })]);
@@ -121,6 +148,10 @@ void describe("session roster diff states", () => {
       assert.equal(
          recorded.some((diff) => diff.schoolClass.id === "replacement" && diff.status === "changed"),
          false
+      );
+      assert.equal(
+         recorded.some((diff) => diff.schoolClass.id === "replacement" && diff.status === "added"),
+         true
       );
    });
 });

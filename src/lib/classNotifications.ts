@@ -48,28 +48,42 @@ export function notifyClassDiffs(diffs: SessionClassDiff[]) {
 }
 
 export function getClassNotificationBodies(diffs: SessionClassDiff[]) {
+   const added = diffs.filter((diff) => diff.status === "added");
    const cancelled = diffs.filter((diff) => diff.status === "cancelled");
    const changed = diffs.filter((diff) => diff.status === "changed");
 
-   return [formatDiffGroup(cancelled, "cancelled"), formatDiffGroup(changed, "changed")].filter((body): body is string => body !== null);
+   return [formatDiffGroup(added, "added"), formatDiffGroup(cancelled, "cancelled"), formatDiffGroup(changed, "changed")].filter(
+      (body): body is string => body !== null
+   );
 }
 
-function formatDiffGroup(diffs: SessionClassDiff[], status: "changed" | "cancelled") {
+function formatDiffGroup(diffs: SessionClassDiff[], status: DiffNotificationStatus) {
    const firstDiff = diffs[0];
    if (!firstDiff) {
       return null;
    }
 
-   return diffs.length === 1 ? formatSingleDiff(firstDiff) : `${diffs.length} classes were ${status === "cancelled" ? "cancelled" : "changed"}`;
+   return diffs.length === 1 ? formatSingleDiff(firstDiff) : `${diffs.length} classes were ${status}`;
 }
+
+type DiffNotificationStatus = Extract<SessionClassDiff["status"], "added" | "changed" | "cancelled">;
 
 function formatSingleDiff(diff: SessionClassDiff) {
    const schoolClass = diff.schoolClass;
    const previous = diff.previousClass;
 
+   if (diff.status === "added") {
+      const start = parseLocalDateTime(schoolClass.start);
+      return `${schoolClass.title} was added: ${dayLabel.format(start)} ${timeLabel.format(start)}`;
+   }
+
    if (diff.status === "cancelled") {
       const start = parseLocalDateTime(schoolClass.start);
       return `${schoolClass.title} was cancelled: ${dayLabel.format(start)} ${timeLabel.format(start)}`;
+   }
+
+   if (!previous) {
+      return `${schoolClass.title} was changed`;
    }
 
    const detailChange =

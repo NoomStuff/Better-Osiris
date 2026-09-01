@@ -161,7 +161,6 @@ export function SettingsDialog({
       [onChangeShownWeekdays, smartWeekdays]
    );
    const showMondayToFriday = useCallback(() => onChangeShownWeekdays([...DEFAULT_SHOWN_WEEKDAYS]), [onChangeShownWeekdays]);
-   const showAllWeekdays = useCallback(() => onChangeShownWeekdays([...ISO_WEEKDAYS]), [onChangeShownWeekdays]);
 
    if (!isOpen && !isClosing) {
       return null;
@@ -257,12 +256,11 @@ export function SettingsDialog({
                            {
                               id: "smart",
                               label: "Smart",
-                              tooltip: isSmartDaysReady ? "Show weekdays with classes in weeks 0 to 4" : "Loading weeks 0 to 4",
+                              tooltip: "Only show weekdays with classes",
                               disabled: !isSmartDaysReady,
                               onPress: applySmartWeekdays,
                            },
                            { id: "default", label: "Default", tooltip: "Show Monday through Friday", onPress: showMondayToFriday },
-                           { id: "all", label: "All", tooltip: "Show every day", onPress: showAllWeekdays },
                         ]}
                      />
                   </div>

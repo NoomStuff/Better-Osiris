@@ -37,6 +37,7 @@ export function IconButton({
    onMouseLeave,
    onFocus,
    onBlur,
+   onClick,
    style,
    children,
    ...buttonProps
@@ -44,7 +45,7 @@ export function IconButton({
    const tooltipId = useId();
    const tooltipText = tooltip ?? label;
    const hasTooltip = Boolean(tooltipText);
-   const { hideTooltip, isTooltipEnabled, isTooltipOpen, showTooltip } = useDelayedTooltip({ disabled, enabled: hasTooltip });
+   const { hideTooltip, isTooltipEnabled, isTooltipOpen, showTooltip, showTooltipForFocus } = useDelayedTooltip({ disabled, enabled: hasTooltip });
    const isShortcutActive = useShortcutActivation(activationId);
    const anchorName = getTooltipAnchorName(tooltipId);
 
@@ -60,7 +61,12 @@ export function IconButton({
 
    const handleFocus = (event: FocusEvent<HTMLButtonElement>) => {
       onFocus?.(event);
-      showTooltip();
+      showTooltipForFocus(event.currentTarget);
+   };
+
+   const handleClick = (event: MouseEvent<HTMLButtonElement>) => {
+      hideTooltip();
+      onClick?.(event);
    };
 
    const handleBlur = (event: FocusEvent<HTMLButtonElement>) => {
@@ -79,12 +85,14 @@ export function IconButton({
          aria-describedby={isTooltipEnabled ? tooltipId : undefined}
          disabled={disabled}
          data-hover-effect={hoverEffect}
+         data-tooltip-open={isTooltipOpen ? "true" : undefined}
          data-shortcut-active={isShortcutActive ? "true" : undefined}
          style={{ ...style, anchorName }}
          onMouseEnter={handleMouseEnter}
          onMouseLeave={handleMouseLeave}
          onFocus={handleFocus}
          onBlur={handleBlur}
+         onClick={handleClick}
       >
          <span className="icon-button__surface">
             <span className="icon-button__icon" aria-hidden="true">

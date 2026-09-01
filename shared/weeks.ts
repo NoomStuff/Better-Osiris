@@ -12,7 +12,7 @@ export interface RosterConfig {
    timeZone: string;
 }
 
-export type ClassStatus = "scheduled" | "changed" | "cancelled";
+export type ClassStatus = "scheduled" | "added" | "changed" | "cancelled";
 
 export interface ClassSnapshot {
    id: string;

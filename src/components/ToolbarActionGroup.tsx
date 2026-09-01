@@ -151,7 +151,7 @@ function ToolbarActionItem({
    onPress,
 }: ToolbarActionItemProps) {
    const tooltipId = useId();
-   const { hideTooltip, isTooltipEnabled, isTooltipOpen, showTooltip } = useDelayedTooltip({ disabled });
+   const { hideTooltip, isTooltipEnabled, isTooltipOpen, showTooltip, showTooltipForFocus } = useDelayedTooltip({ disabled });
    const isShortcutActive = useShortcutActivation(activationId);
    const anchorName = getTooltipAnchorName(tooltipId);
 
@@ -163,8 +163,13 @@ function ToolbarActionItem({
       hideTooltip();
    };
 
-   const handleFocus = (_event: FocusEvent<HTMLButtonElement>) => {
-      showTooltip();
+   const handleFocus = (event: FocusEvent<HTMLButtonElement>) => {
+      showTooltipForFocus(event.currentTarget);
+   };
+
+   const handlePress = () => {
+      hideTooltip();
+      onPress();
    };
 
    const handleBlur = (_event: FocusEvent<HTMLButtonElement>) => {
@@ -182,10 +187,11 @@ function ToolbarActionItem({
          disabled={disabled}
          tabIndex={tabIndex}
          data-selected={selected ? "true" : undefined}
+         data-tooltip-open={isTooltipOpen ? "true" : undefined}
          data-shortcut-active={isShortcutActive ? "true" : undefined}
          style={{ anchorName }}
          onBlur={handleBlur}
-         onClick={onPress}
+         onClick={handlePress}
          onFocus={handleFocus}
          onMouseEnter={handleMouseEnter}
          onMouseLeave={handleMouseLeave}

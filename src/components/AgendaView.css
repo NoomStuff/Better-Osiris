@@ -198,7 +198,7 @@
    scale: 0.99;
 }
 
-.agenda-class.status-changed .agenda-class__time {
+.agenda-class:is(.status-added, .status-changed) .agenda-class__time {
    color: var(--warning);
 }
 
