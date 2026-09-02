@@ -1,6 +1,6 @@
 # Better Osiris
 
-A faster, cleaner, more useful timetable for schools using OSIRIS Student.
+A faster, cleaner, actually useful timetable for schools using OSIRIS Student.
 
 Made because I got so absolutely sick of the official one. Like do you have to lose my session every 5 minutes? Or log me out randomly? Or take ages to load because I need to be redirected through a million different pages?
 
@@ -19,17 +19,15 @@ Anyway, this is heavily vibe coded, but I vibe code with class, so every detail 
 
 ---
 
-## How it Works
+## How it works
 
 You grab your own bearer token from the official OSIRIS Student site and slap it into the app. [Here's how to do that](https://youtu.be/MbcI61KIQbI)
 
-The browser sends a bearer token to the app's own API, where it is encrypted with `COOKIE_SECRET` and stored in an HTTP-only cookie. OSIRIS requests happen server-side, so the saved token is not exposed to frontend JavaScript.
-
-If `BEARER_TOKEN` is configured, it becomes the fallback for visitors who do not yet have a token cookie. That is convenient for a private instance but can leak your roster if it's a public deployment.
+The token is stored encrypted in a cookie and OSIRIS requests happen server-side, so it never touches frontend JavaScript.
 
 ---
 
-## Running Locally
+## Running locally
 
 You need [Bun](https://bun.sh/) and access to an OSIRIS Student environment.
 
@@ -51,40 +49,28 @@ You need [Bun](https://bun.sh/) and access to an OSIRIS Student environment.
 
 The frontend runs at `http://localhost:5173` and proxies API requests to the local server on port `8787`.
 
-On Vercel, the files under `api/` run as serverless functions and Vite serves the browser app. `server.ts` is only the local and self-hosted adapter. Both adapters call the same API services; neither puts the OSIRIS token in the frontend bundle.
+To self-host instead, set the environment variables, run `bun run build`, then `bun run start`.
 
 ---
 
 ## Configuration
 
-| Variable                    | Required | Description                                                                                                           |
-| --------------------------- | -------- | --------------------------------------------------------------------------------------------------------------------- |
-| `COOKIE_SECRET`             | Yes      | Long random value used to encrypt bearer tokens in browser cookies.                                                   |
-| `OSIRIS_ROSTER_URL`         | Yes      | Full weekly roster endpoint, such as `https://mborijnland.osiris-student.nl/student/osiris/student/rooster/per_week`. |
-| `SCHOOL_NAME`               | No       | Optional label shown above “Better Osiris”.                                                                           |
-| `BEARER_TOKEN`              | No       | Shared fallback token. Leave this unset on a public deployment so every user supplies their own token.                |
-| `ALLOW_SHARED_BEARER_TOKEN` | No       | Must be `true` to acknowledge use of `BEARER_TOKEN` in production.                                                    |
+| Variable                    | Description                                                                                                           |
+| --------------------------- | --------------------------------------------------------------------------------------------------------------------- |
+| `COOKIE_SECRET`*            | Long random value used to encrypt bearer tokens in browser cookies.                                                   |
+| `OSIRIS_ROSTER_URL`*        | Full weekly roster endpoint, such as `https://mborijnland.osiris-student.nl/student/osiris/student/rooster/per_week`. |
+| `SCHOOL_NAME`               | Optional label shown above "Better Osiris".                                                                           |
+| `BEARER_TOKEN`              | Shared fallback token. Leave this unset on a public deployment so every user supplies their own token.                |
+| `ALLOW_SHARED_BEARER_TOKEN` | Must be `true` to acknowledge use of `BEARER_TOKEN` in production.                                                    |
 
 ---
 
 ## Commands
 
-| Command                   | Description                                 |
-| ------------------------- | ------------------------------------------- |
-| `bun run dev`             | Start the frontend and API in watch mode    |
-| `bun run build`           | Type-check and build the production app     |
-| `bun run start`           | Serve the built app                         |
-| `bun run test`            | Run all tests                               |
-| `bun run test:unit`       | Run unit and API tests                      |
-| `bun run test:e2e`        | Run Playwright end-to-end tests             |
-| `bun run test:e2e:compat` | Run the browser suite in Firefox and WebKit |
-| `bun run lint`            | Run ESLint                                  |
-| `bun run format`          | Format code with Prettier                   |
-| `bun run format:check`    | Check formatting                            |
-| `bun run verify`          | Run all pre commit checks                   |
-
-For a self-hosted production deployment, set the same environment variables, run `bun run build`, then start the app with `bun run start`. Vercel deploys the built frontend and the `api/` functions directly; it does not run `server.ts`.
-
-## Visual baselines
-
-The screenshot test only passes on the machine that recorded the baselines, since font rendering differs per platform. After intentional styling changes, refresh them with `bunx playwright test --project=chromium --grep "visual baselines" --update-snapshots`.
+| Command         | Description                              |
+| --------------- | ---------------------------------------- |
+| `bun run dev`   | Start the frontend and API in watch mode |
+| `bun run build` | Type-check and build the production app  |
+| `bun run start` | Serve the built app                      |
+| `bun run test`  | Run all tests                            |
+| `bun run lint`  | Run ESLint                               |
