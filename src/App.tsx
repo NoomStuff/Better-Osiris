@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type AnimationEvent, type CSSProperties } from "react";
+import { flushSync } from "react-dom";
 import { AgendaView } from "./components/AgendaView";
 import { AppToolbar } from "./components/AppToolbar";
 import { GridView } from "./components/GridView";
@@ -54,6 +55,7 @@ export default function App() {
    const [gridHours, setGridHours] = useGridHoursPreference();
    const [agendaFoldingMode, setAgendaFoldingMode] = useAgendaFoldingPreference();
    const appContentRef = useRef<HTMLElement>(null);
+   const weekTransitionIdRef = useRef(0);
    const isBarDocked = useDockedMobileBar(appContentRef);
    const [gridZoom, setGridZoom] = useState<GridZoom>("hour");
    const [selectedClassId, setSelectedClassId] = useState<string | null>(null);
@@ -164,10 +166,31 @@ export default function App() {
             return;
          }
 
-         setWeekTransitionDirection(transitionDirection);
-         setWeekOffset(next);
-         setSelectedClassId(null);
-         resetAgenda();
+         const commitWeek = () => {
+            setWeekTransitionDirection(transitionDirection);
+            setWeekOffset(next);
+            setSelectedClassId(null);
+            resetAgenda();
+         };
+
+         const canAnimateSwap = typeof Reflect.get(document, "startViewTransition") === "function";
+         if ((transitionDirection === "previous" || transitionDirection === "next") && canAnimateSwap) {
+            const transitionId = ++weekTransitionIdRef.current;
+            const transitionToken = `${transitionDirection}-${transitionId}`;
+            document.documentElement.dataset["weekTransition"] = transitionToken;
+            const transition = document.startViewTransition(() => flushSync(commitWeek));
+            void transition.ready.catch(() => undefined);
+            const clearTransitionToken = () => {
+               if (document.documentElement.dataset["weekTransition"] === transitionToken) {
+                  delete document.documentElement.dataset["weekTransition"];
+                  setWeekTransitionDirection("settled");
+               }
+            };
+            void transition.finished.then(clearTransitionToken, clearTransitionToken);
+            return;
+         }
+
+         commitWeek();
       },
       [resetAgenda, weekOffset]
    );
@@ -300,6 +323,7 @@ export default function App() {
       enabled: !isSettingsOpen && selectedClass === null,
       viewMode,
       gridZoom,
+      weekOffset,
       canGoPrevious,
       canGoNext,
       isWeekNavigable,
@@ -310,8 +334,8 @@ export default function App() {
       openSettings,
       moveToolbarAction,
       selectToolbarAction,
-      goToWeek: (targetOffset) => {
-         if (isWeekNavigable(targetOffset)) updateWeekOffset(targetOffset);
+      goToWeek: (targetOffset, transitionDirection) => {
+         if (isWeekNavigable(targetOffset)) updateWeekOffset(targetOffset, transitionDirection);
       },
    });
 

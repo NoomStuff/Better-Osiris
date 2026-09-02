@@ -69,6 +69,7 @@
 
 .app-content-frame {
    position: relative;
+   view-transition-name: roster-week;
    border-radius: 24px;
    border: 2px solid var(--line);
    background: linear-gradient(180deg, rgba(var(--highlight-rgb), 0.02), rgba(var(--highlight-rgb), 0.012)), rgba(var(--surface-rgb), var(--frame-veil));
@@ -106,20 +107,20 @@
 }
 
 .view-enter {
-   animation: view-enter 400ms cubic-bezier(0.22, 1, 0.36, 1) both;
+   animation: view-enter 500ms cubic-bezier(0.22, 1, 0.36, 1) both;
    transform-origin: center bottom;
    will-change: opacity, transform;
 }
 
 .view-enter[data-week-transition="previous"] {
    animation-name: view-enter-from-left;
-   animation-duration: 400ms;
+   animation-duration: 500ms;
    animation-timing-function: cubic-bezier(0.18, 1, 0.32, 1);
 }
 
 .view-enter[data-week-transition="next"] {
    animation-name: view-enter-from-right;
-   animation-duration: 400ms;
+   animation-duration: 500ms;
    animation-timing-function: cubic-bezier(0.18, 1, 0.32, 1);
 }
 
@@ -140,32 +141,126 @@
 }
 
 @keyframes view-enter-from-left {
-   from {
+   0% {
       opacity: 0;
-      transform: translateX(-20px) translateY(4px) rotate(-1.6deg) scale(0.985);
+      transform: translateX(-32px) translateY(4px) rotate(-1.6deg) scale(0.975);
    }
 
-   to {
+   50% {
+      opacity: 1;
+   }
+
+   100% {
       opacity: 1;
       transform: translateX(0) translateY(0) rotate(0deg) scale(1);
    }
 }
 
 @keyframes view-enter-from-right {
-   from {
+   0% {
       opacity: 0;
-      transform: translateX(20px) translateY(4px) rotate(1.6deg) scale(0.985);
+      transform: translateX(32px) translateY(4px) rotate(1.6deg) scale(0.975);
    }
 
-   to {
+   50% {
+      opacity: 1;
+   }
+
+   100% {
       opacity: 1;
       transform: translateX(0) translateY(0) rotate(0deg) scale(1);
    }
 }
 
+@supports (view-transition-name: roster-week) {
+   .view-enter[data-week-transition="previous"],
+   .view-enter[data-week-transition="next"] {
+      animation: none;
+   }
+
+   /* One gesture, two depths: the incoming week slides on top while the outgoing week recedes
+      underneath it. The old snapshot holds full opacity until the new one nearly covers it, then
+      fades away inside the covered window, so the crossfade never bleeds the page through and the
+      teardown never cuts a visible ghost. */
+   ::view-transition-group(roster-week) {
+      animation-duration: 400ms;
+      animation-timing-function: cubic-bezier(0.18, 1, 0.32, 1);
+   }
+
+   ::view-transition-old(roster-week),
+   ::view-transition-new(roster-week) {
+      transform-origin: center bottom;
+   }
+
+   ::view-transition-old(roster-week) {
+      z-index: 0;
+   }
+
+   ::view-transition-new(roster-week) {
+      z-index: 1;
+   }
+
+   html[data-week-transition^="previous-"]::view-transition-old(roster-week) {
+      animation: roster-week-out-right 500ms cubic-bezier(0.18, 1, 0.32, 1) both;
+   }
+
+   html[data-week-transition^="previous-"]::view-transition-new(roster-week) {
+      animation: view-enter-from-left 500ms cubic-bezier(0.18, 1, 0.32, 1) both;
+   }
+
+   html[data-week-transition^="next-"]::view-transition-old(roster-week) {
+      animation: roster-week-out-left 500ms cubic-bezier(0.18, 1, 0.32, 1) both;
+   }
+
+   html[data-week-transition^="next-"]::view-transition-new(roster-week) {
+      animation: view-enter-from-right 500ms cubic-bezier(0.18, 1, 0.32, 1) both;
+   }
+}
+
+@keyframes roster-week-out-left {
+   0% {
+      opacity: 1;
+      filter: brightness(1) saturate(1);
+      transform: none;
+   }
+
+   25% {
+      opacity: 1;
+      filter: brightness(0.8) saturate(0.9) blur(2px);
+   }
+
+   100% {
+      opacity: 0;
+      filter: brightness(0.6) saturate(0.8) blur(8px);
+      transform: translateX(-48px) translateY(-64px) rotate(-0.8deg) scale(0.95);
+   }
+}
+
+@keyframes roster-week-out-right {
+   0% {
+      opacity: 1;
+      filter: brightness(1) saturate(1);
+      transform: none;
+   }
+
+   25% {
+      opacity: 1;
+      filter: brightness(0.8) saturate(0.9) blur(2px);
+   }
+
+   100% {
+      opacity: 0;
+      filter: brightness(0.6) saturate(0.8) blur(8px);
+      transform: translateX(48px) translateY(-64px) rotate(0.8deg) scale(0.95);
+   }
+}
+
 @media (prefers-reduced-motion: reduce) {
    .view-enter,
-   .app-content-frame--grid {
+   .app-content-frame--grid,
+   ::view-transition-group(roster-week),
+   ::view-transition-old(roster-week),
+   ::view-transition-new(roster-week) {
       animation: none;
       transition: none;
    }

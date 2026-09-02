@@ -1,6 +1,9 @@
 import { useEffect, useLayoutEffect, useRef } from "react";
 import { triggerShortcutActivation } from "./useShortcutActivation";
 
+export const HOLD_REPEAT_INITIAL_DELAY_MS = 500;
+export const HOLD_REPEAT_INTERVAL_MS = 150;
+
 export interface KeyboardShortcut {
    id: string;
    key: string;
@@ -10,6 +13,7 @@ export interface KeyboardShortcut {
    shiftKey?: boolean;
    disabled?: boolean;
    preventDefault?: boolean;
+   repeat?: boolean;
    activationTargetId?: string | undefined;
    onPress: () => void;
 }
@@ -32,6 +36,8 @@ export function useKeyboardShortcuts(shortcuts: readonly KeyboardShortcut[], ena
       // pointer-focused elements and release them when a shortcut is handled; elements
       // focused through keyboard navigation keep their ring.
       let pointerFocused: HTMLElement | null = null;
+      let repeatTimeout: number | undefined;
+      let repeatedShortcut: { id: string; key: string } | null = null;
       const markPointerFocus = (event: PointerEvent) => {
          pointerFocused = event.target instanceof HTMLElement ? (event.target.closest("button") ?? event.target) : null;
       };
@@ -41,9 +47,35 @@ export function useKeyboardShortcuts(shortcuts: readonly KeyboardShortcut[], ena
          }
          pointerFocused = null;
       };
+      const stopRepeat = () => {
+         window.clearTimeout(repeatTimeout);
+         repeatTimeout = undefined;
+         repeatedShortcut = null;
+      };
+      const invokeShortcut = (shortcut: KeyboardShortcut) => {
+         if (shortcut.activationTargetId) {
+            triggerShortcutActivation(shortcut.activationTargetId);
+         }
+
+         releasePointerFocus();
+         shortcut.onPress();
+      };
+      const scheduleRepeat = (shortcut: KeyboardShortcut, delay: number) => {
+         repeatedShortcut = { id: shortcut.id, key: shortcut.key };
+         repeatTimeout = window.setTimeout(() => {
+            const currentShortcut = shortcutsRef.current.find((candidate) => candidate.id === shortcut.id && !candidate.disabled);
+            if (!currentShortcut || !repeatedShortcut) {
+               stopRepeat();
+               return;
+            }
+
+            invokeShortcut(currentShortcut);
+            scheduleRepeat(currentShortcut, HOLD_REPEAT_INTERVAL_MS);
+         }, delay);
+      };
 
       const handleKeyDown = (event: KeyboardEvent) => {
-         if (event.repeat || isEditableTarget(event.target)) {
+         if (isEditableTarget(event.target)) {
             return;
          }
 
@@ -57,23 +89,41 @@ export function useKeyboardShortcuts(shortcuts: readonly KeyboardShortcut[], ena
             return;
          }
 
+         if (event.repeat) {
+            if (shortcut.repeat && shortcut.preventDefault !== false) {
+               event.preventDefault();
+            }
+            return;
+         }
+
          if (shortcut.preventDefault !== false) {
             event.preventDefault();
          }
 
-         if (shortcut.activationTargetId) {
-            triggerShortcutActivation(shortcut.activationTargetId);
-         }
+         invokeShortcut(shortcut);
 
-         releasePointerFocus();
-         shortcut.onPress();
+         if (shortcut.repeat) {
+            stopRepeat();
+            scheduleRepeat(shortcut, HOLD_REPEAT_INITIAL_DELAY_MS);
+         }
+      };
+
+      const handleKeyUp = (event: KeyboardEvent) => {
+         if (repeatedShortcut?.key.toLowerCase() === event.key.toLowerCase()) {
+            stopRepeat();
+         }
       };
 
       window.addEventListener("keydown", handleKeyDown);
+      window.addEventListener("keyup", handleKeyUp);
+      window.addEventListener("blur", stopRepeat);
       window.addEventListener("pointerdown", markPointerFocus, true);
 
       return () => {
+         stopRepeat();
          window.removeEventListener("keydown", handleKeyDown);
+         window.removeEventListener("keyup", handleKeyUp);
+         window.removeEventListener("blur", stopRepeat);
          window.removeEventListener("pointerdown", markPointerFocus, true);
       };
    }, [enabled]);

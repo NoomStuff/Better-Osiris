@@ -1,5 +1,7 @@
 import { APP_SHORTCUTS } from "../lib/appShortcuts";
 import { getAdjacentGridZoom, getToolbarActionActivationId } from "../lib/appView";
+import { ROSTER_BATCH_SIZE } from "../lib/weekPolicy";
+import { MAX_WEEK_OFFSET, MIN_WEEK_OFFSET } from "../../shared/weeks";
 import type { GridZoom, ViewMode } from "../types/weeks";
 import { useKeyboardShortcuts, type KeyboardShortcut } from "./useKeyboardShortcuts";
 
@@ -9,6 +11,7 @@ interface AppKeyboardShortcutOptions {
    enabled: boolean;
    viewMode: ViewMode;
    gridZoom: GridZoom;
+   weekOffset: number;
    canGoPrevious: boolean;
    canGoNext: boolean;
    isWeekNavigable: (offset: number) => boolean;
@@ -19,16 +22,19 @@ interface AppKeyboardShortcutOptions {
    openSettings: () => void;
    moveToolbarAction: (direction: -1 | 1) => void;
    selectToolbarAction: (actionNumber: number) => void;
-   goToWeek: (offset: number) => void;
+   goToWeek: (offset: number, transitionDirection?: "previous" | "next") => void;
 }
 
 export function useAppKeyboardShortcuts(options: AppKeyboardShortcutOptions) {
+   const previousBatchOffset = Math.max(MIN_WEEK_OFFSET, options.weekOffset - ROSTER_BATCH_SIZE);
+   const nextBatchOffset = Math.min(MAX_WEEK_OFFSET, options.weekOffset + ROSTER_BATCH_SIZE);
    const shortcuts: KeyboardShortcut[] = [
       {
          id: "previous-week",
          ...APP_SHORTCUTS.previousWeek,
          activationTargetId: "previous-week",
          disabled: !options.canGoPrevious,
+         repeat: true,
          onPress: options.goPreviousWeek,
       },
       {
@@ -36,7 +42,26 @@ export function useAppKeyboardShortcuts(options: AppKeyboardShortcutOptions) {
          ...APP_SHORTCUTS.nextWeek,
          activationTargetId: "next-week",
          disabled: !options.canGoNext,
+         repeat: true,
          onPress: options.goNextWeek,
+      },
+      {
+         id: "previous-week-batch",
+         key: "ArrowLeft",
+         shiftKey: true,
+         activationTargetId: "previous-week",
+         disabled: previousBatchOffset === options.weekOffset || !options.isWeekNavigable(previousBatchOffset),
+         repeat: true,
+         onPress: () => options.goToWeek(previousBatchOffset, "previous"),
+      },
+      {
+         id: "next-week-batch",
+         key: "ArrowRight",
+         shiftKey: true,
+         activationTargetId: "next-week",
+         disabled: nextBatchOffset === options.weekOffset || !options.isWeekNavigable(nextBatchOffset),
+         repeat: true,
+         onPress: () => options.goToWeek(nextBatchOffset, "next"),
       },
       {
          id: "current-week-r",

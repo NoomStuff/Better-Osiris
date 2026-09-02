@@ -83,6 +83,53 @@ test("prefetches the batch after the active batch", async ({ page }) => {
    await expect.poll(() => [...requestedOffsets].sort((left, right) => left - right)).toEqual([0, 5, 10]);
 });
 
+test("holding a week arrow keeps advancing through the roster", async ({ page }) => {
+   await page.goto("/");
+
+   await page.keyboard.down("ArrowRight");
+   await expect(page.locator(".weekbar__label")).toHaveText("Next week");
+   await expect
+      .poll(() => page.evaluate(() => document.getAnimations().map((animation) => (animation instanceof CSSAnimation ? animation.animationName : ""))))
+      .toEqual(expect.arrayContaining(["roster-week-out-left", "view-enter-from-right"]));
+   // The label moves on every repeat, so assert the distance travelled instead of a transient value.
+   await expect
+      .poll(async () => {
+         const weeks = /In (\d+) weeks?/.exec((await page.locator(".weekbar__label").textContent()) ?? "");
+         return weeks ? Number(weeks[1]) : 0;
+      })
+      .toBeGreaterThanOrEqual(3);
+   await page.keyboard.up("ArrowRight");
+   // The last repeat's commit lands a frame or two after keyup when the transition callback is
+   // delayed, so wait for the week transition itself to finish before reading where the hold stopped.
+   // Other page animations linger forever, so only the transition's own keyframes count as in-flight.
+   await expect
+      .poll(() =>
+         page.evaluate(
+            () =>
+               document.getAnimations().filter((animation) => {
+                  const name = animation instanceof CSSAnimation ? animation.animationName : "";
+                  return name.startsWith("roster-week") || name.startsWith("view-enter");
+               }).length
+         )
+      )
+      .toBe(0);
+   await expect(page.locator(".app-content-frame")).toHaveAttribute("data-week-transition", "settled");
+
+   const releasedWeek = await page.locator(".weekbar__label").textContent();
+   await page.waitForTimeout(550);
+   await expect(page.locator(".weekbar__label")).toHaveText(releasedWeek ?? "");
+});
+
+test("shift and an arrow moves by one roster batch", async ({ page }) => {
+   await page.goto("/");
+
+   await page.keyboard.press("Shift+ArrowRight");
+   await expect(page.locator(".weekbar__label")).toHaveText("In 5 weeks");
+
+   await page.keyboard.press("Shift+ArrowLeft");
+   await expect(page.locator(".weekbar__label")).toHaveText("This week");
+});
+
 test("defaults to grid on desktop when no roster view was saved", async ({ page }) => {
    await page.setViewportSize({ width: 1280, height: 720 });
    await page.goto("/");
