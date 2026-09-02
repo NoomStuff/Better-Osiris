@@ -18,14 +18,18 @@ type RangeSliderStyle = CSSProperties & {
    "--slider-end": string;
 };
 
+// Pointer travel before a press counts as a drag. Clicks jitter by a pixel or two, and the
+// drag state suspends the movement transitions, so the threshold keeps their glide intact.
+const DRAG_SLOP_PX = 4;
+
 export function RangeSlider({ label, min, max, step, value, startLabel, endLabel, formatValue = String, onChange }: RangeSliderProps) {
    const labelId = useId();
    const controlRef = useRef<HTMLDivElement | null>(null);
    const startInputRef = useRef<HTMLInputElement | null>(null);
    const endInputRef = useRef<HTMLInputElement | null>(null);
-   const dragRef = useRef<{ pointerId: number; side: "start" | "end" } | null>(null);
-   // Set from the first drag move, not the press, so a track click keeps its glide while the
-   // drag that follows tracks the pointer without animation lag (see Slider.css).
+   const dragRef = useRef<{ pointerId: number; side: "start" | "end"; startX: number } | null>(null);
+   // Set once the pointer travels past the drag slop, not on the press: a track click keeps
+   // its glide while the drag that follows tracks the pointer without animation lag.
    const [isDragging, setIsDragging] = useState(false);
    const [start, end] = value;
    const toPercent = (point: number) => `${((point - min) / (max - min)) * 100}%`;
@@ -61,7 +65,7 @@ export function RangeSlider({ label, min, max, step, value, startLabel, endLabel
          return;
       }
       const side = target - start <= end - target ? "start" : "end";
-      dragRef.current = { pointerId: event.pointerId, side };
+      dragRef.current = { pointerId: event.pointerId, side, startX: event.clientX };
       event.currentTarget.setPointerCapture(event.pointerId);
       event.preventDefault();
       (side === "start" ? startInputRef : endInputRef).current?.focus({ preventScroll: true });
@@ -73,7 +77,9 @@ export function RangeSlider({ label, min, max, step, value, startLabel, endLabel
       if (!drag) {
          return;
       }
-      setIsDragging(true);
+      if (!isDragging && Math.abs(event.clientX - drag.startX) > DRAG_SLOP_PX) {
+         setIsDragging(true);
+      }
       const target = valueAt(event.clientX);
       if (target !== null) {
          moveThumb(drag.side, target);
