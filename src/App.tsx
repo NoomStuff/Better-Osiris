@@ -37,6 +37,7 @@ import type { GridZoom, Class, WeekMeta, ViewMode } from "./types/weeks";
 import "./styles/App.css";
 
 type WeekTransitionDirection = "default" | "previous" | "next" | "settled";
+const ALL_WEEKDAYS = [1, 2, 3, 4, 5, 6, 7] as const;
 
 function EmptyWeekState({ week }: { week: WeekMeta }) {
    const message = getEmptyWeekMessage(week.start);
@@ -118,12 +119,16 @@ export default function App() {
       void refreshAfterAuthError();
    }, [error?.isAuthRelated, refreshAfterAuthError]);
 
-   const { allDays, visibleDays } = useWeekDays(displayedData, weekOffset, perceivedDay, shownWeekdays);
+   const isEmptyWeek = displayedData?.classes.length === 0;
+   const hasBlankWeekUnderlay = !displayedData || isEmptyWeek;
+   const visibleWeekdays = hasBlankWeekUnderlay ? ALL_WEEKDAYS : shownWeekdays;
+   const visibleAgendaFoldingMode = hasBlankWeekUnderlay ? "all" : agendaFoldingMode;
+   const { allDays, visibleDays } = useWeekDays(displayedData, weekOffset, perceivedDay, visibleWeekdays);
    const { animateAgenda, collapseAllDays, expandAllDays, resetAgenda, toggleDay, visibleExpandedDays } = useAgendaState(
       visibleDays,
       weekOffset,
       perceivedDay,
-      agendaFoldingMode
+      visibleAgendaFoldingMode
    );
 
    const hiddenDays = useMemo(() => getHiddenDaysWithClasses(allDays, shownWeekdays), [allDays, shownWeekdays]);
@@ -311,9 +316,8 @@ export default function App() {
    });
 
    const hasDisplayedData = Boolean(displayedData);
-   const isVisuallyEmptyWeek = displayedData ? displayedData.classes.length === 0 : true;
    const hasBlockingTokenState = isTokenSettingsLoading ? !hasDisplayedData : !hasBearerToken;
-   const hasOverlayUnderlay = hasBlockingTokenState || loading || (Boolean(error) && !data) || isVisuallyEmptyWeek;
+   const hasOverlayUnderlay = hasBlockingTokenState || loading || (Boolean(error) && !data) || hasBlankWeekUnderlay;
    const visibleGridZoom = hasOverlayUnderlay ? "hour" : gridZoom;
    const frameGridZoom = viewMode === "grid" ? visibleGridZoom : gridZoom;
    const gridZoomScale = visibleGridZoom === "hour" ? 1 : visibleGridZoom === "half" ? 2 : 4;
@@ -409,7 +413,7 @@ export default function App() {
 
             <section
                className={`app-content-frame app-content-frame--${viewMode} app-content-frame--zoom-${frameGridZoom} view-enter`}
-               data-empty-week={isVisuallyEmptyWeek}
+               data-blank-week-underlay={hasBlankWeekUnderlay}
                data-roster-underlay={hasOverlayUnderlay ? "overlay" : "live"}
                data-week-transition={weekTransitionDirection}
                onAnimationEnd={handleWeekTransitionEnd}

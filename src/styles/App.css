@@ -75,9 +75,13 @@
    overflow: hidden;
 }
 
-.app-content-frame[data-empty-week="true"] :is(.agenda-view, .grid-shell) {
-   filter: saturate(0.75);
+.app-content-frame[data-blank-week-underlay="true"] :is(.agenda-view, .grid-shell) {
+   filter: blur(2px) saturate(0.7);
    pointer-events: none;
+}
+
+.app-content-frame--agenda[data-blank-week-underlay="true"] {
+   max-height: calc(100svh - var(--chrome-height) - (var(--app-padding) * 2));
 }
 
 .app-content-frame--agenda {
@@ -224,6 +228,10 @@
 
    .app-content-frame {
       border-radius: 18px;
+   }
+
+   .app-content-frame--agenda[data-blank-week-underlay="true"] {
+      max-height: calc(var(--stable-vh, 100vh) - var(--chrome-height) - (var(--app-padding) * 2) - env(safe-area-inset-bottom));
    }
 
    .app-content-frame--grid {

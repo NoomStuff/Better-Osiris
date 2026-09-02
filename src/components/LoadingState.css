@@ -12,7 +12,7 @@
    color: var(--text-dim);
    font-size: 1em;
    background: rgba(var(--surface-rgb), 0.4);
-   backdrop-filter: blur(1px);
+   backdrop-filter: blur(4px);
 }
 
 .roster-overlay-state > * {
