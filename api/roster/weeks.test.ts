@@ -188,14 +188,29 @@ interface OsirisRequest {
 
 function mockOsirisFetch(requests: OsirisRequest[], response: OsirisRosterResponse) {
    globalThis.fetch = (input, init) => {
+      const requestUrl = getFetchUrl(input);
       const headers = new Headers(init?.headers);
       requests.push({
-         url: getFetchUrl(input),
+         url: requestUrl,
          authorization: headers.get("authorization"),
       });
 
+      const url = new URL(requestUrl);
+      const requestedOffset = Number(url.searchParams.get("offset"));
+      const requestedLimit = Number(url.searchParams.get("limit"));
+      const firstItem = response.items[0];
+      const responseForRequest = firstItem
+         ? {
+              ...response,
+              offset: requestedOffset,
+              limit: requestedLimit,
+              count: requestedLimit,
+              items: Array.from({ length: requestedLimit }, (_, index) => ({ ...firstItem, week: firstItem.week + index })),
+           }
+         : response;
+
       return Promise.resolve(
-         new Response(JSON.stringify(response), {
+         new Response(JSON.stringify(responseForRequest), {
             status: 200,
             headers: { "Content-Type": "application/json" },
          })

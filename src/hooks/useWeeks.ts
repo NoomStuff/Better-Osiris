@@ -59,6 +59,19 @@ export function useWeeks(offset: number, options: UseWeeksOptions = {}) {
    const activeOffsetRef = useRef(offset);
    const previousResetKeyRef = useRef(resetKey);
 
+   const resetRuntime = useCallback(() => {
+      requestGenerationRef.current += 1;
+      entriesRef.current = {};
+      requestsRef.current.forEach(({ controller }) => controller.abort());
+      requestsRef.current.clear();
+      queuedRefetchesRef.current.clear();
+      latestRawWeeksRef.current.clear();
+      hasShownLoadErrorToastRef.current = false;
+      retryTimersRef.current.forEach((timerId) => window.clearTimeout(timerId));
+      retryTimersRef.current.clear();
+      sessionLessonDiffs.clear();
+   }, [sessionLessonDiffs]);
+
    useEffect(() => {
       entriesRef.current = entries;
    }, [entries]);
@@ -75,20 +88,11 @@ export function useWeeks(offset: number, options: UseWeeksOptions = {}) {
       }
 
       clearWeekBrowserCache();
-      requestGenerationRef.current += 1;
-      entriesRef.current = {};
-      requestsRef.current.forEach(({ controller }) => controller.abort());
-      requestsRef.current.clear();
-      queuedRefetchesRef.current.clear();
-      latestRawWeeksRef.current.clear();
-      hasShownLoadErrorToastRef.current = false;
-      retryTimersRef.current.forEach((timerId) => window.clearTimeout(timerId));
-      retryTimersRef.current.clear();
-      sessionLessonDiffs.clear();
+      resetRuntime();
 
       const resetTimerId = window.setTimeout(() => dispatch({ type: "reset" }), 0);
       return () => window.clearTimeout(resetTimerId);
-   }, [clearCache, resetKey, sessionLessonDiffs]);
+   }, [clearCache, resetKey, resetRuntime]);
 
    useEffect(() => {
       const retryTimers = retryTimersRef.current;
@@ -210,31 +214,18 @@ export function useWeeks(offset: number, options: UseWeeksOptions = {}) {
 
       loadBatchRef.current = loadBatch;
 
-      const resetInMemoryState = () => {
-         requestGenerationRef.current += 1;
-         entriesRef.current = {};
-         requestsRef.current.forEach(({ controller }) => controller.abort());
-         requestsRef.current.clear();
-         queuedRefetchesRef.current.clear();
-         latestRawWeeksRef.current.clear();
-         hasShownLoadErrorToastRef.current = false;
-         retryTimersRef.current.forEach((timerId) => window.clearTimeout(timerId));
-         retryTimersRef.current.clear();
-         sessionLessonDiffs.clear();
-      };
-
       // A payload declaring a different zone than the one in memory (e.g. a deploy changed ROSTER_TIME_ZONE
       // mid-session) means every cached wall time was interpreted under the wrong zone: drop everything and refetch.
       const adoptRosterTimeZone = (timeZone: string) => {
          setRosterTimeZone(timeZone);
          clearWeekBrowserCache();
-         resetInMemoryState();
+         resetRuntime();
          dispatch({ type: "reset" });
          loadBatchRef.current(getBatchStart(activeOffsetRef.current), { force: true });
       };
 
       const adoptCalendarRollover = (previousCurrentWeek: Week, payload: WeekBatch) => {
-         resetInMemoryState();
+         resetRuntime();
          storeSessionClassDiffs(sessionLessonDiffs);
 
          const isConsecutiveWeek = shiftIsoDateByDays(previousCurrentWeek.week.start, 7) === payload.weeks.find((week) => week.week.offset === 0)?.week.start;
@@ -266,7 +257,7 @@ export function useWeeks(offset: number, options: UseWeeksOptions = {}) {
                loadBatch(prefetchBatchStart, { force: queuedRefetchesRef.current.has(prefetchBatchStart) });
             });
       }
-   }, [enabled, offset, resetKey, sessionLessonDiffs]);
+   }, [enabled, offset, resetKey, resetRuntime, sessionLessonDiffs]);
 
    useEffect(() => {
       if (!enabled) {
@@ -295,8 +286,25 @@ export function useWeeks(offset: number, options: UseWeeksOptions = {}) {
       };
 
       const intervalId = window.setInterval(refetchPassiveBatches, PASSIVE_REFETCH_INTERVAL_MS);
-      return () => window.clearInterval(intervalId);
+      const refreshWhenActive = () => {
+         if (document.visibilityState !== "visible") {
+            return;
+         }
+         const batchStarts = new Set([getBatchStart(0), getBatchStart(activeOffsetRef.current)]);
+         batchStarts.forEach((batchStart) => loadBatchRef.current(batchStart, { force: true, passive: true }));
+      };
+      document.addEventListener("visibilitychange", refreshWhenActive);
+      window.addEventListener("online", refreshWhenActive);
+      return () => {
+         window.clearInterval(intervalId);
+         document.removeEventListener("visibilitychange", refreshWhenActive);
+         window.removeEventListener("online", refreshWhenActive);
+      };
    }, [enabled, offset, sessionLessonDiffs]);
+
+   const refresh = useCallback(() => {
+      loadBatchRef.current(getBatchStart(activeOffsetRef.current), { force: true });
+   }, []);
 
    const activeEntry = entries[offset];
    const activeRetryAt = activeEntry?.retryAt ?? 0;
@@ -347,6 +355,7 @@ export function useWeeks(offset: number, options: UseWeeksOptions = {}) {
       retryCountdownMs,
       retrying,
       refreshing,
+      refresh,
       title,
    };
 }

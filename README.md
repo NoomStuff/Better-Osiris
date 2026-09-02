@@ -51,6 +51,8 @@ You need [Bun](https://bun.sh/) and access to an OSIRIS Student environment.
 
 The frontend runs at `http://localhost:5173` and proxies API requests to the local server on port `8787`.
 
+On Vercel, the files under `api/` run as serverless functions and Vite serves the browser app. `server.ts` is only the local and self-hosted adapter. Both adapters call the same API services; neither puts the OSIRIS token in the frontend bundle.
+
 ---
 
 ## Configuration
@@ -67,20 +69,21 @@ The frontend runs at `http://localhost:5173` and proxies API requests to the loc
 
 ## Commands
 
-| Command                | Description                              |
-| ---------------------- | ---------------------------------------- |
-| `bun run dev`          | Start the frontend and API in watch mode |
-| `bun run build`        | Type-check and build the production app  |
-| `bun run start`        | Serve the built app                      |
-| `bun run test`         | Run all tests                            |
-| `bun run test:unit`    | Run unit and API tests                   |
-| `bun run test:e2e`     | Run Playwright end-to-end tests          |
-| `bun run lint`         | Run ESLint                               |
-| `bun run format`       | Format code with Prettier                |
-| `bun run format:check` | Check formatting                         |
-| `bun run verify`       | Run all pre commit checks                |
+| Command                   | Description                                 |
+| ------------------------- | ------------------------------------------- |
+| `bun run dev`             | Start the frontend and API in watch mode    |
+| `bun run build`           | Type-check and build the production app     |
+| `bun run start`           | Serve the built app                         |
+| `bun run test`            | Run all tests                               |
+| `bun run test:unit`       | Run unit and API tests                      |
+| `bun run test:e2e`        | Run Playwright end-to-end tests             |
+| `bun run test:e2e:compat` | Run the browser suite in Firefox and WebKit |
+| `bun run lint`            | Run ESLint                                  |
+| `bun run format`          | Format code with Prettier                   |
+| `bun run format:check`    | Check formatting                            |
+| `bun run verify`          | Run all pre commit checks                   |
 
-For a production deployment, set the same environment variables in your hosting provider, run `bun run build`, then start the app with `bun run start`. The included `vercel.json` also supports deployment to Vercel.
+For a self-hosted production deployment, set the same environment variables, run `bun run build`, then start the app with `bun run start`. Vercel deploys the built frontend and the `api/` functions directly; it does not run `server.ts`.
 
 ## Visual baselines
 

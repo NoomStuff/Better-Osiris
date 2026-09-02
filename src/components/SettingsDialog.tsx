@@ -3,6 +3,8 @@ import type { CSSProperties, SyntheticEvent } from "react";
 import type { OsirisTokenSettings } from "../api/settings";
 import type { IsoWeekday } from "../lib/date";
 import type { DevClassStatusPreviewMode } from "../lib/devStatusPreview";
+import { DEFAULT_GRID_HOURS, formatGridHour, GRID_HOUR_MAX, GRID_HOUR_MIN, type GridHourRange } from "../lib/gridHours";
+import type { AgendaFoldingMode } from "../hooks/useAgendaFoldingPreference";
 import { notifyError, notifySuccess, notifyWarning } from "../lib/notyf";
 import { OSIRIS_BEARER_TOKEN_HELP_URL } from "../lib/osirisTokenHelp";
 import { getThemeMode, THEMES_BY_MODE, type ThemeId, type ThemeMode } from "../lib/theme";
@@ -13,6 +15,7 @@ import { ConfirmDialog } from "./ConfirmDialog";
 import { DevToolsSettings } from "./DevToolsSettings";
 import { IconButton } from "./IconButton";
 import { OverlayPanel, PANEL_CLOSE_MS } from "./OverlayPanel";
+import { RangeSlider } from "./RangeSlider";
 import { ToggleSwitch } from "./ToggleSwitch";
 import "./SettingsDialog.css";
 
@@ -26,6 +29,9 @@ interface SettingsDialogProps {
    shownWeekdays: IsoWeekday[];
    smartWeekdays: IsoWeekday[];
    isSmartDaysReady: boolean;
+   gridHours: GridHourRange;
+   smartGridHours: GridHourRange;
+   agendaFoldingMode: AgendaFoldingMode;
    isDevToolsEnabled: boolean;
    perceivedNow: Date;
    timeOverride: Date | null;
@@ -36,6 +42,8 @@ interface SettingsDialogProps {
    onChangeNotifications: (enabled: boolean) => void;
    onChangeTheme: (theme: ThemeId) => void;
    onChangeShownWeekdays: (weekdays: IsoWeekday[]) => void;
+   onChangeGridHours: (hours: GridHourRange) => void;
+   onChangeAgendaFoldingMode: (mode: AgendaFoldingMode) => void;
    onSaveToken: (token: string) => Promise<OsirisTokenSettings>;
    onClearToken: () => Promise<OsirisTokenSettings>;
    onToggleDevTools: (enabled: boolean) => void;
@@ -48,6 +56,12 @@ const IS_DEV_SERVER = import.meta.env.DEV;
 const THEME_MODE_OPTIONS: readonly ActionOption<ThemeMode>[] = [
    { id: "dark", label: "Dark", tooltip: "Browse dark themes" },
    { id: "light", label: "Light", tooltip: "Browse light themes" },
+];
+
+const AGENDA_FOLDING_OPTIONS: readonly ActionOption<AgendaFoldingMode>[] = [
+   { id: "single", label: "Single", tooltip: "Only open today automatically" },
+   { id: "smart", label: "Smart", tooltip: "Open today and upcoming days with classes" },
+   { id: "all", label: "All", tooltip: "Open every day automatically" },
 ];
 
 // January 1st 2024 is a Monday, so ISO weekday N is that month's Nth day. The names are
@@ -66,6 +80,9 @@ export function SettingsDialog({
    shownWeekdays,
    smartWeekdays,
    isSmartDaysReady,
+   gridHours,
+   smartGridHours,
+   agendaFoldingMode,
    isDevToolsEnabled,
    perceivedNow,
    timeOverride,
@@ -76,6 +93,8 @@ export function SettingsDialog({
    onChangeNotifications,
    onChangeTheme,
    onChangeShownWeekdays,
+   onChangeGridHours,
+   onChangeAgendaFoldingMode,
    onSaveToken,
    onClearToken,
    onToggleDevTools,
@@ -307,6 +326,50 @@ export function SettingsDialog({
                            </Button>
                         );
                      })}
+                  </div>
+               </section>
+
+               <section className="settings-section" aria-labelledby="grid-hours-settings-title">
+                  <div className="settings-section__header settings-section__header--with-actions">
+                     <div className="settings-section__copy">
+                        <h3 id="grid-hours-settings-title">Grid hours</h3>
+                        <p>The time range shown in the weekly grid.</p>
+                     </div>
+                     <ActionButtons
+                        label="Grid hours actions"
+                        actions={[
+                           {
+                              id: "smart",
+                              label: "Smart",
+                              tooltip: "Fit the hours to your loaded classes",
+                              disabled: !isSmartDaysReady,
+                              onPress: () => onChangeGridHours(smartGridHours),
+                           },
+                           { id: "default", label: "Default", tooltip: "Show 08:00 to 18:00", onPress: () => onChangeGridHours(DEFAULT_GRID_HOURS) },
+                        ]}
+                     />
+                  </div>
+
+                  <RangeSlider
+                     label="Shown hours"
+                     min={GRID_HOUR_MIN}
+                     max={GRID_HOUR_MAX}
+                     step={1}
+                     value={gridHours}
+                     startLabel="Grid start time"
+                     endLabel="Grid end time"
+                     formatValue={formatGridHour}
+                     onChange={onChangeGridHours}
+                  />
+               </section>
+
+               <section className="settings-section" aria-labelledby="agenda-folding-settings-title">
+                  <div className="settings-section__header settings-section__header--with-actions">
+                     <div className="settings-section__copy">
+                        <h3 id="agenda-folding-settings-title">Agenda folding</h3>
+                        <p>Which days open automatically when you view a week.</p>
+                     </div>
+                     <ActionSelector label="Agenda folding" options={AGENDA_FOLDING_OPTIONS} value={agendaFoldingMode} onChange={onChangeAgendaFoldingMode} />
                   </div>
                </section>
 

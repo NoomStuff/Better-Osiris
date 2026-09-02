@@ -1,20 +1,25 @@
-import { useCallback, useEffect, useMemo, useRef, useState, type AnimationEvent } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type AnimationEvent, type CSSProperties } from "react";
 import { AgendaView } from "./components/AgendaView";
 import { AppToolbar } from "./components/AppToolbar";
 import { GridView } from "./components/GridView";
 import { ClassDrawer } from "./components/ClassDrawer";
 import { HiddenDaysWarning } from "./components/HiddenDaysWarning";
+import { HiddenGridHoursWarning } from "./components/HiddenGridHoursWarning";
+import { WarningBanner } from "./components/WarningBanner";
 import { BearerTokenState, ErrorState, LoadingState, WeekOverlayState } from "./components/LoadingState";
 import { SettingsDialog } from "./components/SettingsDialog";
 import { WeekNavigator } from "./components/WeekNavigator";
 import { useDevPreview } from "./hooks/useDevPreview";
 import { useAppKeyboardShortcuts } from "./hooks/useAppKeyboardShortcuts";
-import { getPerceivedDay, useAgendaState } from "./hooks/useAgendaState";
+import { useAgendaState } from "./hooks/useAgendaState";
+import { useAgendaFoldingPreference } from "./hooks/useAgendaFoldingPreference";
 import { useClassNotificationsPreference } from "./hooks/useClassNotificationsPreference";
 import { useOsirisTokenSettings } from "./hooks/useOsirisTokenSettings";
 import { useRosterTimeZone } from "./hooks/useRosterTimeZone";
 import { useDockedMobileBar } from "./hooks/useDockedMobileBar";
 import { useShownWeekdaysPreference } from "./hooks/useShownWeekdaysPreference";
+import { useGridHoursPreference } from "./hooks/useGridHoursPreference";
+import { getPerceivedDay, useWeekDays } from "./hooks/useWeekDays";
 import { useThemePreference } from "./hooks/useThemePreference";
 import { useViewportMetrics } from "./hooks/useViewportMetrics";
 import { useViewModePreference } from "./hooks/useViewModePreference";
@@ -25,6 +30,7 @@ import { useWeeks } from "./hooks/useWeeks";
 import { dayLabel, getIsoWeekday, toDayKey } from "./lib/date";
 import { getEmptyWeekMessage } from "./lib/flavor";
 import { getHiddenDaysWithClasses, getWeekdaysWithClasses } from "./lib/weekLayout";
+import { countClassesOutsideGridHours, getRequiredGridHours, getSmartGridHours, mergeGridHourRanges } from "./lib/gridHours";
 import { ErrorBoundary } from "./components/ErrorBoundary";
 import { notifyError, notifySuccess } from "./lib/notyf";
 import type { GridZoom, Class, WeekMeta, ViewMode } from "./types/weeks";
@@ -46,6 +52,8 @@ export default function App() {
    const [viewMode, setViewMode] = useViewModePreference();
    const [theme, setTheme] = useThemePreference();
    const [shownWeekdays, setShownWeekdays] = useShownWeekdaysPreference();
+   const [gridHours, setGridHours] = useGridHoursPreference();
+   const [agendaFoldingMode, setAgendaFoldingMode] = useAgendaFoldingPreference();
    const appContentRef = useRef<HTMLElement>(null);
    const isBarDocked = useDockedMobileBar(appContentRef);
    const [gridZoom, setGridZoom] = useState<GridZoom>("hour");
@@ -78,6 +86,7 @@ export default function App() {
       retryCountdownMs,
       retrying,
       refreshing,
+      refresh,
       title,
    } = useWeeks(weekOffset, {
       enabled: !isTokenSettingsLoading && hasBearerToken && rosterTimeZone.isKnown,
@@ -111,19 +120,38 @@ export default function App() {
       void refreshAfterAuthError();
    }, [error?.isAuthRelated, refreshAfterAuthError]);
 
-   const { allDays, animateAgenda, collapseAllDays, expandAllDays, resetAgenda, toggleDay, visibleDays, visibleExpandedDays } = useAgendaState(
-      displayedData,
+   const { allDays, visibleDays } = useWeekDays(displayedData, weekOffset, perceivedDay, shownWeekdays);
+   const { animateAgenda, collapseAllDays, expandAllDays, resetAgenda, toggleDay, visibleExpandedDays } = useAgendaState(
+      visibleDays,
       weekOffset,
       perceivedDay,
-      shownWeekdays
+      agendaFoldingMode
    );
 
    const hiddenDays = useMemo(() => getHiddenDaysWithClasses(allDays, shownWeekdays), [allDays, shownWeekdays]);
    const smartWeekdays = useMemo(() => getWeekdaysWithClasses(initialWeeks), [initialWeeks]);
+   const smartGridHours = useMemo(() => getSmartGridHours(initialWeeks), [initialWeeks]);
+   const requiredGridHours = useMemo(() => getRequiredGridHours(visibleDays), [visibleDays]);
+   const expandedGridHours = useMemo(() => (requiredGridHours ? mergeGridHourRanges(gridHours, requiredGridHours) : null), [gridHours, requiredGridHours]);
+   const hiddenGridClassCount = useMemo(() => countClassesOutsideGridHours(visibleDays, gridHours), [gridHours, visibleDays]);
 
    const showHiddenDays = useCallback(() => {
       setShownWeekdays((current) => [...new Set([...current, ...hiddenDays.map((day) => getIsoWeekday(day.key))])].sort((a, b) => a - b));
    }, [hiddenDays, setShownWeekdays]);
+
+   const showHiddenGridClasses = useCallback(() => {
+      if (expandedGridHours) {
+         setGridHours(expandedGridHours);
+      }
+   }, [expandedGridHours, setGridHours]);
+
+   const changeAgendaFoldingMode = useCallback(
+      (mode: Parameters<typeof setAgendaFoldingMode>[0]) => {
+         setAgendaFoldingMode(mode);
+         resetAgenda();
+      },
+      [resetAgenda, setAgendaFoldingMode]
+   );
 
    const updateWeekOffset = useCallback(
       (updater: number | ((current: number) => number), transitionDirection: WeekTransitionDirection = "default") => {
@@ -290,6 +318,10 @@ export default function App() {
    const hasOverlayUnderlay = hasBlockingTokenState || loading || (Boolean(error) && !data) || isVisuallyEmptyWeek;
    const visibleGridZoom = hasOverlayUnderlay ? "hour" : gridZoom;
    const frameGridZoom = viewMode === "grid" ? visibleGridZoom : gridZoom;
+   const gridZoomScale = visibleGridZoom === "hour" ? 1 : visibleGridZoom === "half" ? 2 : 4;
+   const frameStyle = {
+      "--grid-min-height": `${(gridHours[1] - gridHours[0]) * 52 * gridZoomScale}px`,
+   } as CSSProperties;
 
    const overlay = (() => {
       if (!rosterTimeZone.isKnown) {
@@ -367,7 +399,15 @@ export default function App() {
          </div>
 
          <main className="app-content" ref={appContentRef}>
+            {error && displayedData ? (
+               <WarningBanner icon="fa-solid fa-cloud-arrow-rotate" action={{ label: "Try again", onClick: refresh }}>
+                  Showing your saved roster because the latest refresh failed. {errorDetail}
+               </WarningBanner>
+            ) : null}
             {hiddenDays.length > 0 ? <HiddenDaysWarning labels={hiddenDays.map((day) => dayLabel.format(day.date))} onShow={showHiddenDays} /> : null}
+            {viewMode === "grid" && expandedGridHours && hiddenGridClassCount > 0 ? (
+               <HiddenGridHoursWarning count={hiddenGridClassCount} targetRange={expandedGridHours} onShow={showHiddenGridClasses} />
+            ) : null}
 
             <section
                className={`app-content-frame app-content-frame--${viewMode} app-content-frame--zoom-${frameGridZoom} view-enter`}
@@ -375,6 +415,7 @@ export default function App() {
                data-roster-underlay={hasOverlayUnderlay ? "overlay" : "live"}
                data-week-transition={weekTransitionDirection}
                onAnimationEnd={handleWeekTransitionEnd}
+               style={frameStyle}
                key={`${viewMode}-${weekOffset}`}
             >
                {rosterTimeZone.isKnown && viewMode === "agenda" ? (
@@ -390,7 +431,7 @@ export default function App() {
                   </ErrorBoundary>
                ) : rosterTimeZone.isKnown ? (
                   <ErrorBoundary variant="view">
-                     <GridView days={visibleDays} zoom={visibleGridZoom} now={perceivedNow} onSelectClass={selectClass} />
+                     <GridView days={visibleDays} hours={gridHours} zoom={visibleGridZoom} now={perceivedNow} onSelectClass={selectClass} />
                   </ErrorBoundary>
                ) : null}
                {overlay}
@@ -408,6 +449,9 @@ export default function App() {
             shownWeekdays={shownWeekdays}
             smartWeekdays={smartWeekdays}
             isSmartDaysReady={areInitialWeeksLoaded}
+            gridHours={gridHours}
+            smartGridHours={smartGridHours}
+            agendaFoldingMode={agendaFoldingMode}
             isDevToolsEnabled={devPreview.isEnabled}
             perceivedNow={perceivedNow}
             timeOverride={devPreview.timeOverride}
@@ -420,6 +464,8 @@ export default function App() {
             onChangeNotifications={(enabled) => void classNotifications.setEnabled(enabled)}
             onChangeTheme={setTheme}
             onChangeShownWeekdays={setShownWeekdays}
+            onChangeGridHours={setGridHours}
+            onChangeAgendaFoldingMode={changeAgendaFoldingMode}
             onToggleDevTools={devPreview.toggle}
             onChangeTimeOverride={devPreview.changeTimeOverride}
             onChangeStatusPreviewMode={devPreview.setStatusPreviewMode}

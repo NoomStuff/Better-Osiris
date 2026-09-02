@@ -35,10 +35,22 @@ export function parseOsirisTokenSettings(value: unknown): OsirisTokenSettings {
 
 export function parseWeekBatch(value: unknown): WeekBatch {
    const record = readRecord(value, "roster response");
+   const offset = readInteger(record["offset"], "offset");
+   const limit = readInteger(record["limit"], "limit");
+   const weeks = readArray(record["weeks"], "weeks").map((week, index) => parseWeek(week, `weeks[${index}]`));
+   if (limit < 1 || weeks.length !== limit) {
+      throw invalid("weeks", `an array containing exactly ${limit} weeks`);
+   }
+   weeks.forEach((week, index) => {
+      if (week.week.offset !== offset + index) {
+         throw invalid(`weeks[${index}].week.offset`, `${offset + index}`);
+      }
+   });
+
    return {
-      offset: readInteger(record["offset"], "offset"),
-      limit: readInteger(record["limit"], "limit"),
-      weeks: readArray(record["weeks"], "weeks").map((week, index) => parseWeek(week, `weeks[${index}]`)),
+      offset,
+      limit,
+      weeks,
       timeZone: readTimeZone(record["timeZone"], "roster response"),
    };
 }

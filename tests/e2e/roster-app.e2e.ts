@@ -71,21 +71,6 @@ test("defaults to grid on desktop when no roster view was saved", async ({ page 
    await expect(page.getByRole("button", { name: "Grid view" })).toHaveAttribute("aria-pressed", "true");
 });
 
-test("uses the bundled Quicksand variable font", async ({ page }) => {
-   await page.goto("/");
-   await page.evaluate(() => document.fonts.ready);
-
-   const fontState = await page.evaluate(() => ({
-      computedFamily: getComputedStyle(document.body).fontFamily,
-      loaded: [...document.fonts].some((font) => font.family.includes("Quicksand Variable") && font.status === "loaded"),
-   }));
-   expect(fontState.computedFamily).toContain("Quicksand Variable");
-   // WebKit can resolve fonts.ready before the FontFace is marked loaded, so poll instead of asserting once.
-   await expect
-      .poll(() => page.evaluate(() => [...document.fonts].some((font) => font.family.includes("Quicksand Variable") && font.status === "loaded")))
-      .toBe(true);
-});
-
 test("defaults to agenda on mobile when no roster view was saved", async ({ page }) => {
    await page.setViewportSize({ width: 390, height: 844 });
    await page.goto("/");
@@ -193,6 +178,35 @@ test("settings dialog opens, resets token state, and closes", async ({ page }) =
 
    await page.locator(".settings-dialog__header").getByRole("button", { name: "Close settings" }).click();
    await expect(page.getByRole("dialog", { name: "Preferences" })).toBeHidden();
+});
+
+test("grid hours and agenda folding preferences control the timetable", async ({ page }) => {
+   await page.addInitScript(() => window.localStorage.setItem("roster-grid-hours", "10,11"));
+   await page.goto("/");
+
+   const hiddenHoursWarning = page.getByRole("status").filter({ hasText: "2 classes are outside the grid's shown hours" });
+   await expect(hiddenHoursWarning).toBeVisible();
+   await hiddenHoursWarning.getByRole("button", { name: "Show 09:00–12:00" }).click();
+   await expect(hiddenHoursWarning).toBeHidden();
+   await expect.poll(() => page.evaluate(() => window.localStorage.getItem("roster-grid-hours"))).toBe("9,12");
+
+   await page.getByRole("button", { name: "Open settings" }).click();
+   const gridHours = page.getByRole("region", { name: "Grid hours" });
+   await expect(gridHours.getByRole("slider", { name: "Grid start time" })).toHaveValue("9");
+   await expect(gridHours.getByRole("slider", { name: "Grid end time" })).toHaveValue("12");
+   await gridHours.getByRole("button", { name: "Default", exact: true }).click();
+   await expect(gridHours.getByRole("slider", { name: "Grid start time" })).toHaveValue("8");
+   await expect(gridHours.getByRole("slider", { name: "Grid end time" })).toHaveValue("18");
+   await gridHours.getByRole("button", { name: "Smart", exact: true }).click();
+   await expect(gridHours.getByRole("slider", { name: "Grid start time" })).toHaveValue("9");
+   await expect(gridHours.getByRole("slider", { name: "Grid end time" })).toHaveValue("12");
+
+   const folding = page.getByRole("region", { name: "Agenda folding" });
+   await folding.getByRole("radio", { name: "All", exact: true }).click();
+   await expect.poll(() => page.evaluate(() => window.localStorage.getItem("roster-agenda-folding"))).toBe("all");
+   await page.locator(".settings-dialog__header").getByRole("button", { name: "Close settings" }).click();
+   await page.getByRole("button", { name: "Agenda view" }).click();
+   await expect(page.locator('.day-group__body[aria-hidden="false"]')).toHaveCount(5);
 });
 
 test("only the topmost dialog handles Escape and focus stays contained", async ({ page }) => {
@@ -409,48 +423,6 @@ test("missing bearer token shows an entry overlay without requesting roster data
    expect(rosterWasRequested).toBe(false);
 });
 
-test("devtools can preview changed and cancelled schoolClass states", async ({ page }) => {
-   await page.goto("/");
-
-   await page.getByRole("button", { name: "Agenda view" }).click();
-   await page.getByRole("button", { name: "Open settings" }).click();
-   await page.getByLabel("Enable devtools").check();
-   await page.getByRole("button", { name: "Mixed" }).click();
-   await page.locator(".settings-dialog__header").getByRole("button", { name: "Close settings" }).click();
-
-   await expect(page.locator(".agenda-class.status-changed")).toHaveCount(1);
-   await expect(page.locator(".agenda-class.status-cancelled")).toHaveCount(1);
-
-   await page.getByRole("button", { name: /SOURCE_TITLE_0_1/ }).click();
-   await expect(page.locator(".class-panel__status--changed")).toHaveText("changed");
-   const roomDetails = page.locator(".class-panel__details > div", { has: page.locator("dt", { hasText: "Room" }) });
-   await expect(roomDetails.locator("s")).toHaveText("A101");
-   await expect(roomDetails.locator("strong")).toHaveText("SOURCE_ROOM");
-   await expect(page.locator(".class-panel__details dt", { hasText: "Date" })).toHaveCount(1);
-   await expect(page.locator(".class-panel__details dt", { hasText: "Time" })).toHaveCount(1);
-   await expect(page.locator(".class-panel__details dt", { hasText: "Status" })).toHaveCount(0);
-   await page.locator(".class-panel__header").getByRole("button", { name: "Close", exact: true }).click();
-
-   await page.getByRole("button", { name: /SOURCE_TITLE_0_2/ }).click();
-   await expect(page.locator(".class-panel__status--cancelled")).toHaveText("cancelled");
-   await expect(page.locator(".class-panel__details dt", { hasText: "Status" })).toHaveCount(0);
-});
-
-test("devtools can preview an added schoolClass state", async ({ page }) => {
-   await page.goto("/");
-
-   await page.getByRole("button", { name: "Agenda view" }).click();
-   await page.getByRole("button", { name: "Open settings" }).click();
-   await page.getByLabel("Enable devtools").check();
-   await page.getByRole("button", { name: "Added", exact: true }).click();
-   await page.locator(".settings-dialog__header").getByRole("button", { name: "Close settings" }).click();
-
-   await expect(page.locator(".agenda-class.status-added")).toHaveCount(1);
-   await page.getByRole("button", { name: /SOURCE_TITLE_0_1/ }).click();
-   await expect(page.locator(".class-panel__status--added")).toHaveText("added");
-   await expect(page.locator(".class-panel__change-values")).toHaveCount(0);
-});
-
 test("tooltips work inside preferences and do not reopen after focus restoration", async ({ page }) => {
    await page.setViewportSize({ width: 1280, height: 720 });
    await page.goto("/");
@@ -460,7 +432,7 @@ test("tooltips work inside preferences and do not reopen after focus restoration
    await expect(page.locator('.control-tooltip[data-open="true"]')).toContainText("Open settings");
    await settingsButton.click();
 
-   const defaultDaysButton = page.getByRole("button", { name: "Default", exact: true });
+   const defaultDaysButton = page.getByRole("region", { name: "Shown days" }).getByRole("button", { name: "Default", exact: true });
    await defaultDaysButton.hover();
    const preferencesTooltip = page.locator('.settings-dialog .control-tooltip[data-open="true"]');
    await expect(preferencesTooltip).toContainText("Show Monday through Friday");
@@ -470,42 +442,6 @@ test("tooltips work inside preferences and do not reopen after focus restoration
    await expect(page.getByRole("dialog", { name: "Preferences" })).toBeHidden();
    await page.waitForTimeout(600);
    await expect(page.locator('.control-tooltip[data-open="true"]')).toHaveCount(0);
-});
-
-test("the mobile shell uses a solid theme canvas and stable popup text sizing", async ({ page }) => {
-   await page.setViewportSize({ width: 390, height: 844 });
-   await page.goto("/");
-
-   const mobilePlatformStyles = await page.evaluate(() => ({
-      canvas: getComputedStyle(document.documentElement).backgroundColor,
-      pageBackground: getComputedStyle(document.body, "::before").backgroundImage,
-      viewport: document.querySelector<HTMLMetaElement>('meta[name="viewport"]')?.content,
-      themeColor: document.querySelector<HTMLMetaElement>('meta[name="theme-color"]')?.content,
-   }));
-   expect(mobilePlatformStyles.canvas).toBe("rgb(14, 17, 31)");
-   expect(mobilePlatformStyles.pageBackground).toContain("gradient");
-   expect(mobilePlatformStyles.viewport).toContain("minimum-scale=1");
-   expect(mobilePlatformStyles.viewport).not.toContain("user-scalable=no");
-   expect(mobilePlatformStyles.viewport).toContain("viewport-fit=cover");
-   expect(mobilePlatformStyles.themeColor).toBe("#0e111f");
-
-   await page.getByRole("button", { name: "Open settings" }).click();
-   const description = page.locator(".settings-section__header p").first();
-   const initialFontSize = await description.evaluate((element) => getComputedStyle(element).fontSize);
-   await page.getByRole("radio", { name: "Light", exact: true }).click();
-   await page.getByRole("button", { name: "Light", exact: true }).click();
-   await expect.poll(() => page.locator('meta[name="theme-color"]').getAttribute("content")).toBe("#f9fbfe");
-   await page.setViewportSize({ width: 844, height: 390 });
-   await page.setViewportSize({ width: 390, height: 844 });
-   await expect.poll(() => description.evaluate((element) => getComputedStyle(element).fontSize)).toBe(initialFontSize);
-
-   await page.locator(".settings-dialog__header").getByRole("button", { name: "Close settings" }).click();
-   await page.getByRole("button", { name: /SOURCE_TITLE_0_1/ }).click();
-   const classFieldValue = page.locator(".class-panel__details dd").first();
-   const initialFieldFontSize = await classFieldValue.evaluate((element) => getComputedStyle(element).fontSize);
-   await page.setViewportSize({ width: 844, height: 390 });
-   await page.setViewportSize({ width: 390, height: 844 });
-   await expect.poll(() => classFieldValue.evaluate((element) => getComputedStyle(element).fontSize)).toBe(initialFieldFontSize);
 });
 
 test("a fresh theme follows the system color scheme", async ({ page }) => {

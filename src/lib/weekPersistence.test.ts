@@ -47,9 +47,19 @@ function createClass(overrides: Partial<Class> = {}): Class {
 
 function createRosterResponse(weekStart: string): Week {
    return {
-      week: { offset: 0, number: getIsoWeekNumber(weekStart), start: weekStart, end: shiftIsoDateByDays(weekStart, 4) },
+      week: { offset: 0, number: getIsoWeekNumber(weekStart), start: weekStart, end: shiftIsoDateByDays(weekStart, 6) },
       classes: [createClass()],
    };
+}
+
+function withoutExpectedErrorLog<T>(run: () => T) {
+   const originalConsoleError = console.error;
+   console.error = () => undefined;
+   try {
+      return run();
+   } finally {
+      console.error = originalConsoleError;
+   }
 }
 
 void describe("roster persistence", () => {
@@ -88,7 +98,7 @@ void describe("roster persistence", () => {
       const { localStorage } = installStorage();
       localStorage.setItem(CURRENT_WEEK_CACHE_KEY, "definitely not json");
 
-      const cached = readCachedCurrentWeek();
+      const cached = withoutExpectedErrorLog(readCachedCurrentWeek);
 
       assert.equal(cached, null);
       assert.equal(localStorage.getItem(CURRENT_WEEK_CACHE_KEY), null);
@@ -144,7 +154,7 @@ void describe("roster persistence", () => {
       const { sessionStorage } = installStorage();
       sessionStorage.setItem(SESSION_CLASS_DIFFS_KEY, '{"0":[{"status":"exploded"}]}');
 
-      const restored = readSessionClassDiffs();
+      const restored = withoutExpectedErrorLog(readSessionClassDiffs);
 
       assert.equal(restored.size, 0);
       assert.equal(sessionStorage.getItem(SESSION_CLASS_DIFFS_KEY), null);

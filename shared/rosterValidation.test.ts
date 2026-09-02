@@ -67,6 +67,12 @@ void describe("roster batch validation", () => {
       assert.throws(() => parseWeekBatch({ ...validBatch, timeZone: "Mars/Olympus_Mons" }), /valid IANA time zone/);
    });
 
+   void it("rejects incomplete, duplicate, and mismatched week batches", () => {
+      assert.throws(() => parseWeekBatch({ ...validBatch, limit: 2 }), /exactly 2 weeks/);
+      assert.throws(() => parseWeekBatch({ ...validBatch, offset: 1 }), /weeks\[0\]\.week\.offset/);
+      assert.throws(() => parseWeekBatch({ ...validBatch, weeks: [validRoster, validRoster], limit: 2 }), /weeks\[1\]\.week\.offset/);
+   });
+
    void it("validates the roster config time zone", () => {
       assert.deepEqual(parseRosterConfig({ timeZone: "Asia/Tokyo" }), { timeZone: "Asia/Tokyo" });
       assert.throws(() => parseRosterConfig({}), /timeZone/);

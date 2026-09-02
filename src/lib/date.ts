@@ -138,7 +138,7 @@ export function getMinutesFromMidnight(date: Date) {
 
 export function getRosterWeekBounds(date: Date, offset: number) {
    const start = shiftIsoDateByDays(getLocalWeekStartIso(date), offset * 7);
-   return { start, end: shiftIsoDateByDays(start, 4) };
+   return { start, end: shiftIsoDateByDays(start, 6) };
 }
 
 /** ISO weekday number: 1 = Monday … 7 = Sunday. */

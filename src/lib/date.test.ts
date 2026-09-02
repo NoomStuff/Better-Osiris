@@ -40,6 +40,6 @@ void describe("roster date handling", () => {
    void it("derives week bounds from the roster week start", () => {
       setRosterTimeZone("Europe/Amsterdam");
       const bounds = getRosterWeekBounds(new Date("2026-07-15T12:00:00.000Z"), 2);
-      assert.deepEqual(bounds, { start: "2026-07-27", end: "2026-07-31" });
+      assert.deepEqual(bounds, { start: "2026-07-27", end: "2026-08-02" });
    });
 });

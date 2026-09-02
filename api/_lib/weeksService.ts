@@ -26,7 +26,7 @@ export async function loadWeekBatch(request: WeeksRequest): Promise<WeekBatch> {
    const rawResponse = await fetchOsirisRosterWeeks(offset, limit, resolveOsirisBearerToken(request.cookieHeader));
 
    return {
-      weeks: normalizeWeeksResponse(rawResponse, offset),
+      weeks: normalizeWeeksResponse(rawResponse, offset, limit),
       offset,
       limit,
       timeZone: getRosterTimeZone(),

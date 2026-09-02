@@ -104,10 +104,8 @@ function resolveClassStatus(item: OsirisRosterEntry): ClassStatus {
       return "cancelled";
    }
 
-   if (normalizedHints.some((hint) => hint.includes("change") || hint.includes("wijzig"))) {
-      return "changed";
-   }
-
+   // "changed" is a client-side diff state. Upstream wording is not stable enough to
+   // manufacture that state without the previous class snapshot the UI requires.
    return "scheduled";
 }
 
@@ -123,9 +121,12 @@ function normalizeRosterWeekItem(week: OsirisWeek, requestedOffset: number): Wee
    };
 }
 
-export function normalizeWeeksResponse(rawData: OsirisRosterResponse, requestedOffset: number): Week[] {
-   if (!rawData.items.length) {
-      throw new Error("OSIRIS roster response did not include week items.");
+export function normalizeWeeksResponse(rawData: OsirisRosterResponse, requestedOffset: number, requestedLimit = rawData.items.length): Week[] {
+   if (rawData.offset !== requestedOffset || rawData.items.length !== requestedLimit) {
+      throw new ApiError("OSIRIS returned an incomplete or mismatched week batch.", {
+         code: "UPSTREAM_INVALID_RESPONSE",
+         status: 502,
+      });
    }
 
    return rawData.items.map((week, index) => normalizeRosterWeekItem(week, requestedOffset + index));

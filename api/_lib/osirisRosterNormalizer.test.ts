@@ -202,4 +202,59 @@ void describe("OSIRIS roster normalizer", () => {
       assert.ok(schoolClass);
       assert.equal(schoolClass.status, "cancelled");
    });
+
+   void it("leaves change detection to the client diff that can provide a previous snapshot", () => {
+      const response = createSingleClassResponse({ status_omschrijving: "Gewijzigd" });
+      assert.equal(normalizeWeeksResponse(response, 0)[0]?.classes[0]?.status, "scheduled");
+   });
+
+   void it("rejects partial or mismatched upstream batches", () => {
+      const response = {
+         hasMore: true,
+         limit: 2,
+         offset: 3,
+         count: 0,
+         items: [],
+      } satisfies OsirisRosterResponse;
+
+      assert.throws(() => normalizeWeeksResponse(response, 3, 2), /incomplete or mismatched week batch/);
+      assert.throws(() => normalizeWeeksResponse({ ...response, offset: 4 }, 3, 0), /incomplete or mismatched week batch/);
+   });
 });
+
+function createSingleClassResponse(classOverrides: Partial<OsirisRosterResponse["items"][number]["dagen"][number]["rooster"][number]>): OsirisRosterResponse {
+   return {
+      hasMore: false,
+      limit: 1,
+      offset: 0,
+      count: 1,
+      items: [
+         {
+            jaar: 2026,
+            week: 25,
+            startdatum: "2026-06-15",
+            einddatum: "2026-06-21",
+            dagen: [
+               {
+                  datum: "2026-06-16",
+                  rooster: [
+                     {
+                        id_rooster: "lesson",
+                        datum: "2026-06-16",
+                        onderwerp: "Title",
+                        subonderwerp: "",
+                        tijd_vanaf: "09:00",
+                        tijd_tm: "10:00",
+                        locatie: "A1",
+                        locatie_adres: "Campus",
+                        docenten: [],
+                        actueel: "J",
+                        ...classOverrides,
+                     },
+                  ],
+               },
+            ],
+         },
+      ],
+   };
+}

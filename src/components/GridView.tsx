@@ -1,14 +1,15 @@
-import { useEffect, useRef, useState, type CSSProperties, type MouseEvent } from "react";
+import { useEffect, useMemo, useRef, useState, type CSSProperties, type MouseEvent } from "react";
 import { dayShortLabel, fullDayLabel, getMinutesFromMidnight, timeLabel, toDayKey } from "../lib/date";
 import { clamp } from "../lib/clamp";
 import { DETAILS_SEPARATOR, getClassLocationLabel } from "../lib/classFormat";
-import { WORKDAY_END, WORKDAY_START } from "../lib/weekLayout";
+import type { GridHourRange } from "../lib/gridHours";
 import type { Day, GridZoom, Class } from "../types/weeks";
 import "./GridView.css";
 
 interface GridViewProps {
    days: Day[];
    zoom: GridZoom;
+   hours: GridHourRange;
    now: Date;
    onSelectClass: (schoolClass: Class) => void;
 }
@@ -19,10 +20,7 @@ const zoomOptions = [
    { id: "quarter", interval: 15 },
 ] as const;
 
-const WORKDAY_RANGE = WORKDAY_END - WORKDAY_START;
 const BASE_INTERVAL = zoomOptions[2].interval;
-const TIME_MARKS = Array.from({ length: Math.floor(WORKDAY_RANGE / BASE_INTERVAL) + 1 }, (_, index) => WORKDAY_START + index * BASE_INTERVAL);
-const TIME_LABELS = TIME_MARKS.filter((minutes) => minutes !== WORKDAY_START && minutes !== WORKDAY_END);
 /** Below this rendered height a schoolClass switches to the compact one-line layout. */
 const COMPACT_HEIGHT_PX = 85;
 /** Below this rendered height even the compact layout drops the room label. */
@@ -40,11 +38,7 @@ function formatMinutes(minutes: number) {
    return `${String(hour).padStart(2, "0")}:${String(minute).padStart(2, "0")}`;
 }
 
-function getOffsetPercent(minutes: number) {
-   return ((minutes - WORKDAY_START) / WORKDAY_RANGE) * 100;
-}
-
-export function GridView({ days, zoom: zoomId, now, onSelectClass }: GridViewProps) {
+export function GridView({ days, zoom: zoomId, hours, now, onSelectClass }: GridViewProps) {
    const [animateZoom, setAnimateZoom] = useState(false);
    const [contentHeight, setContentHeight] = useState(0);
    const previousZoomRef = useRef<GridZoom | null>(null);
@@ -53,11 +47,20 @@ export function GridView({ days, zoom: zoomId, now, onSelectClass }: GridViewPro
    const guideLabelRef = useRef<HTMLSpanElement | null>(null);
    const guideMotion = useRef({ top: 0, target: 0, visible: false, frame: 0, lastTime: 0 });
    const zoom = zoomOptions.find((option) => option.id === zoomId) ?? zoomOptions[0];
+   const startMinutes = hours[0] * 60;
+   const endMinutes = hours[1] * 60;
+   const shownMinutes = endMinutes - startMinutes;
+   const timeMarks = useMemo(
+      () => Array.from({ length: Math.floor(shownMinutes / BASE_INTERVAL) + 1 }, (_, index) => startMinutes + index * BASE_INTERVAL),
+      [shownMinutes, startMinutes]
+   );
+   const timeLabels = timeMarks.filter((minutes) => minutes !== startMinutes && minutes !== endMinutes);
+   const getOffsetPercent = (minutes: number) => ((minutes - startMinutes) / shownMinutes) * 100;
    const todayKey = toDayKey(now);
    const nowMinutes = getMinutesFromMidnight(now);
    const todayIndex = days.findIndex((group) => group.key === todayKey);
-   const showNowLine = todayIndex >= 0 && nowMinutes >= WORKDAY_START && nowMinutes <= WORKDAY_END;
-   const nowLineTop = getOffsetPercent(clamp(nowMinutes, WORKDAY_START, WORKDAY_END));
+   const showNowLine = todayIndex >= 0 && nowMinutes >= startMinutes && nowMinutes <= endMinutes;
+   const nowLineTop = getOffsetPercent(clamp(nowMinutes, startMinutes, endMinutes));
 
    useEffect(() => () => cancelAnimationFrame(guideMotion.current.frame), []);
 
@@ -95,7 +98,7 @@ export function GridView({ days, zoom: zoomId, now, onSelectClass }: GridViewPro
       }
       element.style.top = `${motion.top}%`;
       if (guideLabelRef.current) {
-         const minutes = clamp(Math.round(WORKDAY_START + (motion.top / 100) * WORKDAY_RANGE), WORKDAY_START, WORKDAY_END);
+         const minutes = clamp(Math.round(startMinutes + (motion.top / 100) * shownMinutes), startMinutes, endMinutes);
          guideLabelRef.current.textContent = formatMinutes(minutes);
       }
    };
@@ -136,7 +139,7 @@ export function GridView({ days, zoom: zoomId, now, onSelectClass }: GridViewPro
       const rect = event.currentTarget.getBoundingClientRect();
       const height = event.currentTarget.clientHeight;
       const y = clamp(event.clientY - rect.top, 0, height);
-      const minutes = clamp(Math.round(WORKDAY_START + (y / height) * WORKDAY_RANGE), WORKDAY_START, WORKDAY_END);
+      const minutes = clamp(Math.round(startMinutes + (y / height) * shownMinutes), startMinutes, endMinutes);
       const motion = guideMotion.current;
       motion.target = getOffsetPercent(minutes);
 
@@ -199,7 +202,7 @@ export function GridView({ days, zoom: zoomId, now, onSelectClass }: GridViewPro
                </div>
 
                <div className="grid-time-column" aria-hidden="true">
-                  {TIME_LABELS.map((minutes) => (
+                  {timeLabels.map((minutes) => (
                      <div
                         className="grid-time-slot"
                         key={minutes}
@@ -225,7 +228,7 @@ export function GridView({ days, zoom: zoomId, now, onSelectClass }: GridViewPro
 
                   {days.map((group) => (
                      <div className="grid-day-column" key={group.key} role="group" aria-labelledby={`grid-day-${group.key}`}>
-                        {TIME_MARKS.map((minutes) => (
+                        {timeMarks.map((minutes) => (
                            <div
                               className="grid-line"
                               key={minutes}
@@ -241,10 +244,10 @@ export function GridView({ days, zoom: zoomId, now, onSelectClass }: GridViewPro
                            const end = getMinutesFromMidnight(schoolClass.endDate);
                            const duration = end - start;
                            const top = getOffsetPercent(start);
-                           const height = (duration / WORKDAY_RANGE) * 100;
+                           const height = (duration / shownMinutes) * 100;
                            const width = `calc(${100 / schoolClass.overlapCount}% - 5px)`;
                            const left = `calc(${(100 / schoolClass.overlapCount) * schoolClass.overlapIndex}% + 2.5px)`;
-                           const visibleHeight = (duration / WORKDAY_RANGE) * contentHeight;
+                           const visibleHeight = (duration / shownMinutes) * contentHeight;
                            const isCompact = visibleHeight > 0 && visibleHeight < COMPACT_HEIGHT_PX;
                            const densityClass = isCompact ? "is-tight" : "is-roomy";
                            const timeRange = `${timeLabel.format(schoolClass.startDate)}-${timeLabel.format(schoolClass.endDate)}`;
