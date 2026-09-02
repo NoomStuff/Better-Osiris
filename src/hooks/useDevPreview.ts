@@ -59,7 +59,6 @@ export function useDevPreview() {
    const changeTimeOverride = useCallback((date: Date | null) => {
       if (!IS_DEV_SERVER) return;
       setTimeOverride(date);
-      setIsEnabled(true);
    }, []);
 
    return {

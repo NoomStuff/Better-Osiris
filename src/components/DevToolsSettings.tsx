@@ -1,9 +1,16 @@
+import { getClassNotificationBodies, requestNotificationPermission } from "../lib/classNotifications";
 import type { DevClassStatusPreviewMode } from "../lib/devStatusPreview";
 import { DEV_CLASS_STATUS_PREVIEW_MODES } from "../lib/devStatusPreview";
+import { notifyError, notifySuccess, notifyWarning } from "../lib/notyf";
+import type { SessionClassDiff } from "../lib/classDiffs";
+import type { Class, ClassSnapshot } from "../types/weeks";
+import { ActionButtons, ActionSelector } from "./ActionGroup";
 import { Button } from "./Button";
+import { IconButton } from "./IconButton";
+import { Slider } from "./Slider";
+import { ToggleSwitch } from "./ToggleSwitch";
 
 const DAY_MINUTES = 24 * 60;
-const TIME_SLIDER_STEP_MINUTES = 15;
 
 interface DevToolsSettingsProps {
    isEnabled: boolean;
@@ -24,9 +31,10 @@ export function DevToolsSettings({
    onChangeTimeOverride,
    onChangeStatusPreviewMode,
 }: DevToolsSettingsProps) {
+   const isLive = timeOverride === null;
    const perceivedMinutes = perceivedNow.getHours() * 60 + perceivedNow.getMinutes();
 
-   const handleDateOverrideChange = (value: string) => {
+   const changeDate = (value: string) => {
       const [yearText, monthText, dayText] = value.split("-");
       const year = Number(yearText);
       const month = Number(monthText);
@@ -41,90 +49,114 @@ export function DevToolsSettings({
       onChangeTimeOverride(nextDate);
    };
 
-   const handleTimeOverrideChange = (value: string) => {
-      const nextMinutes = Number(value);
+   const stepDay = (days: number) => {
+      const nextDate = new Date(perceivedNow);
+      nextDate.setDate(nextDate.getDate() + days);
+      onChangeTimeOverride(nextDate);
+   };
 
-      if (Number.isNaN(nextMinutes)) {
+   const changeTime = (minutes: number) => {
+      const nextDate = new Date(perceivedNow);
+      nextDate.setHours(Math.floor(minutes / 60), minutes % 60, 0, 0);
+      onChangeTimeOverride(nextDate);
+   };
+
+   const testPushNotification = async () => {
+      const permission = await requestNotificationPermission();
+      if (permission !== "granted") {
+         notifyWarning(
+            permission === "denied"
+               ? "Notifications are blocked in your browser settings."
+               : permission === "unsupported"
+                 ? "This browser does not support notifications."
+                 : "Notifications were not enabled."
+         );
          return;
       }
 
-      const nextDate = new Date(perceivedNow);
-      nextDate.setHours(Math.floor(nextMinutes / 60), nextMinutes % 60, 0, 0);
-      onChangeTimeOverride(nextDate);
+      const [body] = getClassNotificationBodies([createSampleClassDiff(perceivedNow)]);
+      try {
+         new Notification("Better Osiris", { body: body ?? "Test class-change notification" });
+      } catch {
+         notifyWarning("This browser could not show the notification.");
+      }
    };
 
    return (
       <section className="settings-section" aria-labelledby="devtools-settings-title">
-         <div className="settings-section__header">
+         <div className="settings-section__header settings-section__header--with-control">
             <div className="settings-section__copy">
                <h3 id="devtools-settings-title">Devtools</h3>
-               <p>Local-only roster testing tools. These controls are not available in production.</p>
+               <p>Local-only test helpers. Fake the clock and class changes; these controls never ship.</p>
             </div>
+            <ToggleSwitch checked={isEnabled} label="Enable devtools" onCheckedChange={onToggle} />
          </div>
-
-         <label className="settings-toggle">
-            <input type="checkbox" checked={isEnabled} onChange={(event) => onToggle(event.target.checked)} />
-            <span>
-               <strong>Enable devtools</strong>
-               <small>
-                  {timeOverride
-                     ? `Override: ${formatDateLabel(timeOverride)} ${formatTimeLabel(timeOverride)}`
-                     : `Real time: ${formatDateLabel(perceivedNow)} ${formatTimeLabel(perceivedNow)}`}
-               </small>
-            </span>
-         </label>
 
          {isEnabled ? (
             <div className="devtools-panel">
-               <label className="settings-dialog__field settings-dialog__field--compact">
-                  <span>Perceived date</span>
-                  <input type="date" value={formatDateInputValue(perceivedNow)} onChange={(event) => handleDateOverrideChange(event.target.value)} />
-               </label>
-
-               <div className="time-slider">
-                  <div className="time-slider__header">
-                     <span>Perceived time</span>
-                     <strong>{formatTimeLabel(perceivedNow)}</strong>
-                  </div>
+               <div className="devtools-date">
+                  <IconButton icon="fa-solid fa-chevron-left" label="Previous day" hoverEffect="nudge-left" onClick={() => stepDay(-1)} />
                   <input
-                     type="range"
-                     min={0}
-                     max={DAY_MINUTES - TIME_SLIDER_STEP_MINUTES}
-                     step={TIME_SLIDER_STEP_MINUTES}
-                     value={Math.round(perceivedMinutes / TIME_SLIDER_STEP_MINUTES) * TIME_SLIDER_STEP_MINUTES}
-                     onChange={(event) => handleTimeOverrideChange(event.target.value)}
+                     className="devtools-date__input"
+                     type="date"
+                     aria-label="Fake date"
+                     value={formatDateInputValue(perceivedNow)}
+                     onChange={(event) => changeDate(event.target.value)}
                   />
-                  <div className="time-slider__ticks" aria-hidden="true">
+                  <IconButton icon="fa-solid fa-chevron-right" label="Next day" hoverEffect="nudge-right" onClick={() => stepDay(1)} />
+               </div>
+
+               <div className="devtools-clock">
+                  <Slider
+                     label="Fake clock"
+                     min={0}
+                     max={DAY_MINUTES - 1}
+                     step={1}
+                     value={Math.min(perceivedMinutes, DAY_MINUTES - 1)}
+                     formatValue={formatSliderLabel}
+                     onChange={changeTime}
+                  />
+                  <div className="devtools-ticks" aria-hidden="true">
                      <span>00:00</span>
                      <span>06:00</span>
                      <span>12:00</span>
                      <span>18:00</span>
-                     <span>23:45</span>
+                     <span>24:00</span>
                   </div>
                </div>
 
-               <div className="settings-dialog__actions">
-                  <Button onClick={() => onChangeTimeOverride(new Date())}>Use current time</Button>
-                  <Button disabled={!timeOverride} onClick={() => onChangeTimeOverride(null)}>
-                     Clear override
+               <div className="devtools-footer">
+                  <Button size="compact" disabled={isLive} onClick={() => onChangeTimeOverride(null)}>
+                     Back to now
                   </Button>
                </div>
 
-               <div className="devtools-option">
-                  <span className="devtools-option__label">Class diff preview</span>
-                  <div className="settings-segmented-control" role="group" aria-label="Class diff preview">
-                     {DEV_CLASS_STATUS_PREVIEW_MODES.map((mode) => (
-                        <button
-                           type="button"
-                           key={mode.id}
-                           aria-pressed={statusPreviewMode === mode.id}
-                           data-active={statusPreviewMode === mode.id}
-                           onClick={() => onChangeStatusPreviewMode(mode.id)}
-                        >
-                           {mode.label}
-                        </button>
-                     ))}
-                  </div>
+               <div className="devtools-group">
+                  <span className="devtools-group__label">Class changes</span>
+                  <ActionSelector
+                     label="Class changes"
+                     options={DEV_CLASS_STATUS_PREVIEW_MODES}
+                     value={statusPreviewMode}
+                     onChange={onChangeStatusPreviewMode}
+                  />
+               </div>
+
+               <div className="devtools-group">
+                  <span className="devtools-group__label">Notifications</span>
+                  <ActionButtons
+                     label="Notification tests"
+                     actions={[
+                        { id: "push", label: "Push", tooltip: "Fire a real class-change notification", onPress: () => void testPushNotification() },
+                        { id: "success", label: "Success", tooltip: "Show a success toast", onPress: () => notifySuccess("Test success toast") },
+                        { id: "warning", label: "Warning", tooltip: "Show a warning toast", onPress: () => notifyWarning("Test warning toast") },
+                        {
+                           id: "error",
+                           label: "Error",
+                           tooltip: "Show an error toast",
+                           onPress: () => notifyError("Test error toast", "Test error toast", false),
+                        },
+                     ]}
+                  />
                </div>
             </div>
          ) : null}
@@ -132,11 +164,31 @@ export function DevToolsSettings({
    );
 }
 
-function formatTimeLabel(date: Date) {
-   const hours = String(date.getHours()).padStart(2, "0");
-   const minutes = String(date.getMinutes()).padStart(2, "0");
+function createSampleClassDiff(perceivedNow: Date): SessionClassDiff {
+   const dayKey = formatDateInputValue(perceivedNow);
+   const schoolClass: Class = {
+      id: "devtools-sample",
+      title: "Testles",
+      subject: "Devtools",
+      start: `${dayKey}T09:00`,
+      end: `${dayKey}T10:30`,
+      teacher: "D. Boot",
+      room: "B12",
+      location: "Main building",
+      description: "",
+      status: "changed",
+   };
+   const previousClass: ClassSnapshot = { ...schoolClass, room: "A101", status: "scheduled" };
 
-   return `${hours}:${minutes}`;
+   return { schoolClass, previousClass, status: "changed" };
+}
+
+function formatSliderLabel(minutes: number) {
+   return `${formatClockPart(Math.floor(minutes / 60))}:${formatClockPart(minutes % 60)}`;
+}
+
+function formatClockPart(value: number) {
+   return String(value).padStart(2, "0");
 }
 
 function formatDateInputValue(date: Date) {
@@ -145,11 +197,4 @@ function formatDateInputValue(date: Date) {
    const day = String(date.getDate()).padStart(2, "0");
 
    return `${year}-${month}-${day}`;
-}
-
-function formatDateLabel(date: Date) {
-   const day = String(date.getDate()).padStart(2, "0");
-   const month = String(date.getMonth() + 1).padStart(2, "0");
-
-   return `${day}-${month}`;
 }

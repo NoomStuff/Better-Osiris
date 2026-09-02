@@ -1,5 +1,5 @@
 import { useId, type CSSProperties } from "react";
-import "./RangeSlider.css";
+import "./Slider.css";
 
 interface RangeSliderProps {
    label: string;
@@ -14,29 +14,29 @@ interface RangeSliderProps {
 }
 
 type RangeSliderStyle = CSSProperties & {
-   "--range-start": string;
-   "--range-end": string;
+   "--slider-start": string;
+   "--slider-end": string;
 };
 
 export function RangeSlider({ label, min, max, step, value, startLabel, endLabel, formatValue = String, onChange }: RangeSliderProps) {
    const labelId = useId();
    const [start, end] = value;
    const toPercent = (point: number) => `${((point - min) / (max - min)) * 100}%`;
-   const style: RangeSliderStyle = { "--range-start": toPercent(start), "--range-end": toPercent(end) };
+   const style: RangeSliderStyle = { "--slider-start": toPercent(start), "--slider-end": toPercent(end) };
 
    return (
-      <div className="range-slider" role="group" aria-labelledby={labelId} style={style}>
-         <div className="range-slider__values" id={labelId}>
+      <div className="slider slider--range" role="group" aria-labelledby={labelId} style={style}>
+         <div className="slider__header" id={labelId}>
             <span>{label}</span>
             <strong>
                {formatValue(start)} <span aria-hidden="true">–</span> {formatValue(end)}
             </strong>
          </div>
-         <div className="range-slider__control">
-            <span className="range-slider__track" aria-hidden="true" />
-            <span className="range-slider__selection" aria-hidden="true" />
+         <div className="slider__control">
+            <span className="slider__track" aria-hidden="true" />
+            <span className="slider__fill" aria-hidden="true" />
             <input
-               className="range-slider__input range-slider__input--start"
+               className="slider__input slider__input--start"
                type="range"
                min={min}
                max={max}
@@ -47,7 +47,7 @@ export function RangeSlider({ label, min, max, step, value, startLabel, endLabel
                onChange={(event) => onChange([Math.min(Number(event.currentTarget.value), end - step), end])}
             />
             <input
-               className="range-slider__input range-slider__input--end"
+               className="slider__input slider__input--end"
                type="range"
                min={min}
                max={max}
@@ -57,8 +57,8 @@ export function RangeSlider({ label, min, max, step, value, startLabel, endLabel
                aria-valuetext={formatValue(end)}
                onChange={(event) => onChange([start, Math.max(Number(event.currentTarget.value), start + step)])}
             />
-            <span className="range-slider__grip range-slider__grip--start" aria-hidden="true" />
-            <span className="range-slider__grip range-slider__grip--end" aria-hidden="true" />
+            <span className="slider__thumb slider__thumb--start" aria-hidden="true" />
+            <span className="slider__thumb slider__thumb--end" aria-hidden="true" />
          </div>
       </div>
    );

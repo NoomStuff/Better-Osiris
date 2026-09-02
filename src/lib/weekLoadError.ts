@@ -21,7 +21,7 @@ export function toWeekLoadError(error: unknown): WeekLoadError {
 
    return {
       title: "Could not load your roster.",
-      detail: "The roster request crashed before it could finish. Annoying, but I'll keep trying quietly.",
+      detail: "The request crashed before it could finish.",
       log: error instanceof Error ? error.message : "Unknown roster fetch error.",
       isAuthRelated: false,
       retryable: error instanceof TypeError || (error instanceof DOMException && error.name === "TimeoutError"),

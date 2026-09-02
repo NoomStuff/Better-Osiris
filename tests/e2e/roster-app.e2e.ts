@@ -217,7 +217,7 @@ test("only the topmost dialog handles Escape and focus stays contained", async (
    const closeSettingsButton = settings.getByRole("button", { name: "Close settings" });
    await expect(closeSettingsButton).toBeFocused();
    await page.keyboard.press("Shift+Tab");
-   await expect(page.getByLabel("Enable devtools")).toBeFocused();
+   await expect(page.getByRole("switch", { name: "Enable devtools" })).toBeFocused();
    await page.keyboard.press("Tab");
    await expect(closeSettingsButton).toBeFocused();
 

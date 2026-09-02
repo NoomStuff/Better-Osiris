@@ -36,8 +36,6 @@ import { notifyError, notifySuccess } from "./lib/notyf";
 import type { GridZoom, Class, WeekMeta, ViewMode } from "./types/weeks";
 import "./styles/App.css";
 
-const IS_DEV_SERVER = import.meta.env.DEV;
-
 type WeekTransitionDirection = "default" | "previous" | "next" | "settled";
 
 function EmptyWeekState({ week }: { week: WeekMeta }) {
@@ -97,7 +95,7 @@ export default function App() {
    const perceivedDayKey = rosterTimeZone.isKnown ? toDayKey(perceivedNow) : null;
    const perceivedDay = useMemo(() => (perceivedDayKey ? getPerceivedDay(perceivedDayKey) : null), [perceivedDayKey]);
    const displayedData = useMemo(
-      () => applyDevClassStatusPreview(data, IS_DEV_SERVER && devPreview.isEnabled ? devPreview.statusPreviewMode : "none"),
+      () => applyDevClassStatusPreview(data, devPreview.isEnabled ? devPreview.statusPreviewMode : "none"),
       [data, devPreview.isEnabled, devPreview.statusPreviewMode]
    );
    const errorDetail = useMemo(() => {
@@ -401,7 +399,7 @@ export default function App() {
          <main className="app-content" ref={appContentRef}>
             {error && displayedData ? (
                <WarningBanner icon="fa-solid fa-cloud-arrow-rotate" action={{ label: "Try again", onClick: refresh }}>
-                  Showing your saved roster because the latest refresh failed. {errorDetail}
+                  Fetching your latest roster went wrong: {errorDetail}
                </WarningBanner>
             ) : null}
             {hiddenDays.length > 0 ? <HiddenDaysWarning labels={hiddenDays.map((day) => dayLabel.format(day.date))} onShow={showHiddenDays} /> : null}

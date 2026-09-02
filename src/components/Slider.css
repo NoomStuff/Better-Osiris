@@ -1,0 +1,178 @@
+.slider {
+   --slider-spring: cubic-bezier(0.22, 1.7, 0.36, 1);
+   --slider-start: 0%;
+
+   display: grid;
+   gap: 0.8rem;
+   min-width: 0;
+}
+
+.slider__header {
+   display: flex;
+   align-items: baseline;
+   justify-content: space-between;
+   gap: 1rem;
+   color: var(--text-muted);
+   font-size: 0.86rem;
+}
+
+.slider__header strong {
+   color: var(--text-strong);
+   font-variant-numeric: tabular-nums;
+   white-space: nowrap;
+}
+
+.slider__control {
+   position: relative;
+   height: 1.5rem;
+}
+
+.slider__track,
+.slider__fill {
+   position: absolute;
+   top: 50%;
+   right: 0;
+   left: 0;
+   height: 0.3rem;
+   border-radius: 999px;
+   translate: 0 -50%;
+}
+
+.slider__track {
+   background: color-mix(in srgb, var(--text-muted) 72%, transparent);
+   box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--text-strong) 14%, transparent);
+}
+
+.slider__fill {
+   right: calc(100% - var(--slider-end));
+   left: var(--slider-start);
+   background: var(--accent);
+   box-shadow: 0 0 0 1px color-mix(in srgb, var(--accent) 75%, transparent);
+   transition:
+      left 320ms var(--slider-spring),
+      right 320ms var(--slider-spring),
+      background-color 400ms ease,
+      box-shadow 400ms ease;
+}
+
+/* A single slider owns the whole strip, so track clicks jump straight to the cursor. A range
+   slider stacks two inputs that cannot share those clicks, so only their invisible thumbs stay
+   interactive and the visible thumb below is purely decorative. */
+.slider__input {
+   position: absolute;
+   inset: 0;
+   z-index: 2;
+   width: 100%;
+   height: 100%;
+   margin: 0;
+   appearance: none;
+   background: transparent;
+   cursor: pointer;
+}
+
+.slider__input:focus-visible {
+   outline: none;
+}
+
+.slider__input::-webkit-slider-runnable-track {
+   height: 0.3rem;
+   background: transparent;
+}
+
+.slider__input::-moz-range-track {
+   height: 0.3rem;
+   background: transparent;
+}
+
+.slider__input::-webkit-slider-thumb {
+   width: 1.5rem;
+   height: 1.5rem;
+   margin-top: -0.6rem;
+   appearance: none;
+   border: 0;
+   background: transparent;
+   cursor: grab;
+}
+
+.slider__input::-moz-range-thumb {
+   width: 1.5rem;
+   height: 1.5rem;
+   border: 0;
+   background: transparent;
+   cursor: grab;
+}
+
+.slider__input:active::-webkit-slider-thumb {
+   cursor: grabbing;
+}
+
+.slider__input:active::-moz-range-thumb {
+   cursor: grabbing;
+}
+
+.slider--range .slider__input {
+   pointer-events: none;
+}
+
+.slider--range .slider__input::-webkit-slider-thumb {
+   pointer-events: auto;
+}
+
+.slider--range .slider__input::-moz-range-thumb {
+   pointer-events: auto;
+}
+
+.slider__thumb {
+   position: absolute;
+   top: 50%;
+   z-index: 3;
+   left: var(--slider-end);
+   width: 0.85rem;
+   height: 0.85rem;
+   border: 1px solid color-mix(in srgb, var(--text-strong) 32%, transparent);
+   border-radius: 999px;
+   background: color-mix(in srgb, rgb(var(--surface-rgb)) 84%, var(--text-strong));
+   box-shadow: 0 1px 4px rgb(0 0 0 / 22%);
+   pointer-events: none;
+   translate: -50% -50%;
+   scale: 1;
+   transition:
+      left 320ms var(--slider-spring),
+      scale 220ms var(--bounce-overshoot),
+      border-color 180ms ease-out,
+      box-shadow 180ms ease;
+}
+
+.slider__thumb--start {
+   left: var(--slider-start);
+}
+
+.slider__thumb--end {
+   left: var(--slider-end);
+}
+
+.slider:not(.slider--range) .slider__input:is(:hover, :focus-visible) ~ .slider__thumb,
+.slider__input--start:is(:hover, :focus-visible) ~ .slider__thumb--start,
+.slider__input--end:is(:hover, :focus-visible) ~ .slider__thumb--end {
+   scale: 1.2;
+   border-color: rgba(var(--accent-rgb), 0.55);
+   box-shadow:
+      0 1px 4px rgb(0 0 0 / 22%),
+      0 0 0 4px color-mix(in srgb, var(--accent) 16%, transparent);
+}
+
+.slider:not(.slider--range) .slider__input:active ~ .slider__thumb,
+.slider__input--start:active ~ .slider__thumb--start,
+.slider__input--end:active ~ .slider__thumb--end {
+   border-color: rgba(var(--accent-rgb), 0.8);
+   box-shadow:
+      0 1px 4px rgb(0 0 0 / 22%),
+      0 0 0 5px color-mix(in srgb, var(--accent) 22%, transparent);
+}
+
+@media (prefers-reduced-motion: reduce) {
+   .slider__fill,
+   .slider__thumb {
+      transition: none;
+   }
+}

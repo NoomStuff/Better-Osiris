@@ -4,12 +4,12 @@ import { toClassSnapshot } from "./classSnapshot";
 export type DevClassStatusPreviewMode = "none" | "added" | "changed" | "cancelled" | "mixed";
 
 export const DEV_CLASS_STATUS_PREVIEW_MODES = [
-   { id: "none", label: "None" },
-   { id: "added", label: "Added" },
-   { id: "changed", label: "Changed" },
-   { id: "cancelled", label: "Cancelled" },
-   { id: "mixed", label: "Mixed" },
-] as const satisfies readonly { id: DevClassStatusPreviewMode; label: string }[];
+   { id: "none", label: "None", tooltip: "Show classes exactly as OSIRIS reports them" },
+   { id: "added", label: "Added", tooltip: "Turn the first class into a fake addition" },
+   { id: "changed", label: "Changed", tooltip: "Give the first class fake changes to review" },
+   { id: "cancelled", label: "Cancelled", tooltip: "Cancel the first class" },
+   { id: "mixed", label: "Mixed", tooltip: "Fake a change, a cancellation and an addition at once" },
+] as const satisfies readonly { id: DevClassStatusPreviewMode; label: string; tooltip: string }[];
 
 export function isDevClassStatusPreviewMode(value: string | null): value is DevClassStatusPreviewMode {
    return DEV_CLASS_STATUS_PREVIEW_MODES.some((mode) => mode.id === value);
@@ -46,6 +46,10 @@ function applyPreviewStatus(schoolClass: Class, index: number, mode: DevClassSta
 
       if (index === 1) {
          return { ...schoolClass, status: "cancelled" };
+      }
+
+      if (index === 2) {
+         return createAddedPreview(schoolClass);
       }
    }
 
