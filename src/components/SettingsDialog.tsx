@@ -5,6 +5,7 @@ import type { IsoWeekday } from "../lib/date";
 import type { DevClassStatusPreviewMode } from "../lib/devStatusPreview";
 import { DEFAULT_GRID_HOURS, formatGridHour, GRID_HOUR_MAX, GRID_HOUR_MIN, type GridHourRange } from "../lib/gridHours";
 import type { AgendaFoldingMode } from "../hooks/useAgendaFoldingPreference";
+import { useOverlayScrollbar } from "../hooks/useOverlayScrollbar";
 import { notifyError, notifySuccess, notifyWarning } from "../lib/notyf";
 import { OSIRIS_BEARER_TOKEN_HELP_URL } from "../lib/osirisTokenHelp";
 import { getThemeMode, THEMES_BY_MODE, type ThemeId, type ThemeMode } from "../lib/theme";
@@ -16,6 +17,7 @@ import { DevToolsSettings } from "./DevToolsSettings";
 import { IconButton } from "./IconButton";
 import { OverlayPanel, PANEL_CLOSE_MS } from "./OverlayPanel";
 import { RangeSlider } from "./RangeSlider";
+import { ScrollableRow } from "./ScrollableRow";
 import { ToggleSwitch } from "./ToggleSwitch";
 import "./SettingsDialog.css";
 
@@ -102,6 +104,7 @@ export function SettingsDialog({
    onChangeStatusPreviewMode,
 }: SettingsDialogProps) {
    const [token, setToken] = useState("");
+   const contentRef = useOverlayScrollbar();
    const [isClosing, setIsClosing] = useState(false);
    const [isResetConfirmOpen, setIsResetConfirmOpen] = useState(false);
    const [themeMode, setThemeMode] = useState<ThemeMode>(() => getThemeMode(theme));
@@ -228,7 +231,7 @@ export function SettingsDialog({
                <IconButton className="class-panel__close" icon="fa-solid fa-xmark" label="Close settings" tooltipPlacement="bottom" onClick={closeSettings} />
             </header>
 
-            <div className="settings-dialog__content">
+            <div ref={contentRef} className="settings-dialog__content">
                <section className="settings-section" aria-labelledby="notification-settings-title">
                   <div className="settings-section__header settings-section__header--with-control">
                      <div className="settings-section__copy">
@@ -255,35 +258,37 @@ export function SettingsDialog({
                      <ActionSelector label="Theme modes" options={THEME_MODE_OPTIONS} value={themeMode} onChange={changeThemeMode} />
                   </div>
 
-                  <div key={themeMode} className={`theme-picker${animateThemePicker ? " theme-picker--animate" : ""}`} role="group" aria-label="Color theme">
-                     {visibleThemes.map((themeOption, index) => {
-                        const isActive = theme === themeOption.id;
+                  <ScrollableRow>
+                     <div key={themeMode} className={`theme-picker${animateThemePicker ? " theme-picker--animate" : ""}`} role="group" aria-label="Color theme">
+                        {visibleThemes.map((themeOption, index) => {
+                           const isActive = theme === themeOption.id;
 
-                        return (
-                           <button
-                              type="button"
-                              key={themeOption.id}
-                              className="theme-picker__option"
-                              title={themeOption.label}
-                              aria-pressed={isActive}
-                              data-active={isActive}
-                              data-theme-id={themeOption.id}
-                              style={{ "--theme-index": index } as CSSProperties}
-                              onClick={() => onChangeTheme(themeOption.id)}
-                           >
-                              <span className="theme-picker__surface">
-                                 <span
-                                    className="theme-picker__swatch"
-                                    style={{ background: themeOption.swatchBackground, color: themeOption.swatchIconColor }}
-                                 >
-                                    <i className={themeOption.icon} aria-hidden="true" />
+                           return (
+                              <button
+                                 type="button"
+                                 key={themeOption.id}
+                                 className="theme-picker__option"
+                                 title={themeOption.label}
+                                 aria-pressed={isActive}
+                                 data-active={isActive}
+                                 data-theme-id={themeOption.id}
+                                 style={{ "--theme-index": index } as CSSProperties}
+                                 onClick={() => onChangeTheme(themeOption.id)}
+                              >
+                                 <span className="theme-picker__surface">
+                                    <span
+                                       className="theme-picker__swatch"
+                                       style={{ background: themeOption.swatchBackground, color: themeOption.swatchIconColor }}
+                                    >
+                                       <i className={themeOption.icon} aria-hidden="true" />
+                                    </span>
+                                    <span className="theme-picker__label">{themeOption.label}</span>
                                  </span>
-                                 <span className="theme-picker__label">{themeOption.label}</span>
-                              </span>
-                           </button>
-                        );
-                     })}
-                  </div>
+                              </button>
+                           );
+                        })}
+                     </div>
+                  </ScrollableRow>
                </section>
 
                <section className="settings-section" aria-labelledby="days-settings-title">

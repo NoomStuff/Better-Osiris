@@ -3,6 +3,7 @@ import ReactDOM from "react-dom/client";
 import App from "./App";
 import { ErrorBoundary } from "./components/ErrorBoundary";
 import { notifyError } from "./lib/notyf";
+import { attachOverlayScrollbar } from "./lib/overlayScrollbar";
 import { applyTheme, getStoredTheme } from "./lib/theme";
 import "@fortawesome/fontawesome-free/css/fontawesome.min.css";
 import "@fortawesome/fontawesome-free/css/solid.min.css";
@@ -42,6 +43,7 @@ if (!rootElement) {
 }
 
 applyTheme(getStoredTheme());
+attachOverlayScrollbar(document.body);
 
 ReactDOM.createRoot(rootElement).render(
    <React.StrictMode>

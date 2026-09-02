@@ -82,7 +82,7 @@ export const WeekNavigator = memo(function WeekNavigator({
    return (
       <section className="weekbar">
          <IconButton
-            icon="fa-solid fa-arrow-left"
+            icon="fa-solid fa-chevron-left"
             label="Previous week"
             shortcut={APP_SHORTCUT_LABELS.previousWeek}
             activationId="previous-week"
@@ -125,7 +125,7 @@ export const WeekNavigator = memo(function WeekNavigator({
          </h2>
 
          <IconButton
-            icon="fa-solid fa-arrow-right"
+            icon="fa-solid fa-chevron-right"
             label="Next week"
             shortcut={APP_SHORTCUT_LABELS.nextWeek}
             activationId="next-week"

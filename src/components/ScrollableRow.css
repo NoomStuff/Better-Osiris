@@ -1,0 +1,90 @@
+.scrollable-row {
+   position: relative;
+}
+
+.scrollable-row__scroller {
+   overflow-x: auto;
+   overflow-y: hidden;
+   /* A scrollport always clips both axes: overflow-y cannot stay visible next to a scrolling
+      axis, and what passes the top edge is unreachable. The padding gives hover lifts, focus
+      outlines, and entrance motion headroom inside the scrollport, and the negative margins
+      cancel its layout footprint so the row measures as if the padding did not exist. */
+   padding-block: 8px;
+   margin-block: -8px;
+   overscroll-behavior-x: contain;
+   scrollbar-width: none;
+}
+
+.scrollable-row__scroller::-webkit-scrollbar {
+   display: none;
+}
+
+/* Edge fades via mask so they work over any background. */
+.scrollable-row__scroller[data-fade-start]:not([data-fade-end]) {
+   mask-image: linear-gradient(90deg, transparent 0, #000 28px);
+}
+
+.scrollable-row__scroller[data-fade-end]:not([data-fade-start]) {
+   mask-image: linear-gradient(90deg, #000 calc(100% - 28px), transparent);
+}
+
+.scrollable-row__scroller[data-fade-start][data-fade-end] {
+   mask-image: linear-gradient(90deg, transparent 0, #000 28px, #000 calc(100% - 28px), transparent 100%);
+}
+
+.scrollable-row__arrow {
+   position: absolute;
+   top: 50%;
+   translate: 0 -50%;
+   z-index: 1;
+   display: inline-flex;
+   align-items: center;
+   justify-content: center;
+   width: 2.5rem;
+   height: 2.5rem;
+   border: 1px solid var(--line-strong);
+   border-radius: 999px;
+   background: rgba(var(--surface-rgb), 0.92);
+   color: var(--text-dim);
+   font-size: 0.75rem;
+   cursor: pointer;
+   box-shadow: 0 3px 10px rgba(0, 0, 0, 0.28);
+   transition:
+      color 160ms ease-out,
+      border-color 160ms ease-out,
+      background-color 160ms ease-out;
+}
+
+.scrollable-row__arrow:hover {
+   border-color: var(--line-strong);
+   background: var(--class-surface);
+   color: var(--text-strong);
+}
+
+.scrollable-row__arrow:active {
+   transform: scale(0.92);
+}
+
+.scrollable-row__arrow--start {
+   left: 0.5rem;
+   transition: left 160ms var(--bounce-overshoot);
+}
+
+.scrollable-row__arrow--start:hover {
+   left: 0.35rem;
+}
+
+.scrollable-row__arrow--end {
+   right: 0.5rem;
+   transition: right 160ms var(--bounce-overshoot);
+}
+
+.scrollable-row__arrow--end:hover {
+   right: 0.35rem;
+}
+
+@media (hover: none), (pointer: coarse) {
+   .scrollable-row__arrow {
+      display: none;
+   }
+}

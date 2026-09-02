@@ -55,9 +55,10 @@
       box-shadow 400ms ease;
 }
 
-/* A single slider owns the whole strip, so track clicks jump straight to the cursor. A range
-   slider stacks two inputs that cannot share those clicks, so only their invisible thumbs stay
-   interactive and the visible thumb below is purely decorative. */
+/* A single slider owns the whole strip natively, so track clicks jump straight to the cursor.
+   A range slider stacks two inputs that pass pointer events through to their control, which
+   routes every press to the thumb nearest the cursor and drags that thumb until release; the
+   inputs stay interactive for keyboard and for hover styling of their invisible thumbs. */
 .slider__input {
    position: absolute;
    inset: 0;
@@ -110,6 +111,15 @@
    cursor: grabbing;
 }
 
+.slider--range .slider__control {
+   cursor: pointer;
+   touch-action: none;
+}
+
+.slider--range .slider__control:active {
+   cursor: grabbing;
+}
+
 .slider--range .slider__input {
    pointer-events: none;
 }
@@ -127,9 +137,9 @@
    top: 50%;
    z-index: 3;
    left: var(--slider-end);
-   width: 0.85rem;
-   height: 0.85rem;
-   border: 1px solid color-mix(in srgb, var(--text-strong) 32%, transparent);
+   width: 1rem;
+   height: 1rem;
+   border: 4px solid color-mix(in srgb, var(--text-strong) 32%, transparent);
    border-radius: 999px;
    background: color-mix(in srgb, rgb(var(--surface-rgb)) 84%, var(--text-strong));
    box-shadow: 0 1px 4px rgb(0 0 0 / 22%);
@@ -168,6 +178,22 @@
    box-shadow:
       0 1px 4px rgb(0 0 0 / 22%),
       0 0 0 5px color-mix(in srgb, var(--accent) 22%, transparent);
+}
+
+/* While a drag moves the value, the code suspends the movement transitions: restarted on
+   every pointer move they turn into lag and wobble, so the thumb and fill follow the pointer
+   exactly instead. Color and scale feedback keep animating. */
+.slider[data-dragging="true"] .slider__fill {
+   transition:
+      background-color 400ms ease,
+      box-shadow 400ms ease;
+}
+
+.slider[data-dragging="true"] .slider__thumb {
+   transition:
+      scale 220ms var(--bounce-overshoot),
+      border-color 180ms ease-out,
+      box-shadow 180ms ease;
 }
 
 @media (prefers-reduced-motion: reduce) {

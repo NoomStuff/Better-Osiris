@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import type { ReactNode } from "react";
 import { fullDayLabel, parseLocalDateTime, timeLabel } from "../lib/date";
 import { normalizeClassField } from "../lib/classFormat";
+import { useOverlayScrollbar } from "../hooks/useOverlayScrollbar";
 import type { Class } from "../types/weeks";
 import { IconButton } from "./IconButton";
 import { OverlayPanel, PANEL_CLOSE_MS } from "./OverlayPanel";
@@ -16,6 +17,7 @@ export function ClassDrawer({ schoolClass, onClose }: ClassDrawerProps) {
    const [displayLesson, setDisplayLesson] = useState<Class | null>(schoolClass);
    const [isClosing, setIsClosing] = useState(false);
    const closeTimerRef = useRef<number | null>(null);
+   const detailsRef = useOverlayScrollbar();
 
    const closePanel = useCallback(() => {
       if (isClosing) {
@@ -112,7 +114,7 @@ export function ClassDrawer({ schoolClass, onClose }: ClassDrawerProps) {
             <IconButton className="class-panel__close" icon="fa-solid fa-xmark" label="Close" tooltipPlacement="bottom" onClick={closePanel} />
          </div>
 
-         <dl className="class-panel__details">
+         <dl ref={detailsRef} className="class-panel__details">
             {previous && previous.title !== activeClass.title ? <ClassDetail label="Title" current={activeClass.title} previous={previous.title} /> : null}
             {previous && previous.subject !== activeClass.subject ? (
                <ClassDetail label="Subject" current={activeClass.subject} previous={previous.subject} />

@@ -17,14 +17,14 @@
    overflow: auto;
    overscroll-behavior: contain;
    display: grid;
-   gap: 16px;
+   gap: 24px;
    padding: 18px 24px 24px;
 }
 
 .settings-section {
    display: grid;
    gap: 12px;
-   padding-top: 16px;
+   padding-top: 24px;
    border-top: 1px solid var(--line);
 }
 
@@ -35,7 +35,7 @@
 
 .settings-section__copy {
    display: grid;
-   gap: 2px;
+   gap: 4px;
 }
 
 .settings-section__header--with-actions {
@@ -68,15 +68,16 @@
    gap: 14px;
 }
 
+/* Single row inside a ScrollableRow: tiles share the row equally on desktop so all nine
+   always fit, and hold a fixed width on touch screens where the row scrolls instead. */
 .theme-picker {
    display: flex;
-   flex-wrap: wrap;
-   justify-content: center;
    gap: 8px;
 }
 
 .theme-picker__option {
-   width: 70px;
+   flex: 1 1 0;
+   min-width: 0;
    padding: 0;
    cursor: pointer;
 }
@@ -90,7 +91,7 @@
    display: grid;
    gap: 6px;
    justify-items: center;
-   padding: 8px;
+   padding: 8px 4px;
    border: 2px solid var(--line);
    border-radius: 12px;
    background: rgba(var(--highlight-rgb), 0.026);
@@ -712,8 +713,17 @@
 
 @media (max-width: 640px) {
    .settings-dialog__content {
-      gap: 14px;
+      gap: 20px;
       padding: 16px 20px 20px;
+   }
+
+   .settings-section {
+      padding-top: 20px;
+   }
+
+   .theme-picker__option {
+      flex: 0 0 auto;
+      width: 72px;
    }
 
    .weekday-picker {
@@ -727,10 +737,6 @@
 }
 
 @media (max-width: 480px) {
-   .settings-section__header--with-actions {
-      grid-template-columns: minmax(0, 1fr);
-   }
-
    .settings-section__header--with-actions > .action-group {
       width: 100%;
       min-width: 0;

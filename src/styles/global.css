@@ -254,6 +254,74 @@ button {
    background: rgba(var(--accent-rgb), 0.32);
 }
 
+/* Overlay scrollbars (lib/overlayScrollbar.ts): the native bar is hidden and a slim thumb
+   is drawn over the content while scrolling, fading out when idle. Nothing is reserved for
+   it. The track is a viewport-sized strip translated with the scroll position, so it stays
+   pinned to the visible box despite being a child of the scroll container. */
+.overlay-scrollbar-host {
+   position: relative;
+   scrollbar-width: none;
+}
+
+.overlay-scrollbar-host::-webkit-scrollbar {
+   display: none;
+}
+
+.overlay-scrollbar {
+   position: absolute;
+   top: 0;
+   right: 0;
+   z-index: 5;
+   width: 12px;
+   pointer-events: none;
+   opacity: 0;
+   transition: opacity 250ms ease-out;
+}
+
+.overlay-scrollbar--page {
+   z-index: 10;
+}
+
+.overlay-scrollbar[data-scrollable="false"] {
+   display: none;
+}
+
+.overlay-scrollbar[data-active="true"] {
+   opacity: 1;
+}
+
+.overlay-scrollbar__thumb {
+   position: absolute;
+   top: 0;
+   right: 3px;
+   width: 5px;
+   border-radius: 999px;
+   background: rgba(var(--highlight-rgb), 0.28);
+   user-select: none;
+   transition:
+      background-color 160ms ease-out,
+      width 160ms ease-out,
+      right 160ms ease-out;
+}
+
+.overlay-scrollbar[data-active="true"] .overlay-scrollbar__thumb {
+   pointer-events: auto;
+}
+
+.overlay-scrollbar__thumb:hover,
+.overlay-scrollbar[data-dragging="true"] .overlay-scrollbar__thumb {
+   right: 2px;
+   width: 7px;
+   background: rgba(var(--highlight-rgb), 0.45);
+}
+
+/* Touch scrollers flick directly; the thumb stays a pure indicator there. */
+@media (hover: none), (pointer: coarse) {
+   .overlay-scrollbar__thumb {
+      pointer-events: none;
+   }
+}
+
 :where(button, a, input, select, textarea, [tabindex]):focus-visible {
    outline: 3px solid rgba(var(--accent-rgb), 0.72);
    outline-offset: 3px;
