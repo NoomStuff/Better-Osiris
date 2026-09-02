@@ -1,12 +1,14 @@
-/* Fire after midnight: hot orange over charred aubergine and a cold blue edge. */
+/* Banked fire: coals glow from below, charred black above, heat rising between. */
 html[data-theme="ember"] {
    color-scheme: dark;
 
-   --page-canvas: #1b0b18;
+   --page-canvas: #1c0806;
    --page-background:
-      radial-gradient(ellipse at 48% -8%, rgba(255, 122, 50, 0.28), transparent 32%),
-      radial-gradient(ellipse at 10% 100%, rgba(116, 35, 108, 0.24), transparent 40%),
-      radial-gradient(ellipse at 96% 88%, rgba(36, 82, 145, 0.2), transparent 34%), linear-gradient(160deg, #351019 0%, #170b19 48%, #070c15 100%);
+      radial-gradient(ellipse at 52% 114%, rgba(255, 122, 42, 0.4), transparent 46%),
+      radial-gradient(ellipse at 12% 106%, rgba(199, 44, 21, 0.32), transparent 42%),
+      radial-gradient(ellipse at 88% 102%, rgba(255, 84, 34, 0.16), transparent 36%),
+      radial-gradient(ellipse at 50% -18%, rgba(255, 130, 60, 0.1), transparent 38%),
+      linear-gradient(180deg, #150506 0%, #25090a 46%, #3d1008 100%);
 
    --line: rgba(235, 170, 132, 0.14);
    --line-strong: rgba(255, 120, 66, 0.34);

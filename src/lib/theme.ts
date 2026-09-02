@@ -19,7 +19,7 @@ export const THEMES_BY_MODE = {
       { id: "espresso", label: "Espresso", icon: "fa-solid fa-mug-hot", swatchBackground: "#35191d", swatchIconColor: "#ed8a63" },
       { id: "moss", label: "Moss", icon: "fa-solid fa-leaf", swatchBackground: "#1d2719", swatchIconColor: "#94c96e" },
       { id: "dusk", label: "Dusk", icon: "fa-solid fa-cloud-sun", swatchBackground: "#24233f", swatchIconColor: "#e08a9b" },
-      { id: "ember", label: "Ember", icon: "fa-solid fa-fire", swatchBackground: "#1b0b18", swatchIconColor: "#ff7547" },
+      { id: "ember", label: "Ember", icon: "fa-solid fa-fire", swatchBackground: "#1c0806", swatchIconColor: "#ff7547" },
       { id: "abyss", label: "Abyss", icon: "fa-solid fa-water", swatchBackground: "#061c2a", swatchIconColor: "#5de1d4" },
       { id: "noir", label: "Noir", icon: "fa-solid fa-hat-cowboy-side", swatchBackground: "#000000", swatchIconColor: "#f0f0f0" },
       { id: "contrast", label: "Contrast", icon: "fa-solid fa-circle-half-stroke", swatchBackground: "#050505", swatchIconColor: "#d7ff3f" },
