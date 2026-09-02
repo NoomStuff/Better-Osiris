@@ -63,6 +63,26 @@ test("week navigation and view controls work with mocked roster data", async ({ 
    await expect(page.getByRole("button", { name: "Collapse" })).toBeVisible();
 });
 
+test("prefetches the batch after the active batch", async ({ page }) => {
+   const requestedOffsets = new Set<number>();
+   page.on("request", (request) => {
+      if (!request.url().includes("/api/roster/weeks?")) {
+         return;
+      }
+
+      requestedOffsets.add(Number(new URL(request.url()).searchParams.get("offset")));
+   });
+
+   await page.goto("/");
+
+   await expect(page.getByRole("heading", { name: /Week 25:/ })).toBeVisible();
+   await expect.poll(() => [...requestedOffsets].sort((left, right) => left - right)).toEqual([0, 5]);
+
+   await page.keyboard.press("5");
+   await expect(page.locator(".weekbar__label")).toHaveText("In 5 weeks");
+   await expect.poll(() => [...requestedOffsets].sort((left, right) => left - right)).toEqual([0, 5, 10]);
+});
+
 test("defaults to grid on desktop when no roster view was saved", async ({ page }) => {
    await page.setViewportSize({ width: 1280, height: 720 });
    await page.goto("/");

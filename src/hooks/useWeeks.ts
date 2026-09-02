@@ -249,14 +249,11 @@ export function useWeeks(offset: number, options: UseWeeksOptions = {}) {
       const activeBatchQueued = queuedRefetchesRef.current.has(activeBatchStart);
       loadBatch(activeBatchStart, { force: activeBatchQueued || (activeBatchStart === 0 && Boolean(activeEntry?.isHydrated)) });
 
-      const activeBatchEnd = getBatchOffsets(activeBatchStart).at(-1) ?? activeBatchStart;
-      if (activeBatchEnd - offset <= 1) {
-         getAdjacentBatchStarts(activeBatchStart)
-            .filter((prefetchBatchStart) => prefetchBatchStart > activeBatchStart)
-            .forEach((prefetchBatchStart) => {
-               loadBatch(prefetchBatchStart, { force: queuedRefetchesRef.current.has(prefetchBatchStart) });
-            });
-      }
+      getAdjacentBatchStarts(activeBatchStart)
+         .filter((prefetchBatchStart) => prefetchBatchStart > activeBatchStart)
+         .forEach((prefetchBatchStart) => {
+            loadBatch(prefetchBatchStart, { force: queuedRefetchesRef.current.has(prefetchBatchStart) });
+         });
    }, [enabled, offset, resetKey, resetRuntime, sessionLessonDiffs]);
 
    useEffect(() => {
