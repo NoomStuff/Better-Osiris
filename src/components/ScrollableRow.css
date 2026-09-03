@@ -1,8 +1,24 @@
+@property --scroll-fade-start-opacity {
+   syntax: "<number>";
+   inherits: false;
+   initial-value: 1;
+}
+
+@property --scroll-fade-end-opacity {
+   syntax: "<number>";
+   inherits: false;
+   initial-value: 1;
+}
+
 .scrollable-row {
    position: relative;
 }
 
 .scrollable-row__scroller {
+   --scroll-fade-width: 48px;
+   --scroll-fade-start-opacity: 1;
+   --scroll-fade-end-opacity: 1;
+
    overflow-x: auto;
    overflow-y: hidden;
    /* A scrollport always clips both axes: overflow-y cannot stay visible next to a scrolling
@@ -13,6 +29,16 @@
    margin-block: -8px;
    overscroll-behavior-x: contain;
    scrollbar-width: none;
+   mask-image: linear-gradient(
+      90deg,
+      rgba(0, 0, 0, var(--scroll-fade-start-opacity)) 0,
+      #000 var(--scroll-fade-width),
+      #000 calc(100% - var(--scroll-fade-width)),
+      rgba(0, 0, 0, var(--scroll-fade-end-opacity)) 100%
+   );
+   transition:
+      --scroll-fade-start-opacity 180ms ease-out,
+      --scroll-fade-end-opacity 180ms ease-out;
 }
 
 .scrollable-row__scroller::-webkit-scrollbar {
@@ -20,16 +46,12 @@
 }
 
 /* Edge fades via mask so they work over any background. */
-.scrollable-row__scroller[data-fade-start]:not([data-fade-end]) {
-   mask-image: linear-gradient(90deg, transparent 0, #000 28px);
+.scrollable-row__scroller[data-fade-start] {
+   --scroll-fade-start-opacity: 0;
 }
 
-.scrollable-row__scroller[data-fade-end]:not([data-fade-start]) {
-   mask-image: linear-gradient(90deg, #000 calc(100% - 28px), transparent);
-}
-
-.scrollable-row__scroller[data-fade-start][data-fade-end] {
-   mask-image: linear-gradient(90deg, transparent 0, #000 28px, #000 calc(100% - 28px), transparent 100%);
+.scrollable-row__scroller[data-fade-end] {
+   --scroll-fade-end-opacity: 0;
 }
 
 .scrollable-row__arrow {
@@ -86,5 +108,11 @@
 @media (hover: none), (pointer: coarse) {
    .scrollable-row__arrow {
       display: none;
+   }
+}
+
+@media (prefers-reduced-motion: reduce) {
+   .scrollable-row__scroller {
+      transition: none;
    }
 }
