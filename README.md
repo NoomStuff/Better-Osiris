@@ -66,10 +66,10 @@ To self-host instead, set the environment variables, run `bun run build`, then `
 
 ## Commands
 
-| Command         | Description                              |
-| --------------- | ---------------------------------------- |
-| `bun run dev`   | Start the frontend and API in watch mode |
-| `bun run build` | Type-check and build the production app  |
-| `bun run start` | Serve the built app                      |
-| `bun run format`| Format code                              |
-| `bun run verify`| Run all tests & checks                   |
+| Command          | Description                              |
+| ---------------- | ---------------------------------------- |
+| `bun run dev`    | Start the frontend and API in watch mode |
+| `bun run build`  | Type-check and build the production app  |
+| `bun run start`  | Serve the built app                      |
+| `bun run format` | Format code                              |
+| `bun run verify` | Run all tests & checks                   |
