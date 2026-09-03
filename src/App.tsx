@@ -183,7 +183,7 @@ export default function App() {
          };
 
          activeWeekTransitionRef.current?.skipTransition();
-         const canAnimateSwap = typeof Reflect.get(document, "startViewTransition") === "function";
+         const canAnimateSwap = typeof Reflect.get(document, "startViewTransition") === "function" && !window.matchMedia("(max-width: 640px)").matches;
          if ((transitionDirection === "previous" || transitionDirection === "next") && canAnimateSwap) {
             const transitionToken = `${transitionDirection}-${navigationId}`;
             document.documentElement.dataset["weekTransition"] = transitionToken;

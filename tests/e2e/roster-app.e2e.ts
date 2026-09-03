@@ -220,6 +220,44 @@ test("keeps a saved roster view over the viewport default", async ({ page }) => 
    await expect(page.getByRole("button", { name: "Grid view" })).toHaveAttribute("aria-pressed", "true");
 });
 
+test("mobile grid fits its viewport and week buttons remain repeatable", async ({ page }) => {
+   await page.setViewportSize({ width: 390, height: 844 });
+   await page.addInitScript(() => {
+      window.localStorage.setItem("roster-view-mode", "grid");
+   });
+   await page.goto("/");
+
+   await expect(page.locator(".grid-shell")).toBeVisible();
+   await expect(page.locator(".overlay-scrollbar")).toHaveCount(0);
+
+   const viewportMetrics = await page.evaluate(() => ({
+      viewportHeight: window.visualViewport?.height ?? window.innerHeight,
+      pageHeight: document.documentElement.scrollHeight,
+      appHeight: document.getElementById("app")?.getBoundingClientRect().height ?? 0,
+   }));
+   expect(viewportMetrics.pageHeight).toBeLessThanOrEqual(Math.ceil(viewportMetrics.viewportHeight));
+   expect(viewportMetrics.appHeight).toBeCloseTo(viewportMetrics.viewportHeight, 0);
+
+   const nextWeek = page.getByRole("button", { name: "Next week", exact: true });
+   for (const label of ["Next week", "In 2 weeks", "In 3 weeks"]) {
+      await nextWeek.click();
+      await expect(page.locator(".weekbar__label")).toHaveText(label);
+   }
+
+   await expect
+      .poll(() => page.evaluate(() => document.getAnimations().map((animation) => (animation instanceof CSSAnimation ? animation.animationName : ""))))
+      .toContain("roster-week-in-right");
+   await expect.poll(() => page.evaluate(() => document.documentElement.dataset["weekTransition"] ?? null)).toBeNull();
+   await expect
+      .poll(() =>
+         page.evaluate(() => {
+            const toolbar = document.querySelector<HTMLElement>(".mobile-bottom-bar");
+            return toolbar ? getComputedStyle(toolbar).viewTransitionName : null;
+         })
+      )
+      .toBe("none");
+});
+
 test("reloads cleanly when the server changes the roster time zone", async ({ page }) => {
    await page.addInitScript(() => window.localStorage.setItem("roster-time-zone-v1", "America/New_York"));
    await page.goto("/");
