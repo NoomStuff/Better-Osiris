@@ -90,7 +90,9 @@ test("holding a week arrow keeps advancing through the roster", async ({ page })
    await expect(page.locator(".weekbar__label")).toHaveText("Next week");
    await expect
       .poll(() => page.evaluate(() => document.getAnimations().map((animation) => (animation instanceof CSSAnimation ? animation.animationName : ""))))
-      .toEqual(expect.arrayContaining(["roster-week-out-left", "view-enter-from-right"]));
+      .toEqual(expect.arrayContaining(["roster-week-out-left", "roster-week-in-right"]));
+   await expect.poll(() => page.evaluate(() => getComputedStyle(document.documentElement).viewTransitionName)).toBe("none");
+   await expect.poll(() => page.evaluate(() => getComputedStyle(document.documentElement, "::view-transition").pointerEvents)).toBe("none");
    // The label moves on every repeat, so assert the distance travelled instead of a transient value.
    await expect
       .poll(async () => {
@@ -120,6 +122,41 @@ test("holding a week arrow keeps advancing through the roster", async ({ page })
    await expect(page.locator(".weekbar__label")).toHaveText(releasedWeek ?? "");
 });
 
+test("week buttons accept another click before their transition finishes", async ({ page }) => {
+   await page.goto("/");
+
+   const nextWeek = page.getByRole("button", { name: "Next week", exact: true });
+   for (const label of ["Next week", "In 2 weeks", "In 3 weeks"]) {
+      await nextWeek.click();
+      await expect(page.locator(".weekbar__label")).toHaveText(label);
+   }
+   await expect
+      .poll(() => page.evaluate(() => document.getAnimations().map((animation) => (animation instanceof CSSAnimation ? animation.animationName : ""))))
+      .toEqual(expect.arrayContaining(["roster-week-out-left", "roster-week-in-right"]));
+
+   const previousWeek = page.getByRole("button", { name: "Previous week", exact: true });
+   for (const label of ["In 2 weeks", "Next week", "This week"]) {
+      await previousWeek.click();
+      await expect(page.locator(".weekbar__label")).toHaveText(label);
+   }
+});
+
+test("week swipe uses the same directional content transition", async ({ page }) => {
+   await page.goto("/");
+
+   await swipeWeek(page, "next");
+   await expect(page.locator(".weekbar__label")).toHaveText("Next week");
+   await expect
+      .poll(() => page.evaluate(() => document.getAnimations().map((animation) => (animation instanceof CSSAnimation ? animation.animationName : ""))))
+      .toEqual(expect.arrayContaining(["roster-week-out-left", "roster-week-in-right"]));
+
+   await swipeWeek(page, "previous");
+   await expect(page.locator(".weekbar__label")).toHaveText("This week");
+   await expect
+      .poll(() => page.evaluate(() => document.getAnimations().map((animation) => (animation instanceof CSSAnimation ? animation.animationName : ""))))
+      .toEqual(expect.arrayContaining(["roster-week-out-right", "roster-week-in-left"]));
+});
+
 test("shift and an arrow moves by one roster batch", async ({ page }) => {
    await page.goto("/");
 
@@ -144,6 +181,32 @@ test("defaults to agenda on mobile when no roster view was saved", async ({ page
 
    await expect(page.locator(".agenda-view")).toBeVisible();
    await expect(page.getByRole("button", { name: "Agenda view" })).toHaveAttribute("aria-pressed", "true");
+});
+
+test("toolbar controls and shortcuts invoke the same actions", async ({ page }) => {
+   await page.goto("/");
+
+   await page.getByRole("button", { name: "Agenda view" }).click();
+   await expect(page.locator(".agenda-view")).toBeVisible();
+   await page.keyboard.press("g");
+   await expect(page.locator(".grid-shell")).toBeVisible();
+   await page.keyboard.press("a");
+   await expect(page.locator(".agenda-view")).toBeVisible();
+
+   const dayHeaders = page.locator(".day-group__header");
+   await page.getByRole("button", { name: "Collapse" }).click();
+   await expect(page.locator('.day-group__header[aria-expanded="true"]')).toHaveCount(0);
+   await page.keyboard.press("Control+1");
+   await expect(page.locator('.day-group__header[aria-expanded="true"]')).toHaveCount(await dayHeaders.count());
+
+   await page.keyboard.press("g");
+   await page.getByRole("radio", { name: "30m" }).click();
+   await expect(page.getByRole("radio", { name: "30m" })).toHaveAttribute("aria-checked", "true");
+   await page.keyboard.press("Control+1");
+   await expect(page.getByRole("radio", { name: "1h" })).toHaveAttribute("aria-checked", "true");
+
+   await page.keyboard.press("i");
+   await expect(page.getByRole("dialog", { name: "Preferences" })).toBeVisible();
 });
 
 test("keeps a saved roster view over the viewport default", async ({ page }) => {
@@ -420,17 +483,7 @@ test("week swipe navigation is disabled while an overlay is open", async ({ page
    await page.goto("/");
    await page.getByRole("button", { name: "Open settings" }).click();
 
-   await page.evaluate(() => {
-      const target = document.body;
-      const start = { identifier: 1, target, clientX: 320, clientY: 300 };
-      const end = { identifier: 1, target, clientX: 120, clientY: 300 };
-      const startEvent = new Event("touchstart");
-      const endEvent = new Event("touchend");
-      Object.defineProperty(startEvent, "touches", { value: [start] });
-      Object.defineProperty(endEvent, "changedTouches", { value: [end] });
-      window.dispatchEvent(startEvent);
-      window.dispatchEvent(endEvent);
-   });
+   await swipeWeek(page, "next");
 
    await expect(page.locator(".weekbar__label")).toHaveText("This week");
 });
@@ -709,6 +762,22 @@ async function installCachedLastWeek(page: Page) {
          week: createWeek(-1),
       }
    );
+}
+
+async function swipeWeek(page: Page, direction: "previous" | "next") {
+   await page.evaluate((swipeDirection) => {
+      const target = document.body;
+      const startX = swipeDirection === "next" ? 320 : 120;
+      const endX = swipeDirection === "next" ? 120 : 320;
+      const start = { identifier: 1, target, clientX: startX, clientY: 300 };
+      const end = { identifier: 1, target, clientX: endX, clientY: 300 };
+      const startEvent = new Event("touchstart");
+      const endEvent = new Event("touchend");
+      Object.defineProperty(startEvent, "touches", { value: [start] });
+      Object.defineProperty(endEvent, "changedTouches", { value: [end] });
+      window.dispatchEvent(startEvent);
+      window.dispatchEvent(endEvent);
+   }, direction);
 }
 
 async function mockAppApis(page: Page) {

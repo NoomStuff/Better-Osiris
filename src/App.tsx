@@ -25,7 +25,6 @@ import { useThemePreference } from "./hooks/useThemePreference";
 import { useViewportMetrics } from "./hooks/useViewportMetrics";
 import { useViewModePreference } from "./hooks/useViewModePreference";
 import { useWeekSwipeNavigation } from "./hooks/useWeekSwipeNavigation";
-import { getAdjacentGridZoom, GRID_ZOOM_ORDER } from "./lib/appView";
 import { applyDevClassStatusPreview } from "./lib/devStatusPreview";
 import { useWeeks } from "./hooks/useWeeks";
 import { dayLabel, getIsoWeekday, toDayKey } from "./lib/date";
@@ -55,7 +54,9 @@ export default function App() {
    const [gridHours, setGridHours] = useGridHoursPreference();
    const [agendaFoldingMode, setAgendaFoldingMode] = useAgendaFoldingPreference();
    const appContentRef = useRef<HTMLElement>(null);
+   const weekOffsetRef = useRef(0);
    const weekTransitionIdRef = useRef(0);
+   const activeWeekTransitionRef = useRef<ViewTransition | null>(null);
    const isBarDocked = useDockedMobileBar(appContentRef);
    const [gridZoom, setGridZoom] = useState<GridZoom>("hour");
    const [selectedClassId, setSelectedClassId] = useState<string | null>(null);
@@ -160,27 +161,39 @@ export default function App() {
 
    const updateWeekOffset = useCallback(
       (updater: number | ((current: number) => number), transitionDirection: WeekTransitionDirection = "default") => {
-         const next = typeof updater === "function" ? updater(weekOffset) : updater;
+         const current = weekOffsetRef.current;
+         const next = typeof updater === "function" ? updater(current) : updater;
 
-         if (next === weekOffset) {
+         if (next === current) {
             return;
          }
 
+         weekOffsetRef.current = next;
+         const navigationId = ++weekTransitionIdRef.current;
+
          const commitWeek = () => {
+            if (weekTransitionIdRef.current !== navigationId) {
+               return;
+            }
+
             setWeekTransitionDirection(transitionDirection);
             setWeekOffset(next);
             setSelectedClassId(null);
             resetAgenda();
          };
 
+         activeWeekTransitionRef.current?.skipTransition();
          const canAnimateSwap = typeof Reflect.get(document, "startViewTransition") === "function";
          if ((transitionDirection === "previous" || transitionDirection === "next") && canAnimateSwap) {
-            const transitionId = ++weekTransitionIdRef.current;
-            const transitionToken = `${transitionDirection}-${transitionId}`;
+            const transitionToken = `${transitionDirection}-${navigationId}`;
             document.documentElement.dataset["weekTransition"] = transitionToken;
             const transition = document.startViewTransition(() => flushSync(commitWeek));
+            activeWeekTransitionRef.current = transition;
             void transition.ready.catch(() => undefined);
             const clearTransitionToken = () => {
+               if (activeWeekTransitionRef.current === transition) {
+                  activeWeekTransitionRef.current = null;
+               }
                if (document.documentElement.dataset["weekTransition"] === transitionToken) {
                   delete document.documentElement.dataset["weekTransition"];
                   setWeekTransitionDirection("settled");
@@ -192,7 +205,7 @@ export default function App() {
 
          commitWeek();
       },
-      [resetAgenda, weekOffset]
+      [resetAgenda]
    );
 
    const selectedClass: Class | null = useMemo(() => {
@@ -209,25 +222,25 @@ export default function App() {
    }, []);
 
    const goPreviousWeek = useCallback(() => {
-      const targetOffset = weekOffset - 1;
+      const targetOffset = weekOffsetRef.current - 1;
       if (!isWeekNavigable(targetOffset)) {
          return;
       }
 
       updateWeekOffset(targetOffset, "previous");
-   }, [isWeekNavigable, updateWeekOffset, weekOffset]);
+   }, [isWeekNavigable, updateWeekOffset]);
 
    const goNextWeek = useCallback(() => {
-      const targetOffset = weekOffset + 1;
+      const targetOffset = weekOffsetRef.current + 1;
       if (!isWeekNavigable(targetOffset)) {
          return;
       }
 
       updateWeekOffset(targetOffset, "next");
-   }, [isWeekNavigable, updateWeekOffset, weekOffset]);
+   }, [isWeekNavigable, updateWeekOffset]);
 
    const handleCurrentWeek = useCallback(() => {
-      if (weekOffset === 0) {
+      if (weekOffsetRef.current === 0) {
          setSelectedClassId(null);
          resetAgenda(true);
          return;
@@ -238,7 +251,7 @@ export default function App() {
       }
 
       updateWeekOffset(0);
-   }, [isWeekNavigable, resetAgenda, updateWeekOffset, weekOffset]);
+   }, [isWeekNavigable, resetAgenda, updateWeekOffset]);
 
    useWeekSwipeNavigation(!isSettingsOpen && selectedClass === null, goPreviousWeek, goNextWeek);
 
@@ -282,43 +295,6 @@ export default function App() {
       }
    }, [bearerTokenInput, saveToken]);
 
-   const moveToolbarAction = useCallback(
-      (direction: -1 | 1) => {
-         if (viewMode === "agenda") {
-            if (direction < 0) {
-               expandAllDays();
-            } else {
-               collapseAllDays();
-            }
-            return;
-         }
-
-         setGridZoom((current) => {
-            return getAdjacentGridZoom(current, direction);
-         });
-      },
-      [collapseAllDays, expandAllDays, viewMode]
-   );
-
-   const selectToolbarAction = useCallback(
-      (actionNumber: number) => {
-         if (viewMode === "agenda") {
-            if (actionNumber === 1) {
-               expandAllDays();
-            } else if (actionNumber === 2) {
-               collapseAllDays();
-            }
-            return;
-         }
-
-         const nextZoom = GRID_ZOOM_ORDER[actionNumber - 1];
-         if (nextZoom) {
-            setGridZoom(nextZoom);
-         }
-      },
-      [collapseAllDays, expandAllDays, viewMode]
-   );
-
    useAppKeyboardShortcuts({
       enabled: !isSettingsOpen && selectedClass === null,
       viewMode,
@@ -331,9 +307,10 @@ export default function App() {
       goNextWeek,
       goCurrentWeek: handleCurrentWeek,
       changeViewMode,
+      changeGridZoom: setGridZoom,
+      expandAllAgenda: expandAllDays,
+      collapseAllAgenda: collapseAllDays,
       openSettings,
-      moveToolbarAction,
-      selectToolbarAction,
       goToWeek: (targetOffset, transitionDirection) => {
          if (isWeekNavigable(targetOffset)) updateWeekOffset(targetOffset, transitionDirection);
       },

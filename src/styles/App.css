@@ -112,18 +112,6 @@
    will-change: opacity, transform;
 }
 
-.view-enter[data-week-transition="previous"] {
-   animation-name: view-enter-from-left;
-   animation-duration: 500ms;
-   animation-timing-function: cubic-bezier(0.18, 1, 0.32, 1);
-}
-
-.view-enter[data-week-transition="next"] {
-   animation-name: view-enter-from-right;
-   animation-duration: 500ms;
-   animation-timing-function: cubic-bezier(0.18, 1, 0.32, 1);
-}
-
 .view-enter[data-week-transition="settled"] {
    animation: none;
 }
@@ -140,7 +128,7 @@
    }
 }
 
-@keyframes view-enter-from-left {
+@keyframes roster-week-in-left {
    0% {
       opacity: 0;
       transform: translateX(-32px) translateY(4px) rotate(-1.6deg) scale(0.975);
@@ -156,7 +144,7 @@
    }
 }
 
-@keyframes view-enter-from-right {
+@keyframes roster-week-in-right {
    0% {
       opacity: 0;
       transform: translateX(32px) translateY(4px) rotate(1.6deg) scale(0.975);
@@ -173,8 +161,15 @@
 }
 
 @supports (view-transition-name: roster-week) {
-   .view-enter[data-week-transition="previous"],
-   .view-enter[data-week-transition="next"] {
+   html {
+      view-transition-name: none;
+   }
+
+   ::view-transition {
+      pointer-events: none;
+   }
+
+   html[data-week-transition] .view-enter {
       animation: none;
    }
 
@@ -205,7 +200,7 @@
    }
 
    html[data-week-transition^="previous-"]::view-transition-new(roster-week) {
-      animation: view-enter-from-left 500ms cubic-bezier(0.18, 1, 0.32, 1) both;
+      animation: roster-week-in-left 500ms cubic-bezier(0.18, 1, 0.32, 1) both;
    }
 
    html[data-week-transition^="next-"]::view-transition-old(roster-week) {
@@ -213,7 +208,7 @@
    }
 
    html[data-week-transition^="next-"]::view-transition-new(roster-week) {
-      animation: view-enter-from-right 500ms cubic-bezier(0.18, 1, 0.32, 1) both;
+      animation: roster-week-in-right 500ms cubic-bezier(0.18, 1, 0.32, 1) both;
    }
 }
 

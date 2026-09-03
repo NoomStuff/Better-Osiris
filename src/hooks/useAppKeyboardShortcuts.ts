@@ -1,5 +1,5 @@
 import { APP_SHORTCUTS } from "../lib/appShortcuts";
-import { getAdjacentGridZoom, getToolbarActionActivationId } from "../lib/appView";
+import { getAdjacentGridZoom, getToolbarActionActivationId, GRID_ZOOM_ORDER } from "../lib/appView";
 import { ROSTER_BATCH_SIZE } from "../lib/weekPolicy";
 import { MAX_WEEK_OFFSET, MIN_WEEK_OFFSET } from "../../shared/weeks";
 import type { GridZoom, ViewMode } from "../types/weeks";
@@ -19,15 +19,19 @@ interface AppKeyboardShortcutOptions {
    goNextWeek: () => void;
    goCurrentWeek: () => void;
    changeViewMode: (viewMode: ViewMode) => void;
+   changeGridZoom: (zoom: GridZoom) => void;
+   expandAllAgenda: () => void;
+   collapseAllAgenda: () => void;
    openSettings: () => void;
-   moveToolbarAction: (direction: -1 | 1) => void;
-   selectToolbarAction: (actionNumber: number) => void;
    goToWeek: (offset: number, transitionDirection?: "previous" | "next") => void;
 }
 
 export function useAppKeyboardShortcuts(options: AppKeyboardShortcutOptions) {
    const previousBatchOffset = Math.max(MIN_WEEK_OFFSET, options.weekOffset - ROSTER_BATCH_SIZE);
    const nextBatchOffset = Math.min(MAX_WEEK_OFFSET, options.weekOffset + ROSTER_BATCH_SIZE);
+   const previousToolbarAction =
+      options.viewMode === "agenda" ? options.expandAllAgenda : () => options.changeGridZoom(getAdjacentGridZoom(options.gridZoom, -1));
+   const nextToolbarAction = options.viewMode === "agenda" ? options.collapseAllAgenda : () => options.changeGridZoom(getAdjacentGridZoom(options.gridZoom, 1));
    const shortcuts: KeyboardShortcut[] = [
       {
          id: "previous-week",
@@ -88,13 +92,13 @@ export function useAppKeyboardShortcuts(options: AppKeyboardShortcutOptions) {
          id: "previous-toolbar-action",
          ...APP_SHORTCUTS.previousToolbarAction,
          activationTargetId: options.viewMode === "agenda" ? "agenda-expand" : `zoom-${getAdjacentGridZoom(options.gridZoom, -1)}`,
-         onPress: () => options.moveToolbarAction(-1),
+         onPress: previousToolbarAction,
       },
       {
          id: "next-toolbar-action",
          ...APP_SHORTCUTS.nextToolbarAction,
          activationTargetId: options.viewMode === "agenda" ? "agenda-close" : `zoom-${getAdjacentGridZoom(options.gridZoom, 1)}`,
-         onPress: () => options.moveToolbarAction(1),
+         onPress: nextToolbarAction,
       },
       ...FUTURE_WEEK_KEYS.map<KeyboardShortcut>((key) => ({
          id: `future-week-${key}`,
@@ -107,7 +111,16 @@ export function useAppKeyboardShortcuts(options: AppKeyboardShortcutOptions) {
          ctrlKey: true,
          key,
          activationTargetId: getToolbarActionActivationId(options.viewMode, Number(key)),
-         onPress: () => options.selectToolbarAction(Number(key)),
+         onPress: () => {
+            if (options.viewMode === "agenda") {
+               if (key === "1") options.expandAllAgenda();
+               if (key === "2") options.collapseAllAgenda();
+               return;
+            }
+
+            const zoom = GRID_ZOOM_ORDER[Number(key) - 1];
+            if (zoom) options.changeGridZoom(zoom);
+         },
       })),
    ];
 

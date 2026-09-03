@@ -7,8 +7,7 @@ html[data-theme="ember"] {
       radial-gradient(ellipse at 52% 114%, rgba(255, 122, 42, 0.4), transparent 46%),
       radial-gradient(ellipse at 12% 106%, rgba(199, 44, 21, 0.32), transparent 42%),
       radial-gradient(ellipse at 88% 102%, rgba(255, 84, 34, 0.16), transparent 36%),
-      radial-gradient(ellipse at 50% -18%, rgba(255, 130, 60, 0.1), transparent 38%),
-      linear-gradient(180deg, #150506 0%, #25090a 46%, #3d1008 100%);
+      radial-gradient(ellipse at 50% -18%, rgba(255, 130, 60, 0.1), transparent 38%), linear-gradient(180deg, #150506 0%, #25090a 46%, #3d1008 100%);
 
    --line: rgba(235, 170, 132, 0.14);
    --line-strong: rgba(255, 120, 66, 0.34);
