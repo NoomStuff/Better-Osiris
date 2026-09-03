@@ -268,6 +268,10 @@
 }
 
 @media (max-width: 640px) {
+   :root {
+      --mobile-toolbar-clearance: calc(130px + env(safe-area-inset-bottom));
+   }
+
    html,
    body {
       min-height: 0;
@@ -275,7 +279,6 @@
 
    #app {
       --app-padding: 10px;
-      --mobile-toolbar-clearance: calc(130px + env(safe-area-inset-bottom));
       min-height: var(--stable-vh, 100dvh);
       padding-bottom: var(--mobile-toolbar-clearance);
    }
@@ -332,17 +335,13 @@
    }
 
    .app-content-frame--grid {
-      height: max(
-         var(--grid-min-height, 520px),
-         calc(var(--stable-vh, 100vh) - var(--chrome-height) - (var(--app-padding) * 2) - env(safe-area-inset-bottom) - 1px)
-      );
+      height: calc(var(--stable-vh, 100vh) - var(--mobile-toolbar-clearance) - var(--app-padding) - 8px);
    }
 
-   /* The View Transition pseudo-layer sits above fixed page chrome. Keep its moving
-      snapshots inside the roster frame so the live toolbar remains visible and tappable. */
-   ::view-transition-group(roster-week) {
-      overflow: clip;
-      border-radius: 18px;
+   /* View Transitions render in the top layer, above fixed elements regardless of z-index.
+      Clip that layer before the toolbar so the live controls remain visible and tappable. */
+   ::view-transition {
+      clip-path: inset(0 0 var(--mobile-toolbar-clearance) 0);
    }
 
    .app-content-frame--grid.app-content-frame--zoom-half {

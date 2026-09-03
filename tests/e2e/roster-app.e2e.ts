@@ -248,6 +248,7 @@ test("mobile grid fits its viewport and week buttons remain repeatable", async (
       .poll(() => page.evaluate(() => document.getAnimations().map((animation) => (animation instanceof CSSAnimation ? animation.animationName : ""))))
       .toEqual(expect.arrayContaining(["roster-week-out-left", "roster-week-in-right"]));
    await expect.poll(() => page.evaluate(() => getComputedStyle(document.documentElement, "::view-transition").pointerEvents)).toBe("none");
+   await expect.poll(() => page.evaluate(() => getComputedStyle(document.documentElement, "::view-transition").clipPath)).not.toBe("none");
    await expect
       .poll(() =>
          page.evaluate(() => {
@@ -256,6 +257,28 @@ test("mobile grid fits its viewport and week buttons remain repeatable", async (
          })
       )
       .toBe("none");
+});
+
+test("one-hour grid shrinks below its row minimum on compact mobile viewports", async ({ page }) => {
+   await page.setViewportSize({ width: 375, height: 600 });
+   await page.addInitScript(() => {
+      window.localStorage.setItem("roster-view-mode", "grid");
+   });
+   await page.goto("/");
+
+   await expect(page.locator(".grid-shell")).toBeVisible();
+   const metrics = await page.evaluate(() => {
+      const frame = document.querySelector<HTMLElement>(".app-content-frame--grid");
+      return {
+         viewportHeight: window.visualViewport?.height ?? window.innerHeight,
+         pageHeight: document.documentElement.scrollHeight,
+         frameHeight: frame?.getBoundingClientRect().height ?? 0,
+         rowMinimum: Number.parseFloat(frame ? getComputedStyle(frame).getPropertyValue("--grid-min-height") : "0"),
+      };
+   });
+
+   expect(metrics.frameHeight).toBeLessThan(metrics.rowMinimum);
+   expect(metrics.pageHeight).toBeLessThanOrEqual(Math.ceil(metrics.viewportHeight));
 });
 
 test("reloads cleanly when the server changes the roster time zone", async ({ page }) => {
