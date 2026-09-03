@@ -90,7 +90,7 @@ test("holding a week arrow keeps advancing through the roster", async ({ page })
    await expect(page.locator(".weekbar__label")).toHaveText("Next week");
    await expect
       .poll(() => page.evaluate(() => document.getAnimations().map((animation) => (animation instanceof CSSAnimation ? animation.animationName : ""))))
-      .toEqual(expect.arrayContaining(["view-enter"]));
+      .toEqual(expect.arrayContaining(["view-enter-from-right"]));
    // The label moves on every repeat, so assert the distance travelled instead of a transient value.
    await expect
       .poll(async () => {
@@ -130,7 +130,7 @@ test("week buttons accept another click before their transition finishes", async
    }
    await expect
       .poll(() => page.evaluate(() => document.getAnimations().map((animation) => (animation instanceof CSSAnimation ? animation.animationName : ""))))
-      .toEqual(expect.arrayContaining(["view-enter"]));
+      .toEqual(expect.arrayContaining(["view-enter-from-right"]));
 
    const previousWeek = page.getByRole("button", { name: "Previous week", exact: true });
    for (const label of ["In 2 weeks", "Next week", "This week"]) {
@@ -146,13 +146,13 @@ test("week swipe plays the same content transition", async ({ page }) => {
    await expect(page.locator(".weekbar__label")).toHaveText("Next week");
    await expect
       .poll(() => page.evaluate(() => document.getAnimations().map((animation) => (animation instanceof CSSAnimation ? animation.animationName : ""))))
-      .toEqual(expect.arrayContaining(["view-enter"]));
+      .toEqual(expect.arrayContaining(["view-enter-from-right"]));
 
    await swipeWeek(page, "previous");
    await expect(page.locator(".weekbar__label")).toHaveText("This week");
    await expect
       .poll(() => page.evaluate(() => document.getAnimations().map((animation) => (animation instanceof CSSAnimation ? animation.animationName : ""))))
-      .toEqual(expect.arrayContaining(["view-enter"]));
+      .toEqual(expect.arrayContaining(["view-enter-from-left"]));
 });
 
 test("shift and an arrow moves by one roster batch", async ({ page }) => {
@@ -251,7 +251,7 @@ test("mobile grid fits its viewport and week buttons remain repeatable", async (
 
    await expect
       .poll(() => page.evaluate(() => document.getAnimations().map((animation) => (animation instanceof CSSAnimation ? animation.animationName : ""))))
-      .toEqual(expect.arrayContaining(["view-enter"]));
+      .toEqual(expect.arrayContaining(["view-enter-from-right"]));
 });
 
 test("one-hour grid shrinks below its row minimum on compact mobile viewports", async ({ page }) => {
