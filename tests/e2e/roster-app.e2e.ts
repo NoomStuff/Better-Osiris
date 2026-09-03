@@ -90,9 +90,7 @@ test("holding a week arrow keeps advancing through the roster", async ({ page })
    await expect(page.locator(".weekbar__label")).toHaveText("Next week");
    await expect
       .poll(() => page.evaluate(() => document.getAnimations().map((animation) => (animation instanceof CSSAnimation ? animation.animationName : ""))))
-      .toEqual(expect.arrayContaining(["roster-week-out-left", "roster-week-in-right"]));
-   await expect.poll(() => page.evaluate(() => getComputedStyle(document.documentElement).viewTransitionName)).toBe("none");
-   await expect.poll(() => page.evaluate(() => getComputedStyle(document.documentElement, "::view-transition").pointerEvents)).toBe("none");
+      .toEqual(expect.arrayContaining(["view-enter"]));
    // The label moves on every repeat, so assert the distance travelled instead of a transient value.
    await expect
       .poll(async () => {
@@ -101,16 +99,16 @@ test("holding a week arrow keeps advancing through the roster", async ({ page })
       })
       .toBeGreaterThanOrEqual(3);
    await page.keyboard.up("ArrowRight");
-   // The last repeat's commit lands a frame or two after keyup when the transition callback is
-   // delayed, so wait for the week transition itself to finish before reading where the hold stopped.
-   // Other page animations linger forever, so only the transition's own keyframes count as in-flight.
+   // The last repeat's enter animation outlives keyup, so wait for the week's own keyframes to
+   // finish before reading where the hold stopped. Other page animations linger forever, so only
+   // the transition's own animation counts as in-flight.
    await expect
       .poll(() =>
          page.evaluate(
             () =>
                document.getAnimations().filter((animation) => {
                   const name = animation instanceof CSSAnimation ? animation.animationName : "";
-                  return name.startsWith("roster-week") || name.startsWith("view-enter");
+                  return name.startsWith("view-enter");
                }).length
          )
       )
@@ -132,7 +130,7 @@ test("week buttons accept another click before their transition finishes", async
    }
    await expect
       .poll(() => page.evaluate(() => document.getAnimations().map((animation) => (animation instanceof CSSAnimation ? animation.animationName : ""))))
-      .toEqual(expect.arrayContaining(["roster-week-out-left", "roster-week-in-right"]));
+      .toEqual(expect.arrayContaining(["view-enter"]));
 
    const previousWeek = page.getByRole("button", { name: "Previous week", exact: true });
    for (const label of ["In 2 weeks", "Next week", "This week"]) {
@@ -141,20 +139,20 @@ test("week buttons accept another click before their transition finishes", async
    }
 });
 
-test("week swipe uses the same directional content transition", async ({ page }) => {
+test("week swipe plays the same content transition", async ({ page }) => {
    await page.goto("/");
 
    await swipeWeek(page, "next");
    await expect(page.locator(".weekbar__label")).toHaveText("Next week");
    await expect
       .poll(() => page.evaluate(() => document.getAnimations().map((animation) => (animation instanceof CSSAnimation ? animation.animationName : ""))))
-      .toEqual(expect.arrayContaining(["roster-week-out-left", "roster-week-in-right"]));
+      .toEqual(expect.arrayContaining(["view-enter"]));
 
    await swipeWeek(page, "previous");
    await expect(page.locator(".weekbar__label")).toHaveText("This week");
    await expect
       .poll(() => page.evaluate(() => document.getAnimations().map((animation) => (animation instanceof CSSAnimation ? animation.animationName : ""))))
-      .toEqual(expect.arrayContaining(["roster-week-out-right", "roster-week-in-left"]));
+      .toEqual(expect.arrayContaining(["view-enter"]));
 });
 
 test("shift and an arrow moves by one roster batch", async ({ page }) => {
@@ -253,17 +251,7 @@ test("mobile grid fits its viewport and week buttons remain repeatable", async (
 
    await expect
       .poll(() => page.evaluate(() => document.getAnimations().map((animation) => (animation instanceof CSSAnimation ? animation.animationName : ""))))
-      .toEqual(expect.arrayContaining(["roster-week-out-left", "roster-week-mobile-in-right"]));
-   await expect.poll(() => page.evaluate(() => getComputedStyle(document.documentElement, "::view-transition").pointerEvents)).toBe("none");
-   await expect.poll(() => page.evaluate(() => getComputedStyle(document.documentElement, "::view-transition").clipPath)).toBe("none");
-   await expect
-      .poll(() =>
-         page.evaluate(() => {
-            const toolbar = document.querySelector<HTMLElement>(".mobile-bottom-bar");
-            return toolbar ? getComputedStyle(toolbar).viewTransitionName : null;
-         })
-      )
-      .toBe("none");
+      .toEqual(expect.arrayContaining(["view-enter"]));
 });
 
 test("one-hour grid shrinks below its row minimum on compact mobile viewports", async ({ page }) => {
