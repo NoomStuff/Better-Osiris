@@ -292,7 +292,6 @@
       background: var(--chrome-surface);
       box-shadow: var(--shadow);
       backdrop-filter: blur(18px);
-      view-transition-name: mobile-toolbar;
       /* Undocked the bar floats a little narrower over the content; docked it spans the page.
          The width snaps with the app's overshoot bounce; the coat fades smoothly. */
       margin-inline: 10px;
@@ -335,30 +334,14 @@
       height: calc(100dvh - var(--mobile-toolbar-clearance) - var(--app-padding) - 8px);
    }
 
-   ::view-transition-group(roster-week) {
-      z-index: 1;
+   /* A normal fixed toolbar cannot out-rank the View Transition top layer. Keep the
+      mobile snapshots above their own bottom edge instead, leaving the toolbar live. */
+   html[data-week-transition^="previous-"]::view-transition-new(roster-week) {
+      animation-name: roster-week-mobile-in-left;
    }
 
-   /* The static toolbar snapshot paints above the moving roster. The transition layer
-      ignores pointer input, so taps still reach the live fixed controls underneath. */
-   ::view-transition-group(mobile-toolbar) {
-      z-index: 2;
-      animation: none;
-      pointer-events: none;
-   }
-
-   ::view-transition-image-pair(mobile-toolbar),
-   ::view-transition-old(mobile-toolbar),
-   ::view-transition-new(mobile-toolbar) {
-      pointer-events: none;
-   }
-
-   ::view-transition-old(mobile-toolbar) {
-      display: none;
-   }
-
-   ::view-transition-new(mobile-toolbar) {
-      animation: none;
+   html[data-week-transition^="next-"]::view-transition-new(roster-week) {
+      animation-name: roster-week-mobile-in-right;
    }
 
    .app-content-frame--grid.app-content-frame--zoom-half {
@@ -373,5 +356,37 @@
          var(--grid-min-height, 2080px),
          calc(var(--stable-vh-quad, 400vh) - (var(--chrome-height) * 4) - (var(--app-padding) * 2) - env(safe-area-inset-bottom))
       );
+   }
+
+   @keyframes roster-week-mobile-in-left {
+      0% {
+         opacity: 0;
+         transform: translateX(-32px) scale(0.975);
+      }
+
+      50% {
+         opacity: 1;
+      }
+
+      100% {
+         opacity: 1;
+         transform: translateX(0) scale(1);
+      }
+   }
+
+   @keyframes roster-week-mobile-in-right {
+      0% {
+         opacity: 0;
+         transform: translateX(32px) scale(0.975);
+      }
+
+      50% {
+         opacity: 1;
+      }
+
+      100% {
+         opacity: 1;
+         transform: translateX(0) scale(1);
+      }
    }
 }

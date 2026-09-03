@@ -212,7 +212,8 @@ body,
 
 html {
    overflow-x: clip;
-   background: var(--page-canvas);
+   background: var(--page-background);
+   background-attachment: fixed;
 }
 
 body,

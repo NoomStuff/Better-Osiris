@@ -230,6 +230,13 @@ test("mobile grid fits its viewport and week buttons remain repeatable", async (
    await expect(page.locator(".grid-shell")).toBeVisible();
    await expect(page.locator(".overlay-scrollbar")).toHaveCount(0);
 
+   const pageBackgrounds = await page.evaluate(() => ({
+      root: getComputedStyle(document.documentElement).backgroundImage,
+      backdrop: getComputedStyle(document.body, "::before").backgroundImage,
+   }));
+   expect(pageBackgrounds.root).not.toBe("none");
+   expect(pageBackgrounds.root).toBe(pageBackgrounds.backdrop);
+
    const viewportMetrics = await page.evaluate(() => ({
       viewportHeight: window.visualViewport?.height ?? window.innerHeight,
       pageHeight: document.documentElement.scrollHeight,
@@ -246,7 +253,7 @@ test("mobile grid fits its viewport and week buttons remain repeatable", async (
 
    await expect
       .poll(() => page.evaluate(() => document.getAnimations().map((animation) => (animation instanceof CSSAnimation ? animation.animationName : ""))))
-      .toEqual(expect.arrayContaining(["roster-week-out-left", "roster-week-in-right"]));
+      .toEqual(expect.arrayContaining(["roster-week-out-left", "roster-week-mobile-in-right"]));
    await expect.poll(() => page.evaluate(() => getComputedStyle(document.documentElement, "::view-transition").pointerEvents)).toBe("none");
    await expect.poll(() => page.evaluate(() => getComputedStyle(document.documentElement, "::view-transition").clipPath)).toBe("none");
    await expect
@@ -256,15 +263,7 @@ test("mobile grid fits its viewport and week buttons remain repeatable", async (
             return toolbar ? getComputedStyle(toolbar).viewTransitionName : null;
          })
       )
-      .toBe("mobile-toolbar");
-   await expect
-      .poll(() =>
-         page.evaluate(() => ({
-            roster: Number(getComputedStyle(document.documentElement, "::view-transition-group(roster-week)").zIndex),
-            toolbar: Number(getComputedStyle(document.documentElement, "::view-transition-group(mobile-toolbar)").zIndex),
-         }))
-      )
-      .toEqual({ roster: 1, toolbar: 2 });
+      .toBe("none");
 });
 
 test("one-hour grid shrinks below its row minimum on compact mobile viewports", async ({ page }) => {
