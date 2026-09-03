@@ -59,7 +59,6 @@ To self-host instead, set the environment variables, run `bun run build`, then `
 | --------------------------- | --------------------------------------------------------------------------------------------------------------------- |
 | `COOKIE_SECRET`*            | Long random value used to encrypt bearer tokens in browser cookies.                                                   |
 | `OSIRIS_ROSTER_URL`*        | Full weekly roster endpoint, such as `https://mborijnland.osiris-student.nl/student/osiris/student/rooster/per_week`. |
-| `SCHOOL_NAME`               | Optional label shown above "Better Osiris".                                                                           |
 | `BEARER_TOKEN`              | Shared fallback token. Leave this unset on a public deployment so every user supplies their own token.                |
 | `ALLOW_SHARED_BEARER_TOKEN` | Must be `true` to acknowledge use of `BEARER_TOKEN` in production.                                                    |
 
@@ -72,5 +71,5 @@ To self-host instead, set the environment variables, run `bun run build`, then `
 | `bun run dev`   | Start the frontend and API in watch mode |
 | `bun run build` | Type-check and build the production app  |
 | `bun run start` | Serve the built app                      |
-| `bun run test`  | Run all tests                            |
-| `bun run lint`  | Run ESLint                               |
+| `bun run format`| Format code                              |
+| `bun run verify`| Run all tests & checks                   |
