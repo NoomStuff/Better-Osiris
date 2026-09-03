@@ -69,7 +69,6 @@
 
 .app-content-frame {
    position: relative;
-   view-transition-name: roster-week;
    border-radius: 24px;
    border: 2px solid var(--line);
    background: linear-gradient(180deg, rgba(var(--highlight-rgb), 0.02), rgba(var(--highlight-rgb), 0.012)), rgba(var(--surface-rgb), var(--frame-veil));
@@ -107,9 +106,21 @@
 }
 
 .view-enter {
-   animation: view-enter 500ms cubic-bezier(0.22, 1, 0.36, 1) both;
+   animation: view-enter 400ms cubic-bezier(0.22, 1, 0.36, 1) both;
    transform-origin: center bottom;
    will-change: opacity, transform;
+}
+
+.view-enter[data-week-transition="previous"] {
+   animation-name: view-enter-from-left;
+   animation-duration: 400ms;
+   animation-timing-function: cubic-bezier(0.18, 1, 0.32, 1);
+}
+
+.view-enter[data-week-transition="next"] {
+   animation-name: view-enter-from-right;
+   animation-duration: 400ms;
+   animation-timing-function: cubic-bezier(0.18, 1, 0.32, 1);
 }
 
 .view-enter[data-week-transition="settled"] {
@@ -128,134 +139,33 @@
    }
 }
 
-@keyframes roster-week-in-left {
-   0% {
+@keyframes view-enter-from-left {
+   from {
       opacity: 0;
-      transform: translateX(-32px) translateY(4px) rotate(-1.6deg) scale(0.975);
+      transform: translateX(-20px) translateY(4px) rotate(-1.6deg) scale(0.985);
    }
 
-   50% {
-      opacity: 1;
-   }
-
-   100% {
+   to {
       opacity: 1;
       transform: translateX(0) translateY(0) rotate(0deg) scale(1);
    }
 }
 
-@keyframes roster-week-in-right {
-   0% {
+@keyframes view-enter-from-right {
+   from {
       opacity: 0;
-      transform: translateX(32px) translateY(4px) rotate(1.6deg) scale(0.975);
+      transform: translateX(20px) translateY(4px) rotate(1.6deg) scale(0.985);
    }
 
-   50% {
-      opacity: 1;
-   }
-
-   100% {
+   to {
       opacity: 1;
       transform: translateX(0) translateY(0) rotate(0deg) scale(1);
-   }
-}
-
-@supports (view-transition-name: roster-week) {
-   html {
-      view-transition-name: none;
-   }
-
-   ::view-transition {
-      pointer-events: none;
-   }
-
-   html[data-week-transition] .view-enter {
-      animation: none;
-   }
-
-   /* One gesture, two depths: the incoming week slides on top while the outgoing week recedes
-      underneath it. The old snapshot holds full opacity until the new one nearly covers it, then
-      fades away inside the covered window, so the crossfade never bleeds the page through and the
-      teardown never cuts a visible ghost. */
-   ::view-transition-group(roster-week) {
-      animation-duration: 400ms;
-      animation-timing-function: cubic-bezier(0.18, 1, 0.32, 1);
-   }
-
-   ::view-transition-old(roster-week),
-   ::view-transition-new(roster-week) {
-      transform-origin: center bottom;
-   }
-
-   ::view-transition-old(roster-week) {
-      z-index: 0;
-   }
-
-   ::view-transition-new(roster-week) {
-      z-index: 1;
-   }
-
-   html[data-week-transition^="previous-"]::view-transition-old(roster-week) {
-      animation: roster-week-out-right 500ms cubic-bezier(0.18, 1, 0.32, 1) both;
-   }
-
-   html[data-week-transition^="previous-"]::view-transition-new(roster-week) {
-      animation: roster-week-in-left 500ms cubic-bezier(0.18, 1, 0.32, 1) both;
-   }
-
-   html[data-week-transition^="next-"]::view-transition-old(roster-week) {
-      animation: roster-week-out-left 500ms cubic-bezier(0.18, 1, 0.32, 1) both;
-   }
-
-   html[data-week-transition^="next-"]::view-transition-new(roster-week) {
-      animation: roster-week-in-right 500ms cubic-bezier(0.18, 1, 0.32, 1) both;
-   }
-}
-
-@keyframes roster-week-out-left {
-   0% {
-      opacity: 1;
-      filter: brightness(1) saturate(1);
-      transform: none;
-   }
-
-   25% {
-      opacity: 1;
-      filter: brightness(0.8) saturate(0.9) blur(2px);
-   }
-
-   100% {
-      opacity: 0;
-      filter: brightness(0.6) saturate(0.8) blur(8px);
-      transform: translateX(-48px) translateY(-64px) rotate(-0.8deg) scale(0.95);
-   }
-}
-
-@keyframes roster-week-out-right {
-   0% {
-      opacity: 1;
-      filter: brightness(1) saturate(1);
-      transform: none;
-   }
-
-   25% {
-      opacity: 1;
-      filter: brightness(0.8) saturate(0.9) blur(2px);
-   }
-
-   100% {
-      opacity: 0;
-      filter: brightness(0.6) saturate(0.8) blur(8px);
-      transform: translateX(48px) translateY(-64px) rotate(0.8deg) scale(0.95);
    }
 }
 
 @media (prefers-reduced-motion: reduce) {
    .view-enter,
-   .app-content-frame--grid,
-   ::view-transition-group(roster-week),
-   ::view-transition-old(roster-week),
-   ::view-transition-new(roster-week) {
+   .app-content-frame--grid {
       animation: none;
       transition: none;
    }
@@ -268,9 +178,13 @@
 }
 
 @media (max-width: 640px) {
+   :root {
+      --mobile-toolbar-clearance: calc(130px + env(safe-area-inset-bottom));
+   }
+
    #app {
       --app-padding: 10px;
-      padding-bottom: calc(130px + env(safe-area-inset-bottom));
+      padding-bottom: var(--mobile-toolbar-clearance);
    }
 
    .mobile-bottom-bar {
@@ -321,11 +235,13 @@
    }
 
    .app-content-frame--agenda[data-blank-week-underlay="true"] {
-      max-height: calc(var(--stable-vh, 100vh) - var(--chrome-height) - (var(--app-padding) * 2) - env(safe-area-inset-bottom));
+      max-height: calc(var(--stable-vh, 100vh) - var(--mobile-toolbar-clearance) - var(--app-padding) - 8px);
+      max-height: calc(100dvh - var(--mobile-toolbar-clearance) - var(--app-padding) - 8px);
    }
 
    .app-content-frame--grid {
-      height: max(var(--grid-min-height, 520px), calc(var(--stable-vh, 100vh) - var(--chrome-height) - (var(--app-padding) * 2) - env(safe-area-inset-bottom)));
+      height: calc(var(--stable-vh, 100vh) - var(--mobile-toolbar-clearance) - var(--app-padding) - 8px);
+      height: calc(100dvh - var(--mobile-toolbar-clearance) - var(--app-padding) - 8px);
    }
 
    .app-content-frame--grid.app-content-frame--zoom-half {

@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type AnimationEvent, type CSSProperties } from "react";
-import { flushSync } from "react-dom";
 import { AgendaView } from "./components/AgendaView";
 import { AppToolbar } from "./components/AppToolbar";
 import { GridView } from "./components/GridView";
@@ -55,8 +54,6 @@ export default function App() {
    const [agendaFoldingMode, setAgendaFoldingMode] = useAgendaFoldingPreference();
    const appContentRef = useRef<HTMLElement>(null);
    const weekOffsetRef = useRef(0);
-   const weekTransitionIdRef = useRef(0);
-   const activeWeekTransitionRef = useRef<ViewTransition | null>(null);
    const isBarDocked = useDockedMobileBar(appContentRef);
    const [gridZoom, setGridZoom] = useState<GridZoom>("hour");
    const [selectedClassId, setSelectedClassId] = useState<string | null>(null);
@@ -169,41 +166,14 @@ export default function App() {
          }
 
          weekOffsetRef.current = next;
-         const navigationId = ++weekTransitionIdRef.current;
-
-         const commitWeek = () => {
-            if (weekTransitionIdRef.current !== navigationId) {
-               return;
-            }
-
-            setWeekTransitionDirection(transitionDirection);
-            setWeekOffset(next);
-            setSelectedClassId(null);
-            resetAgenda();
-         };
-
-         activeWeekTransitionRef.current?.skipTransition();
-         const canAnimateSwap = typeof Reflect.get(document, "startViewTransition") === "function";
-         if ((transitionDirection === "previous" || transitionDirection === "next") && canAnimateSwap) {
-            const transitionToken = `${transitionDirection}-${navigationId}`;
-            document.documentElement.dataset["weekTransition"] = transitionToken;
-            const transition = document.startViewTransition(() => flushSync(commitWeek));
-            activeWeekTransitionRef.current = transition;
-            void transition.ready.catch(() => undefined);
-            const clearTransitionToken = () => {
-               if (activeWeekTransitionRef.current === transition) {
-                  activeWeekTransitionRef.current = null;
-               }
-               if (document.documentElement.dataset["weekTransition"] === transitionToken) {
-                  delete document.documentElement.dataset["weekTransition"];
-                  setWeekTransitionDirection("settled");
-               }
-            };
-            void transition.finished.then(clearTransitionToken, clearTransitionToken);
-            return;
-         }
-
-         commitWeek();
+         /* Week changes play the .view-enter animation on the frame itself, under the toolbar. The
+            View Transition snapshot system is parked: its top layer covered the mobile toolbar on
+            every real browser and no layering or containment trick fixed it. Restoring the
+            startViewTransition branch from git history brings the overlap back with it. */
+         setWeekTransitionDirection(transitionDirection);
+         setWeekOffset(next);
+         setSelectedClassId(null);
+         resetAgenda();
       },
       [resetAgenda]
    );

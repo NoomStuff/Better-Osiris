@@ -13,6 +13,13 @@ interface ScrollMetrics {
    strip translated along with the scroll position, so the geometry stays trivial even for
    the page itself. */
 export function attachOverlayScrollbar(host: HTMLElement): () => void {
+   // Mobile browsers already provide an overlay scrollbar that understands rubber-band
+   // scrolling and browser chrome. Adding a translated page child there changes the page's
+   // scrollable bounds and makes fixed controls jitter during overscroll.
+   if (window.matchMedia("(max-width: 640px), (hover: none), (pointer: coarse)").matches) {
+      return () => undefined;
+   }
+
    const isPageHost = host === document.body || host === document.documentElement;
    host.classList.add("overlay-scrollbar-host");
    if (isPageHost) {

@@ -212,7 +212,8 @@ body,
 
 html {
    overflow-x: clip;
-   background: var(--page-canvas);
+   background: var(--page-background);
+   background-attachment: fixed;
 }
 
 body,
@@ -354,6 +355,12 @@ button {
 }
 
 @media (max-width: 640px) {
+   html,
+   body,
+   #app {
+      min-height: 0;
+   }
+
    html[data-page-scrollable="false"],
    html[data-page-scrollable="false"] body {
       overflow-y: hidden;

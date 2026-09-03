@@ -90,9 +90,7 @@ test("holding a week arrow keeps advancing through the roster", async ({ page })
    await expect(page.locator(".weekbar__label")).toHaveText("Next week");
    await expect
       .poll(() => page.evaluate(() => document.getAnimations().map((animation) => (animation instanceof CSSAnimation ? animation.animationName : ""))))
-      .toEqual(expect.arrayContaining(["roster-week-out-left", "roster-week-in-right"]));
-   await expect.poll(() => page.evaluate(() => getComputedStyle(document.documentElement).viewTransitionName)).toBe("none");
-   await expect.poll(() => page.evaluate(() => getComputedStyle(document.documentElement, "::view-transition").pointerEvents)).toBe("none");
+      .toEqual(expect.arrayContaining(["view-enter-from-right"]));
    // The label moves on every repeat, so assert the distance travelled instead of a transient value.
    await expect
       .poll(async () => {
@@ -101,16 +99,16 @@ test("holding a week arrow keeps advancing through the roster", async ({ page })
       })
       .toBeGreaterThanOrEqual(3);
    await page.keyboard.up("ArrowRight");
-   // The last repeat's commit lands a frame or two after keyup when the transition callback is
-   // delayed, so wait for the week transition itself to finish before reading where the hold stopped.
-   // Other page animations linger forever, so only the transition's own keyframes count as in-flight.
+   // The last repeat's enter animation outlives keyup, so wait for the week's own keyframes to
+   // finish before reading where the hold stopped. Other page animations linger forever, so only
+   // the transition's own animation counts as in-flight.
    await expect
       .poll(() =>
          page.evaluate(
             () =>
                document.getAnimations().filter((animation) => {
                   const name = animation instanceof CSSAnimation ? animation.animationName : "";
-                  return name.startsWith("roster-week") || name.startsWith("view-enter");
+                  return name.startsWith("view-enter");
                }).length
          )
       )
@@ -132,7 +130,7 @@ test("week buttons accept another click before their transition finishes", async
    }
    await expect
       .poll(() => page.evaluate(() => document.getAnimations().map((animation) => (animation instanceof CSSAnimation ? animation.animationName : ""))))
-      .toEqual(expect.arrayContaining(["roster-week-out-left", "roster-week-in-right"]));
+      .toEqual(expect.arrayContaining(["view-enter-from-right"]));
 
    const previousWeek = page.getByRole("button", { name: "Previous week", exact: true });
    for (const label of ["In 2 weeks", "Next week", "This week"]) {
@@ -141,20 +139,20 @@ test("week buttons accept another click before their transition finishes", async
    }
 });
 
-test("week swipe uses the same directional content transition", async ({ page }) => {
+test("week swipe plays the same content transition", async ({ page }) => {
    await page.goto("/");
 
    await swipeWeek(page, "next");
    await expect(page.locator(".weekbar__label")).toHaveText("Next week");
    await expect
       .poll(() => page.evaluate(() => document.getAnimations().map((animation) => (animation instanceof CSSAnimation ? animation.animationName : ""))))
-      .toEqual(expect.arrayContaining(["roster-week-out-left", "roster-week-in-right"]));
+      .toEqual(expect.arrayContaining(["view-enter-from-right"]));
 
    await swipeWeek(page, "previous");
    await expect(page.locator(".weekbar__label")).toHaveText("This week");
    await expect
       .poll(() => page.evaluate(() => document.getAnimations().map((animation) => (animation instanceof CSSAnimation ? animation.animationName : ""))))
-      .toEqual(expect.arrayContaining(["roster-week-out-right", "roster-week-in-left"]));
+      .toEqual(expect.arrayContaining(["view-enter-from-left"]));
 });
 
 test("shift and an arrow moves by one roster batch", async ({ page }) => {
@@ -218,6 +216,107 @@ test("keeps a saved roster view over the viewport default", async ({ page }) => 
 
    await expect(page.locator(".grid-shell")).toBeVisible();
    await expect(page.getByRole("button", { name: "Grid view" })).toHaveAttribute("aria-pressed", "true");
+});
+
+test("mobile grid fits its viewport and week buttons remain repeatable", async ({ page }) => {
+   await page.setViewportSize({ width: 390, height: 844 });
+   await page.addInitScript(() => {
+      window.localStorage.setItem("roster-view-mode", "grid");
+   });
+   await page.goto("/");
+
+   await expect(page.locator(".grid-shell")).toBeVisible();
+   await expect(page.locator(".overlay-scrollbar")).toHaveCount(0);
+
+   const pageBackgrounds = await page.evaluate(() => ({
+      root: getComputedStyle(document.documentElement).backgroundImage,
+      backdrop: getComputedStyle(document.body, "::before").backgroundImage,
+   }));
+   expect(pageBackgrounds.root).not.toBe("none");
+   expect(pageBackgrounds.root).toBe(pageBackgrounds.backdrop);
+
+   const viewportMetrics = await page.evaluate(() => ({
+      viewportHeight: window.visualViewport?.height ?? window.innerHeight,
+      pageHeight: document.documentElement.scrollHeight,
+      appHeight: document.getElementById("app")?.getBoundingClientRect().height ?? 0,
+   }));
+   expect(viewportMetrics.pageHeight).toBeLessThanOrEqual(Math.ceil(viewportMetrics.viewportHeight));
+   expect(viewportMetrics.appHeight).toBeCloseTo(viewportMetrics.viewportHeight, 0);
+
+   const nextWeek = page.getByRole("button", { name: "Next week", exact: true });
+   for (const label of ["Next week", "In 2 weeks", "In 3 weeks"]) {
+      await nextWeek.click();
+      await expect(page.locator(".weekbar__label")).toHaveText(label);
+   }
+
+   await expect
+      .poll(() => page.evaluate(() => document.getAnimations().map((animation) => (animation instanceof CSSAnimation ? animation.animationName : ""))))
+      .toEqual(expect.arrayContaining(["view-enter-from-right"]));
+});
+
+test("one-hour grid shrinks below its row minimum on compact mobile viewports", async ({ page }) => {
+   await page.setViewportSize({ width: 375, height: 600 });
+   await page.addInitScript(() => {
+      window.localStorage.setItem("roster-view-mode", "grid");
+   });
+   await page.goto("/");
+
+   await expect(page.locator(".grid-shell")).toBeVisible();
+   const readMetrics = () =>
+      page.evaluate(() => {
+         const app = document.getElementById("app");
+         const frame = document.querySelector<HTMLElement>(".app-content-frame--grid");
+         return {
+            viewportHeight: window.visualViewport?.height ?? window.innerHeight,
+            pageHeight: document.documentElement.scrollHeight,
+            appMinHeight: app ? getComputedStyle(app).minHeight : null,
+            frameHeight: frame?.getBoundingClientRect().height ?? 0,
+            rowMinimum: Number.parseFloat(frame ? getComputedStyle(frame).getPropertyValue("--grid-min-height") : "0"),
+         };
+      });
+
+   const metrics = await readMetrics();
+   expect(metrics.appMinHeight).toBe("0px");
+   expect(metrics.frameHeight).toBeLessThan(metrics.rowMinimum);
+   expect(metrics.pageHeight).toBeLessThanOrEqual(Math.ceil(metrics.viewportHeight));
+
+   await page.evaluate(() => document.documentElement.style.setProperty("--stable-vh", "700px"));
+   const staleViewportMetrics = await readMetrics();
+   expect(staleViewportMetrics.frameHeight).toBe(metrics.frameHeight);
+   expect(staleViewportMetrics.pageHeight).toBeLessThanOrEqual(Math.ceil(staleViewportMetrics.viewportHeight));
+});
+
+test("short mobile agendas do not inherit a stale viewport minimum", async ({ page }) => {
+   await page.setViewportSize({ width: 390, height: 844 });
+   await page.route("**/api/roster/weeks?*", async (route) => {
+      const url = new URL(route.request().url());
+      const offset = Number(url.searchParams.get("offset") ?? "0");
+      const limit = Number(url.searchParams.get("limit") ?? "5");
+      const batch = createRosterBatch(offset, limit);
+
+      await route.fulfill({
+         status: 200,
+         contentType: "application/json",
+         body: JSON.stringify({ ...batch, weeks: batch.weeks.map((week) => ({ ...week, classes: [] })) }),
+      });
+   });
+   await page.goto("/");
+
+   await expect(page.locator(".roster-overlay-state")).toBeVisible();
+   await page.evaluate(() => document.documentElement.style.setProperty("--stable-vh", "1000px"));
+   const metrics = await page.evaluate(() => {
+      const app = document.getElementById("app");
+      return {
+         viewportHeight: window.visualViewport?.height ?? window.innerHeight,
+         pageHeight: document.documentElement.scrollHeight,
+         appMinHeight: app ? getComputedStyle(app).minHeight : null,
+         bodyMinHeight: getComputedStyle(document.body).minHeight,
+      };
+   });
+
+   expect(metrics.appMinHeight).toBe("0px");
+   expect(metrics.bodyMinHeight).toBe("0px");
+   expect(metrics.pageHeight).toBeLessThanOrEqual(Math.ceil(metrics.viewportHeight));
 });
 
 test("reloads cleanly when the server changes the roster time zone", async ({ page }) => {
