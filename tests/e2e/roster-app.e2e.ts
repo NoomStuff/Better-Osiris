@@ -246,8 +246,8 @@ test("mobile grid fits its viewport and week buttons remain repeatable", async (
 
    await expect
       .poll(() => page.evaluate(() => document.getAnimations().map((animation) => (animation instanceof CSSAnimation ? animation.animationName : ""))))
-      .toContain("roster-week-in-right");
-   await expect.poll(() => page.evaluate(() => document.documentElement.dataset["weekTransition"] ?? null)).toBeNull();
+      .toEqual(expect.arrayContaining(["roster-week-out-left", "roster-week-in-right"]));
+   await expect.poll(() => page.evaluate(() => getComputedStyle(document.documentElement, "::view-transition").pointerEvents)).toBe("none");
    await expect
       .poll(() =>
          page.evaluate(() => {

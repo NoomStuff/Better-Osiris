@@ -116,16 +116,6 @@
    animation: none;
 }
 
-/* Mobile keeps the week switch in the document instead of the View Transition top layer.
-   The fixed toolbar remains interactive, so repeated taps can replace this animation. */
-.view-enter[data-week-transition="previous"] {
-   animation-name: roster-week-in-left;
-}
-
-.view-enter[data-week-transition="next"] {
-   animation-name: roster-week-in-right;
-}
-
 @keyframes view-enter {
    from {
       opacity: 0;
@@ -342,7 +332,17 @@
    }
 
    .app-content-frame--grid {
-      height: max(var(--grid-min-height, 520px), calc(var(--stable-vh, 100dvh) - var(--mobile-toolbar-clearance) - var(--app-padding) - 8px));
+      height: max(
+         var(--grid-min-height, 520px),
+         calc(var(--stable-vh, 100vh) - var(--chrome-height) - (var(--app-padding) * 2) - env(safe-area-inset-bottom) - 1px)
+      );
+   }
+
+   /* The View Transition pseudo-layer sits above fixed page chrome. Keep its moving
+      snapshots inside the roster frame so the live toolbar remains visible and tappable. */
+   ::view-transition-group(roster-week) {
+      overflow: clip;
+      border-radius: 18px;
    }
 
    .app-content-frame--grid.app-content-frame--zoom-half {
