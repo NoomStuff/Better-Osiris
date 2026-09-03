@@ -354,6 +354,12 @@ button {
 }
 
 @media (max-width: 640px) {
+   html,
+   body,
+   #app {
+      min-height: 0;
+   }
+
    html[data-page-scrollable="false"],
    html[data-page-scrollable="false"] body {
       overflow-y: hidden;

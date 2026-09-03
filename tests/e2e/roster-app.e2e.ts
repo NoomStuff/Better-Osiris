@@ -248,7 +248,7 @@ test("mobile grid fits its viewport and week buttons remain repeatable", async (
       .poll(() => page.evaluate(() => document.getAnimations().map((animation) => (animation instanceof CSSAnimation ? animation.animationName : ""))))
       .toEqual(expect.arrayContaining(["roster-week-out-left", "roster-week-in-right"]));
    await expect.poll(() => page.evaluate(() => getComputedStyle(document.documentElement, "::view-transition").pointerEvents)).toBe("none");
-   await expect.poll(() => page.evaluate(() => getComputedStyle(document.documentElement, "::view-transition").clipPath)).not.toBe("none");
+   await expect.poll(() => page.evaluate(() => getComputedStyle(document.documentElement, "::view-transition").clipPath)).toBe("none");
    await expect
       .poll(() =>
          page.evaluate(() => {
@@ -256,7 +256,15 @@ test("mobile grid fits its viewport and week buttons remain repeatable", async (
             return toolbar ? getComputedStyle(toolbar).viewTransitionName : null;
          })
       )
-      .toBe("none");
+      .toBe("mobile-toolbar");
+   await expect
+      .poll(() =>
+         page.evaluate(() => ({
+            roster: Number(getComputedStyle(document.documentElement, "::view-transition-group(roster-week)").zIndex),
+            toolbar: Number(getComputedStyle(document.documentElement, "::view-transition-group(mobile-toolbar)").zIndex),
+         }))
+      )
+      .toEqual({ roster: 1, toolbar: 2 });
 });
 
 test("one-hour grid shrinks below its row minimum on compact mobile viewports", async ({ page }) => {
@@ -267,17 +275,60 @@ test("one-hour grid shrinks below its row minimum on compact mobile viewports", 
    await page.goto("/");
 
    await expect(page.locator(".grid-shell")).toBeVisible();
+   const readMetrics = () =>
+      page.evaluate(() => {
+         const app = document.getElementById("app");
+         const frame = document.querySelector<HTMLElement>(".app-content-frame--grid");
+         return {
+            viewportHeight: window.visualViewport?.height ?? window.innerHeight,
+            pageHeight: document.documentElement.scrollHeight,
+            appMinHeight: app ? getComputedStyle(app).minHeight : null,
+            frameHeight: frame?.getBoundingClientRect().height ?? 0,
+            rowMinimum: Number.parseFloat(frame ? getComputedStyle(frame).getPropertyValue("--grid-min-height") : "0"),
+         };
+      });
+
+   const metrics = await readMetrics();
+   expect(metrics.appMinHeight).toBe("0px");
+   expect(metrics.frameHeight).toBeLessThan(metrics.rowMinimum);
+   expect(metrics.pageHeight).toBeLessThanOrEqual(Math.ceil(metrics.viewportHeight));
+
+   await page.evaluate(() => document.documentElement.style.setProperty("--stable-vh", "700px"));
+   const staleViewportMetrics = await readMetrics();
+   expect(staleViewportMetrics.frameHeight).toBe(metrics.frameHeight);
+   expect(staleViewportMetrics.pageHeight).toBeLessThanOrEqual(Math.ceil(staleViewportMetrics.viewportHeight));
+});
+
+test("short mobile agendas do not inherit a stale viewport minimum", async ({ page }) => {
+   await page.setViewportSize({ width: 390, height: 844 });
+   await page.route("**/api/roster/weeks?*", async (route) => {
+      const url = new URL(route.request().url());
+      const offset = Number(url.searchParams.get("offset") ?? "0");
+      const limit = Number(url.searchParams.get("limit") ?? "5");
+      const batch = createRosterBatch(offset, limit);
+
+      await route.fulfill({
+         status: 200,
+         contentType: "application/json",
+         body: JSON.stringify({ ...batch, weeks: batch.weeks.map((week) => ({ ...week, classes: [] })) }),
+      });
+   });
+   await page.goto("/");
+
+   await expect(page.locator(".roster-overlay-state")).toBeVisible();
+   await page.evaluate(() => document.documentElement.style.setProperty("--stable-vh", "1000px"));
    const metrics = await page.evaluate(() => {
-      const frame = document.querySelector<HTMLElement>(".app-content-frame--grid");
+      const app = document.getElementById("app");
       return {
          viewportHeight: window.visualViewport?.height ?? window.innerHeight,
          pageHeight: document.documentElement.scrollHeight,
-         frameHeight: frame?.getBoundingClientRect().height ?? 0,
-         rowMinimum: Number.parseFloat(frame ? getComputedStyle(frame).getPropertyValue("--grid-min-height") : "0"),
+         appMinHeight: app ? getComputedStyle(app).minHeight : null,
+         bodyMinHeight: getComputedStyle(document.body).minHeight,
       };
    });
 
-   expect(metrics.frameHeight).toBeLessThan(metrics.rowMinimum);
+   expect(metrics.appMinHeight).toBe("0px");
+   expect(metrics.bodyMinHeight).toBe("0px");
    expect(metrics.pageHeight).toBeLessThanOrEqual(Math.ceil(metrics.viewportHeight));
 });
 

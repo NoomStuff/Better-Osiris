@@ -272,14 +272,8 @@
       --mobile-toolbar-clearance: calc(130px + env(safe-area-inset-bottom));
    }
 
-   html,
-   body {
-      min-height: 0;
-   }
-
    #app {
       --app-padding: 10px;
-      min-height: var(--stable-vh, 100dvh);
       padding-bottom: var(--mobile-toolbar-clearance);
    }
 
@@ -298,6 +292,7 @@
       background: var(--chrome-surface);
       box-shadow: var(--shadow);
       backdrop-filter: blur(18px);
+      view-transition-name: mobile-toolbar;
       /* Undocked the bar floats a little narrower over the content; docked it spans the page.
          The width snaps with the app's overshoot bounce; the coat fades smoothly. */
       margin-inline: 10px;
@@ -331,17 +326,39 @@
    }
 
    .app-content-frame--agenda[data-blank-week-underlay="true"] {
-      max-height: calc(var(--stable-vh, 100vh) - var(--chrome-height) - (var(--app-padding) * 2) - env(safe-area-inset-bottom));
+      max-height: calc(var(--stable-vh, 100vh) - var(--mobile-toolbar-clearance) - var(--app-padding) - 8px);
+      max-height: calc(100dvh - var(--mobile-toolbar-clearance) - var(--app-padding) - 8px);
    }
 
    .app-content-frame--grid {
       height: calc(var(--stable-vh, 100vh) - var(--mobile-toolbar-clearance) - var(--app-padding) - 8px);
+      height: calc(100dvh - var(--mobile-toolbar-clearance) - var(--app-padding) - 8px);
    }
 
-   /* View Transitions render in the top layer, above fixed elements regardless of z-index.
-      Clip that layer before the toolbar so the live controls remain visible and tappable. */
-   ::view-transition {
-      clip-path: inset(0 0 var(--mobile-toolbar-clearance) 0);
+   ::view-transition-group(roster-week) {
+      z-index: 1;
+   }
+
+   /* The static toolbar snapshot paints above the moving roster. The transition layer
+      ignores pointer input, so taps still reach the live fixed controls underneath. */
+   ::view-transition-group(mobile-toolbar) {
+      z-index: 2;
+      animation: none;
+      pointer-events: none;
+   }
+
+   ::view-transition-image-pair(mobile-toolbar),
+   ::view-transition-old(mobile-toolbar),
+   ::view-transition-new(mobile-toolbar) {
+      pointer-events: none;
+   }
+
+   ::view-transition-old(mobile-toolbar) {
+      display: none;
+   }
+
+   ::view-transition-new(mobile-toolbar) {
+      animation: none;
    }
 
    .app-content-frame--grid.app-content-frame--zoom-half {
