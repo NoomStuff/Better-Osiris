@@ -13,9 +13,11 @@ Anyway, this is heavily vibe coded, but I vibe code with class, so every detail 
 ## Features
 
 - Agenda and Grid views that look good on any device
-- Clean and speedy week navigation with keyboard shortcuts and swipe gestures
-- Lesson details, detailed cancellation and change information
-- Many neat touches, like time indicators, breaktimes, animations and icons
+- Clean and speedy week navigation with minimal load times, well designed keyboard shortcuts and swipe gestures
+- Lesson details, detailed cancellation & change information, and the ability to be notified when a change happens
+- Lots of pretty themes to choose from and a good amount of preference settings to display the roster how you desire
+- Skim quickly with current time/class progress displays, readability aiding icon use, break indicators 
+- Many neat touches that just make it *feel right*
 
 ---
 
