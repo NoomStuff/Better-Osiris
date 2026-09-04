@@ -180,22 +180,6 @@
       0 0 0 5px color-mix(in srgb, var(--accent) 22%, transparent);
 }
 
-/* While a drag moves the value, the code suspends the movement transitions: restarted on
-   every pointer move they turn into lag and wobble, so the thumb and fill follow the pointer
-   exactly instead. Color and scale feedback keep animating. */
-.slider[data-dragging="true"] .slider__fill {
-   transition:
-      background-color 400ms ease,
-      box-shadow 400ms ease;
-}
-
-.slider[data-dragging="true"] .slider__thumb {
-   transition:
-      scale 220ms var(--bounce-overshoot),
-      border-color 180ms ease-out,
-      box-shadow 180ms ease;
-}
-
 @media (prefers-reduced-motion: reduce) {
    .slider__fill,
    .slider__thumb {

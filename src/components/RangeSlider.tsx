@@ -1,4 +1,4 @@
-import { useId, useRef, useState, type CSSProperties, type PointerEvent as ReactPointerEvent } from "react";
+import { useId, useRef, type CSSProperties, type PointerEvent as ReactPointerEvent } from "react";
 import "./Slider.css";
 
 interface RangeSliderProps {
@@ -18,19 +18,12 @@ type RangeSliderStyle = CSSProperties & {
    "--slider-end": string;
 };
 
-// Pointer travel before a press counts as a drag. Clicks jitter by a pixel or two, and the
-// drag state suspends the movement transitions, so the threshold keeps their glide intact.
-const DRAG_SLOP_PX = 4;
-
 export function RangeSlider({ label, min, max, step, value, startLabel, endLabel, formatValue = String, onChange }: RangeSliderProps) {
    const labelId = useId();
    const controlRef = useRef<HTMLDivElement | null>(null);
    const startInputRef = useRef<HTMLInputElement | null>(null);
    const endInputRef = useRef<HTMLInputElement | null>(null);
-   const dragRef = useRef<{ pointerId: number; side: "start" | "end"; startX: number } | null>(null);
-   // Set once the pointer travels past the drag slop, not on the press: a track click keeps
-   // its glide while the drag that follows tracks the pointer without animation lag.
-   const [isDragging, setIsDragging] = useState(false);
+   const dragRef = useRef<{ pointerId: number; side: "start" | "end" } | null>(null);
    const [start, end] = value;
    const toPercent = (point: number) => `${((point - min) / (max - min)) * 100}%`;
    const style: RangeSliderStyle = { "--slider-start": toPercent(start), "--slider-end": toPercent(end) };
@@ -65,7 +58,7 @@ export function RangeSlider({ label, min, max, step, value, startLabel, endLabel
          return;
       }
       const side = target - start <= end - target ? "start" : "end";
-      dragRef.current = { pointerId: event.pointerId, side, startX: event.clientX };
+      dragRef.current = { pointerId: event.pointerId, side };
       event.currentTarget.setPointerCapture(event.pointerId);
       event.preventDefault();
       (side === "start" ? startInputRef : endInputRef).current?.focus({ preventScroll: true });
@@ -76,9 +69,6 @@ export function RangeSlider({ label, min, max, step, value, startLabel, endLabel
       const drag = dragRef.current?.pointerId === event.pointerId ? dragRef.current : null;
       if (!drag) {
          return;
-      }
-      if (!isDragging && Math.abs(event.clientX - drag.startX) > DRAG_SLOP_PX) {
-         setIsDragging(true);
       }
       const target = valueAt(event.clientX);
       if (target !== null) {
@@ -91,11 +81,10 @@ export function RangeSlider({ label, min, max, step, value, startLabel, endLabel
          return;
       }
       dragRef.current = null;
-      setIsDragging(false);
    };
 
    return (
-      <div className="slider slider--range" data-dragging={isDragging || undefined} role="group" aria-labelledby={labelId} style={style}>
+      <div className="slider slider--range" role="group" aria-labelledby={labelId} style={style}>
          <div className="slider__header" id={labelId}>
             <span>{label}</span>
             <strong>
