@@ -1,11 +1,14 @@
 import { useCallback, useEffect, useState } from "react";
 import { clearOsirisToken, fetchOsirisTokenSettings, saveOsirisToken, type OsirisTokenSettings } from "../api/settings";
-import { notifyError } from "../lib/notyf";
 import { clearWeekBrowserCache } from "../lib/weekCache";
+
+const INITIAL_SETTINGS_RETRY_DELAY_MS = 250;
+const MAX_SETTINGS_RETRY_DELAY_MS = 5_000;
 
 export function useOsirisTokenSettings() {
    const [settings, setSettings] = useState<OsirisTokenSettings | null>(null);
    const [isInitialLoading, setIsInitialLoading] = useState(true);
+   const [initialLoadError, setInitialLoadError] = useState<string | null>(null);
    const [isMutating, setIsMutating] = useState(false);
    const [weeksResetKey, setRosterResetKey] = useState(0);
 
@@ -18,31 +21,41 @@ export function useOsirisTokenSettings() {
 
    useEffect(() => {
       let isStale = false;
+      let retryTimerId: number | null = null;
+      let retryDelayMs = INITIAL_SETTINGS_RETRY_DELAY_MS;
 
-      fetchOsirisTokenSettings()
-         .then((next) => {
-            if (!isStale) {
+      const loadSettings = () => {
+         void fetchOsirisTokenSettings()
+            .then((next) => {
+               if (isStale) {
+                  return;
+               }
+
                if (!next.hasBearerToken) {
                   clearWeekBrowserCache();
                }
                setSettings(next);
-            }
-         })
-         .catch((error: unknown) => {
-            if (!isStale) {
-               clearWeekBrowserCache();
-               setSettings({ hasCustomToken: false, hasBearerToken: false });
-               notifyError(error, "Failed to load bearer token settings.");
-            }
-         })
-         .finally(() => {
-            if (!isStale) {
+               setInitialLoadError(null);
                setIsInitialLoading(false);
-            }
-         });
+            })
+            .catch((error: unknown) => {
+               if (isStale) {
+                  return;
+               }
+
+               setInitialLoadError(error instanceof Error ? error.message : "Bearer token settings could not be loaded.");
+               retryTimerId = window.setTimeout(loadSettings, retryDelayMs);
+               retryDelayMs = Math.min(retryDelayMs * 2, MAX_SETTINGS_RETRY_DELAY_MS);
+            });
+      };
+
+      loadSettings();
 
       return () => {
          isStale = true;
+         if (retryTimerId !== null) {
+            window.clearTimeout(retryTimerId);
+         }
       };
    }, []);
 
@@ -85,6 +98,7 @@ export function useOsirisTokenSettings() {
       settings,
       hasBearerToken: settings?.hasBearerToken === true,
       isInitialLoading,
+      initialLoadError,
       isMutating,
       weeksResetKey,
       saveToken,

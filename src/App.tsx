@@ -31,8 +31,10 @@ import { getEmptyWeekMessage } from "./lib/flavor";
 import { getHiddenDaysWithClasses, getWeekdaysWithClasses } from "./lib/weekLayout";
 import { countClassesOutsideGridHours, getRequiredGridHours, getSmartGridHours, mergeGridHourRanges } from "./lib/gridHours";
 import { ErrorBoundary } from "./components/ErrorBoundary";
-import { notifyError, notifySuccess } from "./lib/notyf";
+import { notifyError } from "./lib/notyf";
+import { OsirisTokenSettingsError } from "./api/settings";
 import type { GridZoom, Class, WeekMeta, ViewMode } from "./types/weeks";
+import type { OsirisTokenValidationStatus } from "./types/osirisToken";
 import "./styles/App.css";
 
 type WeekTransitionDirection = "default" | "previous" | "next" | "settled";
@@ -59,6 +61,8 @@ export default function App() {
    const [selectedClassId, setSelectedClassId] = useState<string | null>(null);
    const [isSettingsOpen, setIsSettingsOpen] = useState(false);
    const [bearerTokenInput, setBearerTokenInput] = useState("");
+   const [pendingTokenValidationKey, setPendingTokenValidationKey] = useState<string | null>(null);
+   const [tokenSaveFailure, setTokenSaveFailure] = useState<"rejected" | "unavailable" | null>(null);
    const devPreview = useDevPreview();
    const classNotifications = useClassNotificationsPreference();
    const rosterTimeZone = useRosterTimeZone();
@@ -66,6 +70,7 @@ export default function App() {
       settings: tokenSettings,
       hasBearerToken,
       isInitialLoading: isTokenSettingsLoading,
+      initialLoadError: tokenSettingsLoadError,
       isMutating: isTokenMutating,
       weeksResetKey,
       saveToken,
@@ -73,6 +78,7 @@ export default function App() {
       refreshAfterAuthError,
    } = useOsirisTokenSettings();
    useViewportMetrics();
+   const weeksQueryResetKey = `${weeksResetKey}:${rosterTimeZone.cacheResetKey}`;
    const {
       areInitialWeeksLoaded,
       canGoNext,
@@ -80,6 +86,7 @@ export default function App() {
       data,
       error,
       initialWeeks,
+      lastSuccessfulResetKey,
       isWeekNavigable,
       loading,
       retryCountdownMs,
@@ -90,7 +97,7 @@ export default function App() {
    } = useWeeks(weekOffset, {
       enabled: !isTokenSettingsLoading && hasBearerToken && rosterTimeZone.isKnown,
       clearCache: !isTokenSettingsLoading && !hasBearerToken,
-      resetKey: `${weeksResetKey}:${rosterTimeZone.cacheResetKey}`,
+      resetKey: weeksQueryResetKey,
    });
    const perceivedNow = devPreview.perceivedNow;
    const perceivedDayKey = rosterTimeZone.isKnown ? toDayKey(perceivedNow) : null;
@@ -105,11 +112,27 @@ export default function App() {
       }
 
       if (error.isAuthRelated && tokenSettings?.hasCustomToken) {
-         return `${error.detail} Your custom bearer token might be expired or pasted wrong. Settings is the place to poke it.`;
+         return "OSIRIS rejected your saved bearer token.";
       }
 
       return error.detail;
    }, [error, tokenSettings?.hasCustomToken]);
+
+   const isTokenValidationPending = pendingTokenValidationKey !== null && pendingTokenValidationKey !== lastSuccessfulResetKey;
+   const successfulTokenValidationKey =
+      pendingTokenValidationKey !== null && pendingTokenValidationKey === lastSuccessfulResetKey ? pendingTokenValidationKey : null;
+
+   useEffect(() => {
+      if (pendingTokenValidationKey === null || pendingTokenValidationKey !== lastSuccessfulResetKey) {
+         return;
+      }
+
+      const resetTimerId = window.setTimeout(() => {
+         setPendingTokenValidationKey(null);
+         setBearerTokenInput("");
+      }, 0);
+      return () => window.clearTimeout(resetTimerId);
+   }, [lastSuccessfulResetKey, pendingTokenValidationKey]);
 
    useEffect(() => {
       if (!error?.isAuthRelated) {
@@ -250,20 +273,26 @@ export default function App() {
 
    const closeSettings = useCallback(() => setIsSettingsOpen(false), []);
 
-   const submitBearerToken = useCallback(async () => {
-      const nextToken = bearerTokenInput.trim();
-      if (!nextToken) {
-         return;
-      }
+   const submitBearerToken = useCallback(
+      async (token: string) => {
+         const nextToken = token.trim();
+         if (!nextToken) {
+            return;
+         }
 
-      try {
-         await saveToken(nextToken);
-         setBearerTokenInput("");
-         notifySuccess("Osiris token saved successfully.");
-      } catch (requestError) {
-         notifyError(requestError, "Failed to save Osiris token.");
-      }
-   }, [bearerTokenInput, saveToken]);
+         const validationKey = `${weeksResetKey + 1}:${rosterTimeZone.cacheResetKey}`;
+         setTokenSaveFailure(null);
+         setPendingTokenValidationKey(validationKey);
+         try {
+            await saveToken(nextToken);
+         } catch (requestError) {
+            setPendingTokenValidationKey(null);
+            setTokenSaveFailure(requestError instanceof OsirisTokenSettingsError && requestError.isTokenRejected ? "rejected" : "unavailable");
+            notifyError(requestError, "Failed to save Osiris token.");
+         }
+      },
+      [rosterTimeZone.cacheResetKey, saveToken, weeksResetKey]
+   );
 
    useAppKeyboardShortcuts({
       enabled: !isSettingsOpen && selectedClass === null,
@@ -287,7 +316,21 @@ export default function App() {
    });
 
    const hasDisplayedData = Boolean(displayedData);
-   const hasBlockingTokenState = isTokenSettingsLoading ? !hasDisplayedData : !hasBearerToken;
+   const hasTokenAccessError = Boolean(error?.isAuthRelated && !data);
+   const tokenValidationStatus: OsirisTokenValidationStatus = isTokenMutating
+      ? "checking"
+      : (tokenSaveFailure ??
+        (error?.isAuthRelated
+           ? "rejected"
+           : isTokenValidationPending && error
+             ? "unavailable"
+             : isTokenValidationPending
+               ? "checking"
+               : hasBearerToken
+                 ? "ready"
+                 : "required"));
+   const shouldShowTokenEntry = !isTokenSettingsLoading && (!hasBearerToken || isTokenValidationPending || hasTokenAccessError);
+   const hasBlockingTokenState = isTokenSettingsLoading ? !hasDisplayedData : shouldShowTokenEntry;
    const hasOverlayUnderlay = hasBlockingTokenState || loading || (Boolean(error) && !data) || hasBlankWeekUnderlay;
    const visibleGridZoom = hasOverlayUnderlay ? "hour" : gridZoom;
    const frameGridZoom = viewMode === "grid" ? visibleGridZoom : gridZoom;
@@ -313,15 +356,19 @@ export default function App() {
          );
       }
       if (isTokenSettingsLoading && !hasDisplayedData) {
-         return <LoadingState message="Checking bearer token." />;
+         return <LoadingState message={tokenSettingsLoadError ? "Waiting for the roster server." : "Checking bearer token."} />;
       }
-      if (!isTokenSettingsLoading && !hasBearerToken) {
+      if (shouldShowTokenEntry) {
+         const tokenStatus = tokenValidationStatus === "ready" ? "required" : tokenValidationStatus;
          return (
             <BearerTokenState
                token={bearerTokenInput}
-               isSaving={isTokenMutating}
-               onTokenChange={setBearerTokenInput}
-               onSubmit={() => void submitBearerToken()}
+               status={tokenStatus}
+               onTokenChange={(token) => {
+                  setBearerTokenInput(token);
+                  setTokenSaveFailure(null);
+               }}
+               onSubmit={() => void submitBearerToken(bearerTokenInput)}
             />
          );
       }
@@ -373,7 +420,10 @@ export default function App() {
 
          <main className="app-content" ref={appContentRef}>
             {error && displayedData ? (
-               <WarningBanner icon="fa-solid fa-cloud-arrow-rotate" action={{ label: "Try again", onClick: refresh }}>
+               <WarningBanner
+                  icon="fa-solid fa-cloud-arrow-rotate"
+                  action={error.isAuthRelated ? { label: "Replace token", onClick: openSettings } : { label: "Try again", onClick: refresh }}
+               >
                   Fetching your latest roster went wrong: {errorDetail}
                </WarningBanner>
             ) : null}
@@ -431,7 +481,10 @@ export default function App() {
             statusPreviewMode={devPreview.statusPreviewMode}
             tokenSettings={tokenSettings}
             isTokenLoading={isTokenMutating}
-            onSaveToken={saveToken}
+            tokenValidationStatus={tokenValidationStatus}
+            successfulTokenValidationKey={successfulTokenValidationKey}
+            onTokenDraftChange={() => setTokenSaveFailure(null)}
+            onSaveToken={submitBearerToken}
             onClearToken={clearToken}
             onClose={closeSettings}
             onChangeNotifications={(enabled) => void classNotifications.setEnabled(enabled)}

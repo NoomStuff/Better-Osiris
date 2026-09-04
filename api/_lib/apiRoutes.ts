@@ -1,8 +1,8 @@
-import type { OsirisTokenSettings, RosterConfig } from "../../shared/weeks.js";
+import { MAX_WEEK_LIMIT, type OsirisTokenSettings, type RosterConfig } from "../../shared/weeks.js";
 import { toApiError, toApiErrorPayload } from "./errors.js";
 import { clearOsirisTokenSetting, getOsirisTokenSettings, saveOsirisTokenSetting } from "./osirisTokenSettingsService.js";
-import { getRosterTimeZone } from "./osirisConfig.js";
-import { loadWeekBatch, type WeeksRequest } from "./weeksService.js";
+import { getRosterTimeZone, normalizeBearerToken } from "./osirisConfig.js";
+import { loadWeekBatch, loadWeekBatchWithToken, type WeeksRequest } from "./weeksService.js";
 
 export interface ApiRouteResponse<TPayload = unknown> {
    statusCode: number;
@@ -34,9 +34,10 @@ export function getTokenSettingsRoute(cookieHeader: string | undefined): ApiRout
    }
 }
 
-export function saveTokenSettingsRoute(rawBody: unknown): ApiRouteResponse<OsirisTokenSettings | ReturnType<typeof toApiErrorPayload>> {
+export async function saveTokenSettingsRoute(rawBody: unknown): Promise<ApiRouteResponse<OsirisTokenSettings | ReturnType<typeof toApiErrorPayload>>> {
    try {
-      const token = readToken(rawBody);
+      const token = normalizeBearerToken(readToken(rawBody));
+      await loadWeekBatchWithToken(0, MAX_WEEK_LIMIT, token);
       return settingsResponse(saveOsirisTokenSetting(token));
    } catch (error) {
       return errorResponse(error, "The bearer token could not be saved.");

@@ -6,6 +6,8 @@ import handler from "./osiris-token.js";
 import type { IncomingMessage, ServerResponse } from "node:http";
 
 const TEST_SECRET = "settings-secret-that-is-at-least-32-characters";
+const TEST_OSIRIS_ROSTER_URL = "https://example-school.osiris-student.nl/student/osiris/student/rooster/per_week";
+const originalFetch = globalThis.fetch;
 
 interface MockRequestOptions {
    method?: string;
@@ -31,8 +33,10 @@ class MockResponse {
 }
 
 afterEach(() => {
+   globalThis.fetch = originalFetch;
    delete process.env["COOKIE_SECRET"];
    delete process.env["BEARER_TOKEN"];
+   delete process.env["OSIRIS_ROSTER_URL"];
 });
 
 void describe("/api/settings/osiris-token", () => {
@@ -79,6 +83,11 @@ void describe("/api/settings/osiris-token", () => {
 
    void it("saves an encrypted custom token", async () => {
       process.env["COOKIE_SECRET"] = TEST_SECRET;
+      process.env["OSIRIS_ROSTER_URL"] = TEST_OSIRIS_ROSTER_URL;
+      let authorization: string | null = null;
+      mockSuccessfulOsirisFetch((value) => {
+         authorization = value;
+      });
 
       const response = await callSettingsHandler({
          method: "PUT",
@@ -90,6 +99,27 @@ void describe("/api/settings/osiris-token", () => {
       assert.equal(response.statusCode, 200);
       assert.deepEqual(payload, { hasCustomToken: true, hasBearerToken: true });
       assert.equal(readOsirisTokenFromCookie(String(cookieHeader), process.env["COOKIE_SECRET"]), "Bearer custom-token");
+      assert.equal(authorization, "Bearer custom-token");
+   });
+
+   void it("does not replace the token when OSIRIS rejects it", async () => {
+      process.env["COOKIE_SECRET"] = TEST_SECRET;
+      process.env["OSIRIS_ROSTER_URL"] = TEST_OSIRIS_ROSTER_URL;
+      globalThis.fetch = () =>
+         Promise.resolve(
+            new Response(JSON.stringify({ error: "Unauthorized" }), {
+               status: 401,
+               headers: { "Content-Type": "application/json" },
+            })
+         );
+
+      const response = await callSettingsHandler({
+         method: "PUT",
+         body: { token: "Bearer rejected-token" },
+      });
+
+      assert.equal(response.statusCode, 401);
+      assert.equal(response.headers.get("set-cookie"), undefined);
    });
 
    void it("restores the default token when the custom token is cleared", async () => {
@@ -125,6 +155,29 @@ void describe("/api/settings/osiris-token", () => {
       assert.equal(response.statusCode, 403);
    });
 });
+
+function mockSuccessfulOsirisFetch(readAuthorization: (authorization: string | null) => void) {
+   globalThis.fetch = (input, init) => {
+      readAuthorization(new Headers(init?.headers).get("authorization"));
+      const url = new URL(typeof input === "string" ? input : input instanceof URL ? input : input.url);
+      const offset = Number(url.searchParams.get("offset"));
+      const limit = Number(url.searchParams.get("limit"));
+      const items = Array.from({ length: limit }, (_, index) => ({
+         jaar: 2026,
+         week: 25 + index,
+         startdatum: "2026-06-15",
+         einddatum: "2026-06-21",
+         dagen: [],
+      }));
+
+      return Promise.resolve(
+         new Response(JSON.stringify({ items, hasMore: true, limit, offset, count: items.length }), {
+            status: 200,
+            headers: { "Content-Type": "application/json" },
+         })
+      );
+   };
+}
 
 async function callSettingsHandler(options: MockRequestOptions) {
    const req = createRequest(options);

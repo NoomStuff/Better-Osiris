@@ -47,6 +47,7 @@ export function useWeeks(offset: number, options: UseWeeksOptions = {}) {
    const resetKey = options.resetKey ?? 0;
    const [entries, dispatch] = useReducer(rosterWeekReducer, undefined, getInitialWeekEntries);
    const [now, setNow] = useState<number | null>(null);
+   const [lastSuccessfulResetKey, setLastSuccessfulResetKey] = useState<number | string | null>(null);
    const [sessionLessonDiffs] = useState(readSessionClassDiffs);
    const entriesRef = useRef(entries);
    const requestsRef = useRef(new Map<string, BatchRequest>());
@@ -168,6 +169,9 @@ export function useWeeks(offset: number, options: UseWeeksOptions = {}) {
                hasShownLoadErrorToastRef.current = false;
                const displayWeeks = getDisplayWeeksFromPayload(payload, entriesRef.current, latestRawWeeksRef.current, sessionLessonDiffs);
                dispatch({ type: "fetch-succeeded", weeks: displayWeeks });
+               if (startOffset === getBatchStart(activeOffsetRef.current)) {
+                  setLastSuccessfulResetKey(resetKey);
+               }
             })
             .catch((error: unknown) => {
                if (controller.signal.aborted || generation !== requestGenerationRef.current) {
@@ -348,6 +352,7 @@ export function useWeeks(offset: number, options: UseWeeksOptions = {}) {
       error,
       isWeekNavigable,
       initialWeeks,
+      lastSuccessfulResetKey,
       loading,
       retryCountdownMs,
       retrying,

@@ -185,6 +185,12 @@ function useOverlayLifecycle(
    closeOnEscape: boolean,
    onClose: () => void
 ) {
+   const onCloseRef = useRef(onClose);
+
+   useEffect(() => {
+      onCloseRef.current = onClose;
+   }, [onClose]);
+
    useEffect(() => {
       const previouslyFocused = returnFocusRef.current;
       overlayStack.push(overlayId);
@@ -207,7 +213,7 @@ function useOverlayLifecycle(
 
          event.preventDefault();
          event.stopImmediatePropagation();
-         onClose();
+         onCloseRef.current();
       };
 
       document.addEventListener("keydown", handleKeyDown);
@@ -227,7 +233,7 @@ function useOverlayLifecycle(
             }
          }
       };
-   }, [closeOnEscape, onClose, overlayId, returnFocusRef, rootRef, surfaceRef]);
+   }, [closeOnEscape, overlayId, returnFocusRef, rootRef, surfaceRef]);
 }
 
 function useLockedBodyScroll() {

@@ -1,13 +1,14 @@
 import type { ReactNode, SyntheticEvent } from "react";
 import { OSIRIS_BEARER_TOKEN_HELP_URL } from "../lib/osirisTokenHelp";
+import type { OsirisTokenValidationStatus } from "../types/osirisToken";
 import "./LoadingState.css";
 
 interface WeekOverlayStateProps {
    title: string;
    detail: string;
-   icon?: string;
+   icon?: string | undefined;
    spinning?: boolean;
-   role?: "alert" | "status";
+   role?: "alert" | "status" | undefined;
    children?: ReactNode;
 }
 
@@ -26,7 +27,7 @@ interface ErrorStateProps {
 
 interface BearerTokenStateProps {
    token: string;
-   isSaving: boolean;
+   status: Exclude<OsirisTokenValidationStatus, "ready">;
    onTokenChange: (token: string) => void;
    onSubmit: () => void;
 }
@@ -62,8 +63,27 @@ export function ErrorState({ title, detail, log, retryCountdownMs, isRetrying, c
    );
 }
 
-export function BearerTokenState({ token, isSaving, onTokenChange, onSubmit }: BearerTokenStateProps) {
-   const canSave = token.trim().length > 0 && !isSaving;
+export function BearerTokenState({ token, status, onTokenChange, onSubmit }: BearerTokenStateProps) {
+   const isChecking = status === "checking";
+   const canSave = token.trim().length > 0 && !isChecking;
+   const content = {
+      required: {
+         title: "Bearer token required",
+         detail: "Paste your OSIRIS bearer token to load the roster. You can change it any time from settings.",
+      },
+      checking: {
+         title: "Checking bearer token",
+         detail: "Waiting for OSIRIS to return your roster.",
+      },
+      rejected: {
+         title: "Bearer token rejected",
+         detail: "OSIRIS did not accept this token. Paste a fresh token and try again.",
+      },
+      unavailable: {
+         title: "Could not check bearer token",
+         detail: "OSIRIS is unavailable right now. The roster will retry automatically, or you can try another token.",
+      },
+   }[status];
 
    const handleSubmit = (event: SyntheticEvent<HTMLFormElement>) => {
       event.preventDefault();
@@ -76,9 +96,11 @@ export function BearerTokenState({ token, isSaving, onTokenChange, onSubmit }: B
 
    return (
       <WeekOverlayState
-         title="Bearer token required"
-         detail="Paste your OSIRIS bearer token to load the roster. You can change this any time from settings."
-         icon="fa-solid fa-key"
+         title={content.title}
+         detail={content.detail}
+         icon={isChecking ? undefined : status === "required" ? "fa-solid fa-key" : "fa-solid fa-triangle-exclamation"}
+         spinning={isChecking}
+         role={isChecking ? "status" : status === "required" ? undefined : "alert"}
       >
          <form className="roster-overlay-state__form" onSubmit={handleSubmit}>
             <a className="roster-overlay-state__help-link" href={OSIRIS_BEARER_TOKEN_HELP_URL} target="_blank" rel="noreferrer">
@@ -92,11 +114,11 @@ export function BearerTokenState({ token, isSaving, onTokenChange, onSubmit }: B
                   placeholder="Bearer XXXXXXXXXXXXXXXXXXXXXXXXXXX"
                   autoComplete="off"
                   spellCheck={false}
-                  disabled={isSaving}
+                  disabled={isChecking}
                   onChange={(event) => onTokenChange(event.target.value)}
                />
-               <button className="roster-overlay-state__button" type="submit" aria-label="Save token" disabled={!canSave}>
-                  <i className="fa-solid fa-check" aria-hidden="true" />
+               <button className="roster-overlay-state__button" type="submit" aria-label="Load roster" disabled={!canSave}>
+                  <i className="fa-solid fa-arrow-right" aria-hidden="true" />
                </button>
             </div>
          </form>

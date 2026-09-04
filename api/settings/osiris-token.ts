@@ -19,7 +19,7 @@ export default async function handler(req: IncomingMessage, res: ServerResponse)
    try {
       assertSameOrigin(req);
       enforceRateLimit(req, "token-mutation", 20, 15 * 60_000);
-      const response = req.method === "DELETE" ? clearTokenSettingsRoute() : saveTokenSettingsRoute(await readJsonBody(req));
+      const response = req.method === "DELETE" ? clearTokenSettingsRoute() : await saveTokenSettingsRoute(await readJsonBody(req));
       sendRouteResponse(res, response);
    } catch (error) {
       const apiError = toApiError(error, "The token setting request could not be completed.");

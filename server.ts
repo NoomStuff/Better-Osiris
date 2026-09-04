@@ -62,9 +62,9 @@ app.get("/api/settings/osiris-token", (req, res) => {
    sendRouteResponse(res, getTokenSettingsRoute(req.headers.cookie));
 });
 
-app.put("/api/settings/osiris-token", (req, res) => {
+app.put("/api/settings/osiris-token", async (req, res) => {
    assertTokenMutationAllowed(req);
-   sendRouteResponse(res, saveTokenSettingsRoute(req.body as unknown));
+   sendRouteResponse(res, await saveTokenSettingsRoute(req.body as unknown));
 });
 
 app.delete("/api/settings/osiris-token", (req, res) => {

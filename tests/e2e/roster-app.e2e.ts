@@ -392,7 +392,7 @@ test("settings dialog opens, resets token state, and closes", async ({ page }) =
    await expect(page.getByRole("dialog", { name: "Preferences" })).toBeVisible();
    await expect(page.getByText("Roster requests are using your saved bearer token.")).toBeVisible();
    await expect(page.getByRole("link", { name: "How to get one" })).toHaveAttribute("href", OSIRIS_BEARER_TOKEN_HELP_URL);
-   await expect(page.getByRole("button", { name: "Save token" })).toBeDisabled();
+   await expect(page.getByRole("button", { name: "Save" })).toBeDisabled();
 
    await page.getByRole("group", { name: "Shown weekdays" }).getByRole("button", { name: "Sun", exact: true }).click();
    await expect(page.getByRole("group", { name: "Shown weekdays" }).getByRole("button", { name: "Sun", exact: true })).toHaveAttribute("aria-pressed", "true");
@@ -461,6 +461,35 @@ test("only the topmost dialog handles Escape and focus stays contained", async (
    await expect(resetTokenButton).toBeFocused();
 });
 
+test("a confirming dialog stays topmost while its parent updates", async ({ page }) => {
+   let releaseReset = () => undefined;
+   const resetGate = new Promise<void>((resolve) => {
+      releaseReset = resolve;
+   });
+   await page.route("**/api/settings/osiris-token", async (route) => {
+      if (route.request().method() === "DELETE") {
+         await resetGate;
+      }
+      await route.fallback();
+   });
+
+   await page.goto("/");
+   await page.getByRole("button", { name: "Open settings" }).click();
+   const settings = page.getByRole("dialog", { name: "Preferences" });
+   await settings.getByRole("region", { name: "Roster access" }).getByRole("button", { name: "Reset" }).click();
+
+   const confirmation = page.getByRole("alertdialog", { name: "Reset bearer token?" });
+   await confirmation.getByRole("button", { name: "Reset token" }).click();
+
+   await expect(page.locator(".confirm-dialog")).not.toHaveAttribute("inert", "");
+   await expect(page.locator(".settings-dialog")).toHaveAttribute("inert", "");
+   await expect(confirmation.getByRole("button", { name: "Working..." })).toBeDisabled();
+
+   releaseReset();
+   await expect(confirmation).toBeHidden();
+   await expect(page.locator(".settings-dialog")).not.toHaveAttribute("inert", "");
+});
+
 test("class change notifications are an explicit saved preference", async ({ page }) => {
    await page.addInitScript(() => {
       Object.defineProperty(window, "Notification", {
@@ -487,10 +516,21 @@ test("class change notifications are an explicit saved preference", async ({ pag
 
 test("saving a replacement token refreshes roster data without reloading the page", async ({ page }) => {
    let rosterRequestCount = 0;
+   let holdReplacementRequest = false;
+   let releaseReplacementRequest = () => undefined;
+   const replacementRequestGate = new Promise<void>((resolve) => {
+      releaseReplacementRequest = resolve;
+   });
    page.on("request", (request) => {
       if (request.url().includes("/api/roster/weeks?")) {
          rosterRequestCount += 1;
       }
+   });
+   await page.route("**/api/roster/weeks?*", async (route) => {
+      if (holdReplacementRequest) {
+         await replacementRequestGate;
+      }
+      await route.fallback();
    });
 
    await page.goto("/");
@@ -500,17 +540,53 @@ test("saving a replacement token refreshes roster data without reloading the pag
    await page.getByRole("button", { name: "Open settings" }).click();
    const settings = page.getByRole("dialog", { name: "Preferences" });
    const tokenInput = settings.getByLabel("Bearer token");
-   const saveButton = settings.getByRole("button", { name: "Save token" });
+   const saveButton = settings.getByRole("button", { name: "Save" });
    await tokenInput.fill("Bearer replacement-token");
    await expect(tokenInput).toHaveValue("Bearer replacement-token");
    await expect(saveButton).toBeEnabled();
+   holdReplacementRequest = true;
    const weekRefresh = page.waitForResponse((response) => response.url().includes("/api/roster/weeks?") && response.request().method() === "GET");
    await saveButton.click();
+
+   await expect(settings.getByRole("button", { name: "Verifying..." })).toBeDisabled();
+   await expect(tokenInput).toHaveValue("Bearer replacement-token");
+   releaseReplacementRequest();
    await weekRefresh;
 
    await expect.poll(() => rosterRequestCount).toBeGreaterThan(initialRequestCount);
    await expect(settings).toBeVisible();
+   await expect(tokenInput).toHaveValue("");
    await expect(page.locator(".grid-class", { hasText: "SOURCE_TITLE_0_1" })).toBeVisible();
+});
+
+test("settings keeps a rejected token editable", async ({ page }) => {
+   let rejectRosterRequest = false;
+   await page.route("**/api/settings/osiris-token", async (route) => {
+      if (route.request().method() !== "PUT" || !rejectRosterRequest) {
+         await route.fallback();
+         return;
+      }
+
+      await route.fulfill({
+         status: 401,
+         contentType: "application/json",
+         body: JSON.stringify({ code: "AUTH_REQUIRED", error: "OSIRIS rejected the token.", retryable: false }),
+      });
+   });
+
+   await page.goto("/");
+   await expect(page.getByRole("button", { name: "SOURCE_TITLE_0_1" })).toBeVisible();
+   await page.getByRole("button", { name: "Open settings" }).click();
+
+   const settings = page.getByRole("dialog", { name: "Preferences" });
+   const tokenInput = settings.getByLabel("Bearer token");
+   await tokenInput.fill("Bearer rejected-replacement");
+   rejectRosterRequest = true;
+   await settings.getByRole("button", { name: "Save" }).click();
+
+   await expect(settings.getByText("OSIRIS rejected this token. Paste a fresh one and try again.")).toBeVisible();
+   await expect(tokenInput).toHaveValue("Bearer rejected-replacement");
+   await expect(settings.getByRole("button", { name: "Save" })).toBeEnabled();
 });
 
 test("an aborted credential request cannot restore stale roster data", async ({ page }) => {
@@ -564,7 +640,7 @@ test("an aborted credential request cannot restore stale roster data", async ({ 
 
    const settings = page.getByRole("dialog", { name: "Preferences" });
    const tokenInput = settings.getByLabel("Bearer token");
-   const saveButton = settings.getByRole("button", { name: "Save token" });
+   const saveButton = settings.getByRole("button", { name: "Save" });
    await tokenInput.fill("Bearer fresh-token");
    await expect(tokenInput).toHaveValue("Bearer fresh-token");
    await expect(saveButton).toBeEnabled();
@@ -634,12 +710,81 @@ test("missing bearer token shows an entry overlay without requesting roster data
    await expect(page.getByRole("heading", { name: "Bearer token required" })).toBeVisible();
    await expect(page.getByRole("link", { name: "Learn how to get your bearer token" })).toHaveAttribute("href", OSIRIS_BEARER_TOKEN_HELP_URL);
    const tokenInput = page.getByLabel("Bearer token");
-   const saveTokenButton = page.getByRole("button", { name: "Save token" });
+   const saveTokenButton = page.getByRole("button", { name: "Load roster" });
    await expect(tokenInput).toBeVisible();
    await expect(saveTokenButton).toBeDisabled();
    await tokenInput.fill("Bearer browser-token");
    await expect(saveTokenButton).toBeEnabled();
    expect(rosterWasRequested).toBe(false);
+});
+
+test("keeps token entry open until OSIRIS accepts the token", async ({ page }) => {
+   let hasToken = false;
+   let rejectToken = true;
+
+   await page.route("**/api/settings/osiris-token", async (route) => {
+      if (route.request().method() === "PUT") {
+         if (rejectToken) {
+            await route.fulfill({
+               status: 401,
+               contentType: "application/json",
+               body: JSON.stringify({ code: "AUTH_REQUIRED", error: "OSIRIS rejected the token.", retryable: false }),
+            });
+            return;
+         }
+         hasToken = true;
+      }
+      await route.fulfill({
+         status: 200,
+         contentType: "application/json",
+         body: JSON.stringify({ hasCustomToken: hasToken, hasBearerToken: hasToken }),
+      });
+   });
+   await page.route("**/api/roster/weeks?*", async (route) => {
+      const url = new URL(route.request().url());
+      const offset = Number(url.searchParams.get("offset") ?? "0");
+      const limit = Number(url.searchParams.get("limit") ?? "5");
+      await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(createRosterBatch(offset, limit)) });
+   });
+
+   await page.goto("/");
+   const tokenInput = page.getByLabel("Bearer token");
+   await tokenInput.fill("Bearer rejected-token");
+   await page.getByRole("button", { name: "Load roster" }).click();
+
+   await expect(page.getByRole("heading", { name: "Bearer token rejected" })).toBeVisible();
+   await expect(tokenInput).toHaveValue("Bearer rejected-token");
+
+   rejectToken = false;
+   await tokenInput.fill("Bearer accepted-token");
+   await page.getByRole("button", { name: "Load roster" }).click();
+
+   await expect(page.getByRole("heading", { name: "Checking bearer token" })).toBeVisible();
+   await expect(page.getByRole("button", { name: "SOURCE_TITLE_0_1" })).toBeVisible();
+   await expect(page.getByRole("heading", { name: /Bearer token/ })).toHaveCount(0);
+});
+
+test("retries token settings instead of showing the entry form after a transient startup failure", async ({ page }) => {
+   let settingsRequestCount = 0;
+   await page.route("**/api/settings/osiris-token", async (route) => {
+      settingsRequestCount += 1;
+      if (settingsRequestCount === 1) {
+         await route.fulfill({ status: 502, contentType: "text/plain", body: "Dev server is starting." });
+         return;
+      }
+
+      await route.fulfill({
+         status: 200,
+         contentType: "application/json",
+         body: JSON.stringify({ hasCustomToken: false, hasBearerToken: true }),
+      });
+   });
+
+   await page.goto("/");
+
+   await expect(page.getByRole("heading", { name: "Bearer token required" })).toHaveCount(0);
+   await expect(page.getByRole("button", { name: "SOURCE_TITLE_0_1" })).toBeVisible();
+   expect(settingsRequestCount).toBeGreaterThan(1);
 });
 
 test("tooltips work inside preferences and do not reopen after focus restoration", async ({ page }) => {

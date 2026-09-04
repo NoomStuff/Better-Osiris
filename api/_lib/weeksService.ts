@@ -23,7 +23,11 @@ export function parseWeeksRange(offsetValue: string | null | undefined, limitVal
 
 export async function loadWeekBatch(request: WeeksRequest): Promise<WeekBatch> {
    const { offset, limit } = parseWeeksRange(request.offset, request.limit);
-   const rawResponse = await fetchOsirisRosterWeeks(offset, limit, resolveOsirisBearerToken(request.cookieHeader));
+   return loadWeekBatchWithToken(offset, limit, resolveOsirisBearerToken(request.cookieHeader));
+}
+
+export async function loadWeekBatchWithToken(offset: number, limit: number, token: string | null): Promise<WeekBatch> {
+   const rawResponse = await fetchOsirisRosterWeeks(offset, limit, token);
 
    return {
       weeks: normalizeWeeksResponse(rawResponse, offset, limit),

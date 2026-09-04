@@ -34,8 +34,31 @@ async function parseSettingsResponse(response: Response): Promise<OsirisTokenSet
 
    if (!response.ok) {
       const errorPayload = parseApiErrorPayload(payload);
-      throw new Error(errorPayload?.error ?? `Settings request failed with HTTP ${response.status}.`);
+      throw new OsirisTokenSettingsError(
+         errorPayload?.error ?? `Settings request failed with HTTP ${response.status}.`,
+         response.status,
+         errorPayload?.code ?? null,
+         errorPayload?.retryable ?? false
+      );
    }
 
    return parseOsirisTokenSettings(payload);
+}
+
+export class OsirisTokenSettingsError extends Error {
+   readonly status: number;
+   readonly code: string | null;
+   readonly retryable: boolean;
+
+   constructor(message: string, status: number, code: string | null, retryable: boolean) {
+      super(message);
+      this.name = "OsirisTokenSettingsError";
+      this.status = status;
+      this.code = code;
+      this.retryable = retryable;
+   }
+
+   get isTokenRejected() {
+      return this.status === 400 || this.status === 401 || this.status === 403 || this.code === "AUTH_REQUIRED";
+   }
 }

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { CSSProperties, SyntheticEvent } from "react";
 import type { OsirisTokenSettings } from "../api/settings";
+import type { OsirisTokenValidationStatus } from "../types/osirisToken";
 import type { IsoWeekday } from "../lib/date";
 import type { DevClassStatusPreviewMode } from "../lib/devStatusPreview";
 import { DEFAULT_GRID_HOURS, formatGridHour, GRID_HOUR_MAX, GRID_HOUR_MIN, type GridHourRange } from "../lib/gridHours";
@@ -40,13 +41,16 @@ interface SettingsDialogProps {
    statusPreviewMode: DevClassStatusPreviewMode;
    tokenSettings: OsirisTokenSettings | null;
    isTokenLoading: boolean;
+   tokenValidationStatus: OsirisTokenValidationStatus;
+   successfulTokenValidationKey: string | null;
+   onTokenDraftChange: () => void;
    onClose: () => void;
    onChangeNotifications: (enabled: boolean) => void;
    onChangeTheme: (theme: ThemeId) => void;
    onChangeShownWeekdays: (weekdays: IsoWeekday[]) => void;
    onChangeGridHours: (hours: GridHourRange) => void;
    onChangeAgendaFoldingMode: (mode: AgendaFoldingMode) => void;
-   onSaveToken: (token: string) => Promise<OsirisTokenSettings>;
+   onSaveToken: (token: string) => Promise<void>;
    onClearToken: () => Promise<OsirisTokenSettings>;
    onToggleDevTools: (enabled: boolean) => void;
    onChangeTimeOverride: (date: Date | null) => void;
@@ -91,6 +95,9 @@ export function SettingsDialog({
    statusPreviewMode,
    tokenSettings,
    isTokenLoading,
+   tokenValidationStatus,
+   successfulTokenValidationKey,
+   onTokenDraftChange,
    onClose,
    onChangeNotifications,
    onChangeTheme,
@@ -113,7 +120,18 @@ export function SettingsDialog({
    const closeTimerRef = useRef<number | null>(null);
    const hasCustomToken = tokenSettings?.hasCustomToken === true;
    const hasBearerToken = tokenSettings?.hasBearerToken === true;
-   const canSaveToken = token.trim().length > 0 && !isTokenLoading;
+   const isCheckingToken = isTokenLoading || tokenValidationStatus === "checking";
+   const canSaveToken = token.trim().length > 0 && !isCheckingToken;
+   const tokenAccessDetail =
+      tokenValidationStatus === "checking"
+         ? "Checking whether OSIRIS accepts this token."
+         : tokenValidationStatus === "rejected"
+           ? "OSIRIS rejected this token. Paste a fresh one and try again."
+           : tokenValidationStatus === "unavailable"
+             ? "OSIRIS is unavailable. The roster will retry automatically."
+             : hasCustomToken || hasBearerToken
+               ? "Roster requests are using your saved bearer token."
+               : "No bearer token is set.";
    const notificationDetail = !areNotificationsSupported
       ? "This browser does not support timetable notifications."
       : areNotificationsBlocked
@@ -130,12 +148,13 @@ export function SettingsDialog({
       setIsClosing(true);
       closeTimerRef.current = window.setTimeout(() => {
          setToken("");
+         onTokenDraftChange();
          setThemeMode(getThemeMode(theme));
          setAnimateThemePicker(false);
          setIsClosing(false);
          onClose();
       }, PANEL_CLOSE_MS);
-   }, [isClosing, onClose, theme]);
+   }, [isClosing, onClose, onTokenDraftChange, theme]);
 
    useEffect(() => {
       return () => {
@@ -145,6 +164,15 @@ export function SettingsDialog({
       };
    }, []);
 
+   useEffect(() => {
+      if (successfulTokenValidationKey === null) {
+         return;
+      }
+
+      const resetTimerId = window.setTimeout(() => setToken(""), 0);
+      return () => window.clearTimeout(resetTimerId);
+   }, [successfulTokenValidationKey]);
+
    const handleSubmit = async (event: SyntheticEvent<HTMLFormElement>) => {
       event.preventDefault();
       const nextToken = token.trim();
@@ -153,13 +181,7 @@ export function SettingsDialog({
          return;
       }
 
-      try {
-         await onSaveToken(nextToken);
-         setToken("");
-         notifySuccess("Osiris token saved successfully.");
-      } catch (requestError) {
-         notifyError(requestError, "Failed to save Osiris token.");
-      }
+      await onSaveToken(nextToken);
    };
 
    const handleClear = useCallback(async () => {
@@ -382,7 +404,7 @@ export function SettingsDialog({
                   <div className="settings-section__header">
                      <div className="settings-section__copy">
                         <h3 id="token-settings-title">Roster access</h3>
-                        <p>{hasCustomToken || hasBearerToken ? "Roster requests are using your saved bearer token." : "No bearer token is set."}</p>
+                        <p>{tokenAccessDetail}</p>
                      </div>
                   </div>
 
@@ -400,18 +422,21 @@ export function SettingsDialog({
                            placeholder={hasCustomToken ? "Replace custom token" : "Bearer XXXXXXXXXXXXXXXXXXXXXXXXXXX"}
                            autoComplete="off"
                            spellCheck={false}
-                           disabled={isTokenLoading}
-                           onChange={(event) => setToken(event.target.value)}
+                           disabled={isCheckingToken}
+                           onChange={(event) => {
+                              setToken(event.target.value);
+                              onTokenDraftChange();
+                           }}
                         />
                      </label>
 
                      <div className="settings-dialog__actions">
                         <Button variant="primary" type="submit" disabled={!canSaveToken}>
-                           Save token
+                           {isCheckingToken ? "Verifying..." : "Save"}
                         </Button>
                         <Button
                            variant="danger"
-                           disabled={isTokenLoading || !hasCustomToken}
+                           disabled={isCheckingToken || !hasCustomToken}
                            onClick={(event) => {
                               event.currentTarget.focus({ preventScroll: true });
                               setIsResetConfirmOpen(true);
