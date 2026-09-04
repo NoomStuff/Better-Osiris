@@ -673,6 +673,118 @@ test("space activates a focused schoolClass instead of jumping to the current we
    await expect(page.locator(".weekbar__label")).toHaveText("This week");
 });
 
+test("class details use location and date as context for the primary facts", async ({ page }) => {
+   await page.goto("/");
+   await page.getByRole("button", { name: /SOURCE_TITLE_0_1/ }).click();
+
+   const dialog = page.getByRole("dialog", { name: "Class details" });
+   const glance = dialog.getByRole("region", { name: "Where and when" });
+   await expect(glance).toContainText("SOURCE_ROOM");
+   await expect(glance).toContainText("SOURCE_LOCATION");
+   await expect(glance).toContainText("Tuesday 16 June");
+   await expect(glance).toContainText("09:00 – 10:30");
+   const teacher = dialog.getByRole("region", { name: "Teacher" });
+   await expect(teacher).toContainText("is teaching");
+   await expect(teacher).toContainText("SOURCE_TEACHER");
+   await expect(glance.getByRole("region", { name: "Details" })).toContainText("SOURCE_DESCRIPTION");
+   await expect(dialog.getByRole("heading", { name: "Details" })).toHaveCount(0);
+});
+
+test("changed class details keep old and current room and time values together", async ({ page }) => {
+   await page.addInitScript(() => {
+      window.localStorage.setItem("roster-devtools-enabled", "true");
+      window.localStorage.setItem("roster-devtools-status-preview", "changed");
+   });
+   await page.goto("/");
+   await page.getByRole("button", { name: /SOURCE_TITLE_0_1/ }).click();
+
+   const dialog = page.getByRole("dialog", { name: "Class details" });
+   const status = dialog.locator(".class-panel__status--changed");
+   await expect(status).toContainText("changed");
+   await expect(status.locator(".fa-pen")).toBeVisible();
+   const place = dialog.locator(".class-panel__place");
+   await expect(place.locator("s")).toHaveText("A101");
+   await expect(place.locator("strong")).toHaveText("SOURCE_ROOM");
+   const time = dialog.locator(".class-panel__time-value");
+   await expect(time.locator("s")).toHaveText("08:30 – 10:00");
+   await expect(time.locator("strong")).toHaveText("09:00 – 10:30");
+});
+
+test("a removed location is not presented as changing into the Room fallback label", async ({ page }) => {
+   await page.route("**/api/roster/weeks?*", async (route) => {
+      const url = new URL(route.request().url());
+      const offset = Number(url.searchParams.get("offset") ?? "0");
+      const limit = Number(url.searchParams.get("limit") ?? "5");
+      const batch = createRosterBatch(offset, limit);
+
+      await route.fulfill({
+         status: 200,
+         contentType: "application/json",
+         body: JSON.stringify({
+            ...batch,
+            weeks: batch.weeks.map((week) => ({
+               ...week,
+               classes: week.classes.map((schoolClass, index) =>
+                  index === 0
+                     ? {
+                          ...schoolClass,
+                          location: "",
+                          status: "changed",
+                          previous: { ...schoolClass, location: "LMSA923", status: "scheduled" },
+                       }
+                     : schoolClass
+               ),
+            })),
+         }),
+      });
+   });
+   await page.goto("/");
+   await page.getByRole("button", { name: /SOURCE_TITLE_0_1/ }).click();
+
+   const context = page.getByRole("dialog", { name: "Class details" }).locator(".class-panel__place .class-panel__glance-context");
+   await expect(context.locator("s")).toHaveText("LMSA923");
+   await expect(context.locator("strong")).toHaveText("Not set");
+   await expect(context).not.toContainText("Room");
+});
+
+test("cancelled class details strike through place, date and time", async ({ page }) => {
+   await page.addInitScript(() => {
+      window.localStorage.setItem("roster-devtools-enabled", "true");
+      window.localStorage.setItem("roster-devtools-status-preview", "cancelled");
+   });
+   await page.goto("/");
+   await page.getByRole("button", { name: /SOURCE_TITLE_0_1/ }).click();
+
+   const dialog = page.getByRole("dialog", { name: "Class details" });
+   const status = dialog.locator(".class-panel__status--cancelled");
+   await expect(status).toContainText("cancelled");
+   await expect(status.locator(".fa-trash-can")).toBeVisible();
+   const cancelledPlaceValues = dialog.locator(".class-panel__place .class-panel__cancelled-value");
+   await expect(cancelledPlaceValues).toHaveCount(2);
+   await expect(cancelledPlaceValues.nth(0)).toHaveText("SOURCE_LOCATION");
+   await expect(cancelledPlaceValues.nth(1)).toHaveText("SOURCE_ROOM");
+   const cancelledValues = dialog.locator(".class-panel__time .class-panel__cancelled-value");
+   await expect(cancelledValues).toHaveCount(2);
+   await expect(cancelledValues.nth(0)).toHaveText("Tuesday 16 June");
+   await expect(cancelledValues.nth(1)).toHaveText("09:00 – 10:30");
+});
+
+test("added class details show plus markers in the status, place and time", async ({ page }) => {
+   await page.addInitScript(() => {
+      window.localStorage.setItem("roster-devtools-enabled", "true");
+      window.localStorage.setItem("roster-devtools-status-preview", "added");
+   });
+   await page.goto("/");
+   await page.getByRole("button", { name: /SOURCE_TITLE_0_1/ }).click();
+
+   const dialog = page.getByRole("dialog", { name: "Class details" });
+   const status = dialog.locator(".class-panel__status--added");
+   await expect(status).toContainText("added");
+   await expect(status.locator(".fa-plus")).toBeVisible();
+   await expect(dialog.locator(".class-panel__place .class-panel__added-value > .fa-plus")).toBeVisible();
+   await expect(dialog.locator(".class-panel__time .class-panel__added-value > .fa-plus")).toBeVisible();
+});
+
 test("collapsed agenda days remove hidden classes from keyboard navigation", async ({ page }) => {
    await page.goto("/");
    await page.getByRole("button", { name: "Agenda view" }).click();

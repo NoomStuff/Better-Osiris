@@ -73,12 +73,25 @@ function createOriginalPreview(schoolClass: Class): ClassSnapshot {
       id: schoolClass.id,
       title: schoolClass.title,
       subject: schoolClass.subject,
-      start: schoolClass.start,
-      end: schoolClass.end,
+      start: shiftPreviewDateTime(schoolClass.start, -30),
+      end: shiftPreviewDateTime(schoolClass.end, -30),
       teacher: schoolClass.teacher,
       room: schoolClass.room === "A101" ? "B12" : "A101",
       location: schoolClass.location,
       description: schoolClass.description,
       status: "scheduled",
    };
+}
+
+function shiftPreviewDateTime(value: string, minutes: number): string {
+   const match = /^(\d{4})-(\d{2})-(\d{2})[T ](\d{2}):(\d{2})(?::(\d{2}))?/.exec(value);
+   if (!match) {
+      return value;
+   }
+
+   const [, year, month, day, hour, minute, second = "00"] = match;
+   const shifted = new Date(Date.UTC(Number(year), Number(month) - 1, Number(day), Number(hour), Number(minute), Number(second)));
+   shifted.setUTCMinutes(shifted.getUTCMinutes() + minutes);
+
+   return shifted.toISOString().slice(0, 19);
 }
