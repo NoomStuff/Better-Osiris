@@ -1,3 +1,4 @@
+import { shiftCalendarDate } from "../../shared/calendar";
 import assert from "node:assert/strict";
 import { Readable } from "node:stream";
 import { afterEach, describe, it } from "node:test";
@@ -17,6 +18,9 @@ interface MockRequestOptions {
 }
 
 class MockResponse {
+   once() {
+      return this;
+   }
    statusCode = 200;
    readonly headers = new Map<string, number | string | string[]>();
    body = "";
@@ -45,7 +49,7 @@ void describe("/api/settings/osiris-token", () => {
       process.env["BEARER_TOKEN"] = "Bearer default-token";
 
       const response = await callSettingsHandler({ method: "GET" });
-      const payload = JSON.parse(response.body) as { hasCustomToken?: boolean; hasBearerToken?: boolean };
+      const payload = JSON.parse(response.body) as { hasCustomToken?: boolean; hasBearerToken?: boolean; contextId?: string };
 
       assert.equal(response.statusCode, 200);
       assert.equal(payload.hasCustomToken, false);
@@ -60,7 +64,7 @@ void describe("/api/settings/osiris-token", () => {
       process.env["BEARER_TOKEN"] = "Bearer default-token";
 
       const response = await callSettingsHandler({ method: "GET" });
-      const payload = JSON.parse(response.body) as { hasCustomToken?: boolean; hasBearerToken?: boolean };
+      const payload = JSON.parse(response.body) as { hasCustomToken?: boolean; hasBearerToken?: boolean; contextId?: string };
 
       assert.equal(response.statusCode, 500);
       assert.equal(payload.hasCustomToken, undefined);
@@ -73,7 +77,7 @@ void describe("/api/settings/osiris-token", () => {
       process.env["BEARER_TOKEN"] = "";
 
       const response = await callSettingsHandler({ method: "GET" });
-      const payload = JSON.parse(response.body) as { hasCustomToken?: boolean; hasBearerToken?: boolean };
+      const payload = JSON.parse(response.body) as { hasCustomToken?: boolean; hasBearerToken?: boolean; contextId?: string };
 
       assert.equal(response.statusCode, 200);
       assert.equal(payload.hasCustomToken, false);
@@ -93,11 +97,13 @@ void describe("/api/settings/osiris-token", () => {
          method: "PUT",
          body: { token: "Bearer custom-token" },
       });
-      const payload = JSON.parse(response.body) as { hasCustomToken?: boolean; hasBearerToken?: boolean };
+      const payload = JSON.parse(response.body) as { hasCustomToken?: boolean; hasBearerToken?: boolean; contextId?: string };
       const cookieHeader = response.headers.get("set-cookie");
 
       assert.equal(response.statusCode, 200);
-      assert.deepEqual(payload, { hasCustomToken: true, hasBearerToken: true });
+      assert.equal(payload.hasCustomToken, true);
+      assert.equal(payload.hasBearerToken, true);
+      assert.ok(payload.contextId);
       assert.equal(readOsirisTokenFromCookie(String(cookieHeader), process.env["COOKIE_SECRET"]), "Bearer custom-token");
       assert.equal(authorization, "Bearer custom-token");
    });
@@ -127,11 +133,13 @@ void describe("/api/settings/osiris-token", () => {
       process.env["BEARER_TOKEN"] = "Bearer default-token";
 
       const response = await callSettingsHandler({ method: "DELETE" });
-      const payload = JSON.parse(response.body) as { hasCustomToken?: boolean; hasBearerToken?: boolean };
+      const payload = JSON.parse(response.body) as { hasCustomToken?: boolean; hasBearerToken?: boolean; contextId?: string };
       const cookieHeader = response.headers.get("set-cookie");
 
       assert.equal(response.statusCode, 200);
-      assert.deepEqual(payload, { hasCustomToken: false, hasBearerToken: true });
+      assert.equal(payload.hasCustomToken, false);
+      assert.equal(payload.hasBearerToken, true);
+      assert.ok(payload.contextId);
       assert.equal(readOsirisTokenFromCookie(String(cookieHeader), process.env["COOKIE_SECRET"]), null);
       assert.match(String(cookieHeader), /Max-Age=0/);
    });
@@ -165,8 +173,8 @@ function mockSuccessfulOsirisFetch(readAuthorization: (authorization: string | n
       const items = Array.from({ length: limit }, (_, index) => ({
          jaar: 2026,
          week: 25 + index,
-         startdatum: "2026-06-15",
-         einddatum: "2026-06-21",
+         startdatum: shiftCalendarDate("2026-06-15", index * 7),
+         einddatum: shiftCalendarDate("2026-06-21", index * 7),
          dagen: [],
       }));
 

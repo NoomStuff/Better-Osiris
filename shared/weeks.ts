@@ -6,15 +6,17 @@ export const MAX_WEEK_LIMIT = 5;
 export interface OsirisTokenSettings {
    hasCustomToken: boolean;
    hasBearerToken: boolean;
+   contextId: string | null;
 }
 
 export interface RosterConfig {
    timeZone: string;
 }
 
-export type ClassStatus = "scheduled" | "added" | "changed" | "cancelled";
+export type SourceClassStatus = "scheduled" | "cancelled";
+export type ClassStatus = SourceClassStatus | "added" | "changed";
 
-export interface ClassSnapshot {
+export interface ClassDetails {
    id: string;
    title: string;
    subject: string;
@@ -24,22 +26,12 @@ export interface ClassSnapshot {
    room: string;
    location: string;
    description: string;
-   status: ClassStatus;
 }
 
-export interface Class {
-   id: string;
-   title: string;
-   subject: string;
-   start: string;
-   end: string;
-   teacher: string;
-   room: string;
-   location: string;
-   description: string;
-   status: ClassStatus;
-   previous?: ClassSnapshot;
-}
+export type ClassSnapshot = ClassDetails & { status: SourceClassStatus };
+export type SourceClass = ClassSnapshot;
+export type Class = ClassDetails &
+   ({ status: "scheduled" | "added"; previous?: never } | { status: "cancelled"; previous?: ClassSnapshot } | { status: "changed"; previous: ClassSnapshot });
 
 export interface WeekMeta {
    offset: number;
@@ -62,4 +54,6 @@ export interface WeekBatch {
     * the client must interpret every timezone-less class time against this zone.
     */
    timeZone: string;
+   contextId: string;
+   fetchedAt: number;
 }

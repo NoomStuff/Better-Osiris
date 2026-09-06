@@ -24,37 +24,45 @@ import "./SettingsDialog.css";
 
 interface SettingsDialogProps {
    isOpen: boolean;
-   areNotificationsBlocked: boolean;
-   areNotificationsEnabled: boolean;
-   areNotificationsSupported: boolean;
-   areNotificationsUpdating: boolean;
-   theme: ThemeId;
-   shownWeekdays: IsoWeekday[];
-   smartWeekdays: IsoWeekday[];
-   isSmartDaysReady: boolean;
-   gridHours: GridHourRange;
-   smartGridHours: GridHourRange;
-   agendaFoldingMode: AgendaFoldingMode;
-   isDevToolsEnabled: boolean;
-   perceivedNow: Date;
-   timeOverride: Date | null;
-   statusPreviewMode: DevClassStatusPreviewMode;
-   tokenSettings: OsirisTokenSettings | null;
-   isTokenLoading: boolean;
-   tokenValidationStatus: OsirisTokenValidationStatus;
-   successfulTokenValidationKey: string | null;
-   onTokenDraftChange: () => void;
    onClose: () => void;
-   onChangeNotifications: (enabled: boolean) => void;
-   onChangeTheme: (theme: ThemeId) => void;
-   onChangeShownWeekdays: (weekdays: IsoWeekday[]) => void;
-   onChangeGridHours: (hours: GridHourRange) => void;
-   onChangeAgendaFoldingMode: (mode: AgendaFoldingMode) => void;
-   onSaveToken: (token: string) => Promise<void>;
-   onClearToken: () => Promise<OsirisTokenSettings>;
-   onToggleDevTools: (enabled: boolean) => void;
-   onChangeTimeOverride: (date: Date | null) => void;
-   onChangeStatusPreviewMode: (mode: DevClassStatusPreviewMode) => void;
+   notifications: {
+      areNotificationsBlocked: boolean;
+      areNotificationsEnabled: boolean;
+      areNotificationsSupported: boolean;
+      areNotificationsUpdating: boolean;
+      onChangeNotifications: (enabled: boolean) => void;
+   };
+   preferences: {
+      theme: ThemeId;
+      shownWeekdays: IsoWeekday[];
+      smartWeekdays: IsoWeekday[];
+      isSmartDaysReady: boolean;
+      gridHours: GridHourRange;
+      smartGridHours: GridHourRange;
+      agendaFoldingMode: AgendaFoldingMode;
+      tokenValidationStatus: OsirisTokenValidationStatus;
+      onChangeTheme: (theme: ThemeId) => void;
+      onChangeShownWeekdays: (weekdays: IsoWeekday[]) => void;
+      onChangeGridHours: (hours: GridHourRange) => void;
+      onChangeAgendaFoldingMode: (mode: AgendaFoldingMode) => void;
+   };
+   access: {
+      tokenSettings: OsirisTokenSettings | null;
+      isTokenLoading: boolean;
+      successfulTokenValidationKey: number | null;
+      onTokenDraftChange: () => void;
+      onSaveToken: (token: string) => Promise<void>;
+      onClearToken: () => Promise<OsirisTokenSettings>;
+   };
+   preview: {
+      isDevToolsEnabled: boolean;
+      perceivedNow: Date;
+      timeOverride: Date | null;
+      statusPreviewMode: DevClassStatusPreviewMode;
+      onToggleDevTools: (enabled: boolean) => void;
+      onChangeTimeOverride: (date: Date | null) => void;
+      onChangeStatusPreviewMode: (mode: DevClassStatusPreviewMode) => void;
+   };
 }
 
 const IS_DEV_SERVER = import.meta.env.DEV;
@@ -76,40 +84,24 @@ const AGENDA_FOLDING_OPTIONS: readonly ActionOption<AgendaFoldingMode>[] = [
 const WEEKDAY_LABEL_FORMAT = new Intl.DateTimeFormat("en-GB", { weekday: "short", timeZone: "UTC" });
 const WEEKDAY_LABELS: readonly string[] = ISO_WEEKDAYS.map((weekday) => WEEKDAY_LABEL_FORMAT.format(new Date(Date.UTC(2024, 0, weekday))));
 
-export function SettingsDialog({
-   isOpen,
-   areNotificationsBlocked,
-   areNotificationsEnabled,
-   areNotificationsSupported,
-   areNotificationsUpdating,
-   theme,
-   shownWeekdays,
-   smartWeekdays,
-   isSmartDaysReady,
-   gridHours,
-   smartGridHours,
-   agendaFoldingMode,
-   isDevToolsEnabled,
-   perceivedNow,
-   timeOverride,
-   statusPreviewMode,
-   tokenSettings,
-   isTokenLoading,
-   tokenValidationStatus,
-   successfulTokenValidationKey,
-   onTokenDraftChange,
-   onClose,
-   onChangeNotifications,
-   onChangeTheme,
-   onChangeShownWeekdays,
-   onChangeGridHours,
-   onChangeAgendaFoldingMode,
-   onSaveToken,
-   onClearToken,
-   onToggleDevTools,
-   onChangeTimeOverride,
-   onChangeStatusPreviewMode,
-}: SettingsDialogProps) {
+export function SettingsDialog({ isOpen, onClose, notifications, preferences, access, preview }: SettingsDialogProps) {
+   const { areNotificationsBlocked, areNotificationsEnabled, areNotificationsSupported, areNotificationsUpdating, onChangeNotifications } = notifications;
+   const {
+      theme,
+      shownWeekdays,
+      smartWeekdays,
+      isSmartDaysReady,
+      gridHours,
+      smartGridHours,
+      agendaFoldingMode,
+      tokenValidationStatus,
+      onChangeTheme,
+      onChangeShownWeekdays,
+      onChangeGridHours,
+      onChangeAgendaFoldingMode,
+   } = preferences;
+   const { tokenSettings, isTokenLoading, successfulTokenValidationKey, onTokenDraftChange, onSaveToken, onClearToken } = access;
+   const { isDevToolsEnabled, perceivedNow, timeOverride, statusPreviewMode, onToggleDevTools, onChangeTimeOverride, onChangeStatusPreviewMode } = preview;
    const [token, setToken] = useState("");
    const contentRef = useOverlayScrollbar();
    const [isClosing, setIsClosing] = useState(false);
@@ -127,18 +119,20 @@ export function SettingsDialog({
          ? "Checking whether OSIRIS accepts this token."
          : tokenValidationStatus === "rejected"
            ? "OSIRIS rejected this token. Paste a fresh one and try again."
-           : tokenValidationStatus === "unavailable"
-             ? "OSIRIS is unavailable. The roster will retry automatically."
-             : hasCustomToken || hasBearerToken
-               ? "Roster requests are using your saved bearer token."
-               : "No bearer token is set.";
+           : tokenValidationStatus === "save-unavailable"
+             ? "The token was not saved. Try again with the same token."
+             : tokenValidationStatus === "unavailable"
+               ? "OSIRIS is unavailable. The roster will retry automatically."
+               : hasCustomToken || hasBearerToken
+                 ? "Roster requests are using your saved bearer token."
+                 : "No bearer token is set.";
    const notificationDetail = !areNotificationsSupported
       ? "This browser does not support timetable notifications."
       : areNotificationsBlocked
         ? "Notifications are blocked in your browser settings."
         : areNotificationsEnabled
-          ? "You'll get alerts when this week's classes change."
-          : "Get an alert when this week's classes change.";
+          ? "You'll get alerts when this week's classes change while the app is open."
+          : "Get an alert when this week's classes change while the app is open.";
 
    const closeSettings = useCallback(() => {
       if (isClosing) {

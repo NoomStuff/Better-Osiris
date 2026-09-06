@@ -2,6 +2,7 @@ import type { ReactNode, SyntheticEvent } from "react";
 import { OSIRIS_BEARER_TOKEN_HELP_URL } from "../lib/osirisTokenHelp";
 import type { OsirisTokenValidationStatus } from "../types/osirisToken";
 import "./LoadingState.css";
+import { Button } from "./Button";
 
 interface WeekOverlayStateProps {
    title: string;
@@ -23,6 +24,7 @@ interface ErrorStateProps {
    retryCountdownMs: number;
    isRetrying: boolean;
    canRetry: boolean;
+   onRetry?: () => void;
 }
 
 interface BearerTokenStateProps {
@@ -48,13 +50,18 @@ export function LoadingState({ message }: LoadingStateProps) {
    return <WeekOverlayState title="Loading roster" detail={message} spinning role="status" />;
 }
 
-export function ErrorState({ title, detail, log, retryCountdownMs, isRetrying, canRetry }: ErrorStateProps) {
+export function ErrorState({ title, detail, log, retryCountdownMs, isRetrying, canRetry, onRetry }: ErrorStateProps) {
    const secondsUntilRetry = Math.ceil(retryCountdownMs / 1_000);
    const retryText = isRetrying ? "Retrying now..." : secondsUntilRetry > 0 ? `Retrying in ${secondsUntilRetry}s.` : "Retrying soon.";
 
    return (
       <WeekOverlayState title={title} detail={detail} icon="fa-solid fa-triangle-exclamation" role="alert">
          {canRetry ? <strong className="roster-overlay-state__retry">{retryText}</strong> : null}
+         {onRetry ? (
+            <Button onClick={onRetry} disabled={isRetrying}>
+               Try again
+            </Button>
+         ) : null}
          <details className="roster-overlay-state__log">
             <summary>Error log</summary>
             <p>Error: {log}</p>
@@ -81,7 +88,11 @@ export function BearerTokenState({ token, status, onTokenChange, onSubmit }: Bea
       },
       unavailable: {
          title: "Could not check bearer token",
-         detail: "OSIRIS is unavailable right now. The roster will retry automatically, or you can try another token.",
+         detail: "OSIRIS is unavailable right now. Your token was saved; the roster will retry automatically.",
+      },
+      "save-unavailable": {
+         title: "Could not save bearer token",
+         detail: "The server is unavailable right now. Your token was not saved. Try again with the same token.",
       },
    }[status];
 

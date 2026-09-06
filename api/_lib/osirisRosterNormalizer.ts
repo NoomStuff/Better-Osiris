@@ -1,4 +1,5 @@
-import type { Class, ClassStatus, Week } from "../../shared/weeks.js";
+import type { SourceClass, SourceClassStatus, Week } from "../../shared/weeks.js";
+import { shiftCalendarDate } from "../../shared/calendar.js";
 import { getZoneDateFormatter } from "../../shared/timeZone.js";
 import { ApiError } from "./errors.js";
 import { getRosterTimeZone } from "./osirisConfig.js";
@@ -65,9 +66,9 @@ function toLocalDateOnly(dayIso: string) {
    return getDatePart(dayIso);
 }
 
-function normalizeClass(item: OsirisRosterEntry): Class {
+function normalizeClass(item: OsirisRosterEntry): SourceClass {
    const parsed = splitSubject(item.onderwerp);
-   const status: ClassStatus = resolveClassStatus(item);
+   const status = resolveClassStatus(item);
 
    const start = toLocalDateTime(item.datum, item.tijd_vanaf);
    const end = toLocalDateTime(item.datum, item.tijd_tm);
@@ -92,7 +93,7 @@ function normalizeClass(item: OsirisRosterEntry): Class {
    };
 }
 
-function resolveClassStatus(item: OsirisRosterEntry): ClassStatus {
+function resolveClassStatus(item: OsirisRosterEntry): SourceClassStatus {
    const statusHints = ["status", "roosterstatus", "status_omschrijving", "statusomschrijving"];
    const itemRecord = item as unknown as Record<string, unknown>;
    const normalizedHints = statusHints
@@ -115,7 +116,7 @@ function normalizeRosterWeekItem(week: OsirisWeek, requestedOffset: number): Wee
          offset: requestedOffset,
          number: week.week,
          start: toLocalDateOnly(week.startdatum),
-         end: toLocalDateOnly(week.einddatum),
+         end: shiftCalendarDate(toLocalDateOnly(week.startdatum), 6),
       },
       classes: week.dagen.flatMap((day) => day.rooster.map(normalizeClass)),
    };

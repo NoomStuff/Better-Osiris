@@ -1,8 +1,11 @@
-import { Fragment, useCallback, useLayoutEffect, useRef, useState } from "react";
+import { Fragment, useCallback, useLayoutEffect, useRef, useState, type RefObject } from "react";
 import { dayLabel, monthDayLabel, timeLabel, toDayKey } from "../lib/date";
 import { DETAILS_SEPARATOR, getClassLocationLabel } from "../lib/classFormat";
 import { getBreakIcon, getEmptyDayMessage, getEmptyTodayMessage } from "../lib/flavor";
-import type { Day, Class, PositionedClass } from "../types/weeks";
+import type { Day, Class } from "../types/weeks";
+import { getBreaktimeLabel, getCurrentAgendaSegment, getDayTimeline, getSegmentProgress, getTodayProgressAnchor, isActiveClass } from "../lib/dayTimeline";
+import { useClock } from "../hooks/useClock";
+import { ClassStatusMarker } from "./ClassStatusMarker";
 import "./AgendaView.css";
 
 interface AgendaViewProps {
@@ -10,30 +13,15 @@ interface AgendaViewProps {
    expandedDays: Set<string>;
    animate: boolean;
    now: Date;
+   timeOverride: Date | null;
    onToggleDay: (dayKey: string) => void;
    onSelectClass: (schoolClass: Class) => void;
 }
 
-const MINUTE_MS = 60 * 1000;
 const CURRENT_INDICATOR_MIN_HEIGHT = 8;
 const CURRENT_INDICATOR_MAX_HEIGHT = 32;
 const CURRENT_INDICATOR_CLASS_INSET = 28;
 const CURRENT_INDICATOR_BREAK_INSET = 12;
-
-type CurrentAgendaSegment =
-   | {
-        type: "schoolClass";
-        key: string;
-        startDate: Date;
-        endDate: Date;
-     }
-   | {
-        type: "break";
-        key: string;
-        startDate: Date;
-        endDate: Date;
-     };
-
 interface CurrentIndicatorPlacement {
    visible: boolean;
    top: number;
@@ -41,116 +29,19 @@ interface CurrentIndicatorPlacement {
    progress: number;
 }
 
-function getBreaktimeLabel(previousClass: PositionedClass, nextClass: PositionedClass): string | null {
-   const breakMinutes = Math.round((nextClass.startDate.getTime() - previousClass.endDate.getTime()) / MINUTE_MS);
-
-   if (breakMinutes <= 0) {
-      return null;
-   }
-
-   if (breakMinutes < 60) {
-      return `${breakMinutes} min break`;
-   }
-
-   const hours = Math.floor(breakMinutes / 60);
-   const minutes = breakMinutes % 60;
-   const hourLabel = `${hours} hr${hours === 1 ? "" : "s"}`;
-
-   return minutes === 0 ? `${hourLabel} break` : `${hourLabel} ${minutes} min break`;
-}
-
-function getBreaktimeKey(previousClass: PositionedClass, nextClass: PositionedClass): string {
-   return `${previousClass.id}--${nextClass.id}`;
-}
-
-function clamp(value: number, min: number, max: number) {
-   return Math.min(Math.max(value, min), max);
-}
-
-function getSegmentProgress(segment: CurrentAgendaSegment | null, now: Date) {
-   if (!segment) {
-      return 0;
-   }
-
-   const start = segment.startDate.getTime();
-   const end = segment.endDate.getTime();
-   const duration = end - start;
-
-   if (duration <= 0) {
-      return 1;
-   }
-
-   return clamp((now.getTime() - start) / duration, 0, 1);
-}
-
-function getCurrentAgendaSegment(days: Day[], now: Date): CurrentAgendaSegment | null {
-   const todayKey = toDayKey(now);
-   const todayGroup = days.find((group) => group.key === todayKey);
-
-   if (!todayGroup) {
-      return null;
-   }
-
-   const nowTime = now.getTime();
-
-   for (let index = 0; index < todayGroup.classes.length; index += 1) {
-      const schoolClass = todayGroup.classes[index];
-      const nextClass = todayGroup.classes[index + 1];
-
-      if (!schoolClass) {
-         continue;
-      }
-
-      if (nowTime >= schoolClass.startDate.getTime() && nowTime < schoolClass.endDate.getTime()) {
-         return {
-            type: "schoolClass",
-            key: schoolClass.id,
-            startDate: schoolClass.startDate,
-            endDate: schoolClass.endDate,
-         };
-      }
-
-      if (nextClass && nowTime >= schoolClass.endDate.getTime() && nowTime < nextClass.startDate.getTime()) {
-         return {
-            type: "break",
-            key: getBreaktimeKey(schoolClass, nextClass),
-            startDate: schoolClass.endDate,
-            endDate: nextClass.startDate,
-         };
-      }
-   }
-
-   return null;
-}
-
-function getTodayProgressAnchor(days: Day[], now: Date): "before-first" | "after-last" | null {
-   const todayKey = toDayKey(now);
-   const todayGroup = days.find((group) => group.key === todayKey);
-   const firstClass = todayGroup?.classes[0];
-   const lastClass = todayGroup?.classes[todayGroup.classes.length - 1];
-
-   if (!firstClass || !lastClass) {
-      return null;
-   }
-
-   const nowTime = now.getTime();
-
-   if (nowTime < firstClass.startDate.getTime()) {
-      return "before-first";
-   }
-
-   if (nowTime >= lastClass.endDate.getTime()) {
-      return "after-last";
-   }
-
-   return null;
-}
-
-export function AgendaView({ days, expandedDays, animate, now, onToggleDay, onSelectClass }: AgendaViewProps) {
-   const agendaRef = useRef<HTMLElement | null>(null);
+function AgendaCurrentIndicator({
+   days,
+   expandedDays,
+   agendaRef,
+   timeOverride,
+}: {
+   days: Day[];
+   expandedDays: Set<string>;
+   agendaRef: RefObject<HTMLElement | null>;
+   timeOverride: Date | null;
+}) {
+   const now = useClock(1000, timeOverride);
    const [indicatorPlacement, setIndicatorPlacement] = useState<CurrentIndicatorPlacement | null>(null);
-   const todayKey = toDayKey(now);
-
    const measureIndicator = useCallback(() => {
       const agendaElement = agendaRef.current;
       if (!agendaElement) {
@@ -158,7 +49,6 @@ export function AgendaView({ days, expandedDays, animate, now, onToggleDay, onSe
       }
 
       const activeDayKey = toDayKey(now);
-      const todayGroup = days.find((group) => group.key === activeDayKey);
       const todayBodyElement = agendaElement.querySelector<HTMLElement>(`[data-day="${CSS.escape(activeDayKey)}"] .day-group__body-inner`);
       const activeSegment = getCurrentAgendaSegment(days, now);
       const todayExpanded = expandedDays.has(activeDayKey);
@@ -178,7 +68,7 @@ export function AgendaView({ days, expandedDays, animate, now, onToggleDay, onSe
       }
 
       const anchor = getTodayProgressAnchor(days, now);
-      const anchorClass = anchor === "before-first" ? todayGroup?.classes[0] : todayGroup?.classes.at(-1);
+      const anchorClass = anchor?.schoolClass;
       const anchorElement =
          anchorClass && todayBodyElement ? todayBodyElement.querySelector<HTMLElement>(`[data-current-segment="${CSS.escape(anchorClass.id)}"]`) : null;
 
@@ -186,37 +76,55 @@ export function AgendaView({ days, expandedDays, animate, now, onToggleDay, onSe
          const bodyRect = todayBodyElement.getBoundingClientRect();
          const anchorRect = anchorElement.getBoundingClientRect();
          const height = Math.max(CURRENT_INDICATOR_MIN_HEIGHT, Math.min(CURRENT_INDICATOR_MAX_HEIGHT, anchorRect.height - CURRENT_INDICATOR_CLASS_INSET));
-         const top = anchor === "before-first" ? anchorRect.top - bodyRect.top - height - 8 : anchorRect.bottom - bodyRect.top + 8;
+         const top = anchor?.position === "before-first" ? anchorRect.top - bodyRect.top - height - 8 : anchorRect.bottom - bodyRect.top + 8;
 
          setIndicatorPlacement({ visible: false, top, height, progress: 0 });
          return;
       }
 
       setIndicatorPlacement((current) => (current ? { ...current, visible: false, progress: 0 } : null));
-   }, [expandedDays, days, now]);
+   }, [agendaRef, expandedDays, days, now]);
 
+   const measureRef = useRef(measureIndicator);
    useLayoutEffect(() => {
-      const agendaElement = agendaRef.current;
-      if (!agendaElement) {
-         return undefined;
-      }
+      measureRef.current = measureIndicator;
       measureIndicator();
-
-      const resizeObserver = new ResizeObserver(measureIndicator);
-      resizeObserver.observe(agendaElement);
-      window.addEventListener("resize", measureIndicator);
-
-      return () => {
-         resizeObserver.disconnect();
-         window.removeEventListener("resize", measureIndicator);
-      };
    }, [measureIndicator]);
+   useLayoutEffect(() => {
+      const element = agendaRef.current;
+      if (!element) return;
+      const measure = () => measureRef.current();
+      const observer = new ResizeObserver(measure);
+      observer.observe(element);
+      window.addEventListener("resize", measure);
+      return () => {
+         observer.disconnect();
+         window.removeEventListener("resize", measure);
+      };
+   }, [agendaRef]);
+   if (!indicatorPlacement) return null;
+   return (
+      <span
+         className="agenda-current-indicator"
+         aria-hidden="true"
+         data-visible={indicatorPlacement.visible}
+         style={{ top: `${indicatorPlacement.top}px`, height: `${indicatorPlacement.height}px` }}
+      >
+         <span className="agenda-current-indicator__progress" style={{ height: `${indicatorPlacement.progress * 100}%` }} />
+      </span>
+   );
+}
 
+export function AgendaView({ days, expandedDays, animate, now, timeOverride, onToggleDay, onSelectClass }: AgendaViewProps) {
+   const agendaRef = useRef<HTMLElement | null>(null);
+   const todayKey = toDayKey(now);
    return (
       <section className="agenda-view" ref={agendaRef} aria-label="Weekly agenda">
          {days.map((group) => {
             const expanded = expandedDays.has(group.key);
-            const countLabel = group.classes.length === 0 ? "empty" : `${group.classes.length} class${group.classes.length === 1 ? "" : "es"}`;
+            const timeline = getDayTimeline(group.classes);
+            const count = group.classes.filter(isActiveClass).length;
+            const countLabel = count === 0 ? "empty" : `${count} class${count === 1 ? "" : "es"}`;
             const isToday = group.key === todayKey;
             const emptyTodayMessage = isToday ? getEmptyTodayMessage(group.key) : null;
 
@@ -246,20 +154,7 @@ export function AgendaView({ days, expandedDays, animate, now, onToggleDay, onSe
 
                   <div className="day-group__body" aria-hidden={!expanded} inert={!expanded ? true : undefined}>
                      <div className="day-group__body-inner">
-                        {isToday && indicatorPlacement ? (
-                           <span
-                              className="agenda-current-indicator"
-                              aria-hidden="true"
-                              data-visible={indicatorPlacement.visible}
-                              style={{
-                                 top: `${indicatorPlacement.top}px`,
-                                 height: `${indicatorPlacement.height}px`,
-                              }}
-                           >
-                              <span className="agenda-current-indicator__progress" style={{ height: `${indicatorPlacement.progress * 100}%` }} />
-                           </span>
-                        ) : null}
-
+                        {isToday ? <AgendaCurrentIndicator days={days} expandedDays={expandedDays} agendaRef={agendaRef} timeOverride={timeOverride} /> : null}
                         {group.classes.length === 0 ? (
                            <div className="empty-state" data-today={isToday}>
                               {emptyTodayMessage ? (
@@ -277,10 +172,10 @@ export function AgendaView({ days, expandedDays, animate, now, onToggleDay, onSe
                            group.classes.map((schoolClass, classIndex) => {
                               const locationLabel = getClassLocationLabel(schoolClass);
                               const teacherLocationLabel = locationLabel ? `${schoolClass.teacher}${DETAILS_SEPARATOR}${locationLabel}` : schoolClass.teacher;
-                              const previousClass = group.classes[classIndex - 1];
-                              const breaktimeLabel = previousClass ? getBreaktimeLabel(previousClass, schoolClass) : null;
-                              const breaktimeKey = previousClass ? getBreaktimeKey(previousClass, schoolClass) : null;
-                              const breakIcon = previousClass ? getBreakIcon(previousClass.endDate, schoolClass.startDate, classIndex) : "";
+                              const breakSegment = timeline.breaksBefore.get(schoolClass.id);
+                              const breaktimeLabel = breakSegment ? getBreaktimeLabel(breakSegment) : null;
+                              const breaktimeKey = breakSegment?.key;
+                              const breakIcon = breakSegment ? getBreakIcon(breakSegment.startDate, breakSegment.endDate, classIndex) : "";
 
                               return (
                                  <Fragment key={schoolClass.id}>
@@ -302,7 +197,10 @@ export function AgendaView({ days, expandedDays, animate, now, onToggleDay, onSe
                                        onClick={() => onSelectClass(schoolClass)}
                                     >
                                        <div className="agenda-class__time">
-                                          <span>{timeLabel.format(schoolClass.startDate)}</span>
+                                          <span>
+                                             {timeLabel.format(schoolClass.startDate)}
+                                             <ClassStatusMarker status={schoolClass.status} />
+                                          </span>
                                           <span>{timeLabel.format(schoolClass.endDate)}</span>
                                        </div>
 

@@ -15,6 +15,7 @@ export default tseslint.config(
       ignores: ["coverage", "dist", "node_modules", "playwright-report", "test-results"],
    },
    js.configs.recommended,
+   { files: ["public/notifications-sw.js"], languageOptions: { globals: globals.serviceworker } },
    ...typedTypeCheckedConfigs,
    {
       files: ["**/*.{ts,tsx}"],

@@ -1,3 +1,4 @@
+import { observeApiRequest } from "./api/_lib/observability.js";
 import compression from "compression";
 import express from "express";
 import path from "node:path";
@@ -10,9 +11,9 @@ import {
    saveTokenSettingsRoute,
    type ApiRouteResponse,
 } from "./api/_lib/apiRoutes.js";
-import { ApiError, toApiError, toApiErrorPayload } from "./api/_lib/errors.js";
+import { ApiError, toApiError, toApiErrorPayload, errorHeaders } from "./api/_lib/errors.js";
 import { isProduction, validateServerConfiguration } from "./api/_lib/osirisConfig.js";
-import { enforceRateLimit } from "./api/_lib/rateLimit.js";
+import { enforceRateLimit, enforceRosterRateLimit, enforceTokenRateLimit } from "./api/_lib/rateLimit.js";
 import { applyPrivateResponseHeaders, assertSameOrigin, CONTENT_SECURITY_POLICY } from "./api/_lib/security.js";
 
 const __filename = fileURLToPath(import.meta.url);
@@ -33,13 +34,15 @@ app.use((req, res, next) => {
    }
    if (req.path.startsWith("/api/")) {
       applyPrivateResponseHeaders(res);
+      const route = ["/api/roster/weeks", "/api/roster/config", "/api/settings/osiris-token"].includes(req.path) ? req.path : "/api/unknown";
+      observeApiRequest(req, res, route);
    }
    next();
 });
 app.use("/api", express.json({ limit: "8kb", strict: true }));
 
 app.get("/api/roster/weeks", async (req, res) => {
-   enforceRateLimit(req, "roster", 120, 60_000);
+   enforceRosterRateLimit(req);
    const requestUrl = new URL(req.originalUrl, "http://localhost");
    sendRouteResponse(
       res,
@@ -53,7 +56,7 @@ app.get("/api/roster/weeks", async (req, res) => {
 app.all("/api/roster/weeks", (_req, res) => sendMethodNotAllowed(res, ["GET"]));
 
 app.get("/api/roster/config", (req, res) => {
-   enforceRateLimit(req, "roster-config", 60, 60_000);
+   enforceRateLimit(req, "roster-config", 3000, 60_000);
    sendRouteResponse(res, getRosterConfigRoute());
 });
 app.all("/api/roster/config", (_req, res) => sendMethodNotAllowed(res, ["GET"]));
@@ -122,6 +125,7 @@ app.use((error: unknown, _req: express.Request, res: express.Response, _next: ex
            cause: error,
         })
       : toApiError(error);
+   Object.entries(errorHeaders(apiError)).forEach(([key, value]) => res.setHeader(key, value));
    res.status(apiError.status).json(toApiErrorPayload(apiError));
 });
 
@@ -142,5 +146,5 @@ function sendMethodNotAllowed(res: express.Response, allowedMethods: readonly st
 
 function assertTokenMutationAllowed(req: express.Request) {
    assertSameOrigin(req);
-   enforceRateLimit(req, "token-mutation", 20, 15 * 60_000);
+   enforceTokenRateLimit(req);
 }

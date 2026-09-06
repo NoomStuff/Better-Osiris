@@ -1,5 +1,6 @@
 import { MAX_WEEK_OFFSET, MIN_WEEK_OFFSET, type Week } from "../../shared/weeks";
-import { formatWeekTitle, getIsoWeekNumber, shiftIsoDateByDays } from "./date";
+import { formatWeekTitle, getIsoWeekNumber, shiftIsoDateByDays, parseLocalDateTime } from "./date";
+import { isActiveClass } from "./dayTimeline";
 import { isSameClassDetails } from "./classSnapshot";
 import type { WeekLoadError } from "./weekLoadError";
 
@@ -8,6 +9,7 @@ export interface WeekEntry {
    error: WeekLoadError | null;
    isFetching: boolean;
    isHydrated: boolean;
+   isOmitted: boolean;
    retryAt: number;
    retryDelayMs: number;
    updatedAt: number;
@@ -23,6 +25,7 @@ export function createWeekEntry(data: Week | null, overrides?: Partial<WeekEntry
       error: null,
       isFetching: false,
       isHydrated: false,
+      isOmitted: false,
       retryAt: 0,
       retryDelayMs: 0,
       updatedAt: data ? Date.now() : 0,
@@ -74,19 +77,43 @@ export function getAdjacentBatchStarts(startOffset: number) {
    return [previous, next].filter((batchStart): batchStart is number => batchStart !== null && batchStart >= MIN_WEEK_OFFSET && batchStart <= MAX_WEEK_OFFSET);
 }
 
-export function canNavigateToWeek(offset: number, entries: WeekEntries) {
+/** Prefer remaining classes this week or next; keep longer vacations visible. */
+export function getHomeWeek(entries: WeekEntries, sourceShift: number | null, now: Date): { offset: number | null; pendingOffset: number | null } {
+   for (let offset = 0; offset <= 1; offset += 1) {
+      const entry = entries[offset];
+      if (!entry?.data) {
+         if (sourceShift !== null && offset < sourceShift) continue;
+         return { offset: null, pendingOffset: offset };
+      }
+      if (entry.data.classes.some((item) => isActiveClass(item) && parseLocalDateTime(item.end) > now)) return { offset, pendingOffset: null };
+   }
+   const fallback = Math.max(0, sourceShift ?? 0);
+   if (fallback > MAX_WEEK_OFFSET) return { offset: null, pendingOffset: null };
+   return entries[fallback]?.data ? { offset: fallback, pendingOffset: null } : { offset: null, pendingOffset: fallback };
+}
+
+export function canNavigateToWeek(offset: number, entries: WeekEntries, sourceShift: number | null = null) {
    if (offset < MIN_WEEK_OFFSET || offset > MAX_WEEK_OFFSET) {
       return false;
    }
 
    const entry = entries[offset];
-   return offset < 0 ? Boolean(entry?.data) : !(entry?.error && !entry.data);
+   if (entry?.data) return true;
+   if (offset < 0 || entry?.isOmitted || (sourceShift !== null && offset < sourceShift)) return false;
+   return !entry?.error;
+}
+
+export function getAdjacentWeekOffset(offset: number, direction: -1 | 1, entries: WeekEntries, sourceShift: number | null) {
+   for (let target = offset + direction; target >= MIN_WEEK_OFFSET && target <= MAX_WEEK_OFFSET; target += direction) {
+      if (canNavigateToWeek(target, entries, sourceShift)) return target;
+      if (sourceShift === null || target >= sourceShift) break;
+   }
+   return null;
 }
 
 export function isSameWeekData(left: Week | null | undefined, right: Week) {
    if (
-      left?.week.offset !== right.week.offset ||
-      left.week.number !== right.week.number ||
+      left?.week.number !== right.week.number ||
       left.week.start !== right.week.start ||
       left.week.end !== right.week.end ||
       left.classes.length !== right.classes.length

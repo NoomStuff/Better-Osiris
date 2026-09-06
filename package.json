@@ -10,6 +10,7 @@
       "lint": "eslint . --max-warnings 0",
       "test": "concurrently \"bun run test:unit\" \"bun run test:e2e\"",
       "test:unit": "bun test",
+      "test:production": "bun scripts/smokeProduction.ts",
       "test:e2e": "playwright test --project=chromium",
       "test:e2e:compat": "playwright test --project=firefox --project=webkit",
       "serve": "bunx vite preview",

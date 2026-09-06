@@ -1,5 +1,7 @@
 import type { IncomingMessage } from "node:http";
 import { ApiError } from "./errors.js";
+import { getCredentialContext } from "./credentialContext.js";
+import { resolveOsirisBearerToken } from "./osirisTokenSettingsService.js";
 import { getEnvValue } from "./env.js";
 
 interface RateLimitEntry {
@@ -10,9 +12,9 @@ interface RateLimitEntry {
 const MAX_TRACKED_CLIENTS = 2_000;
 const entries = new Map<string, RateLimitEntry>();
 
-export function enforceRateLimit(req: IncomingMessage, bucket: string, limit: number, windowMs: number) {
+export function enforceRateLimit(req: IncomingMessage, bucket: string, limit: number, windowMs: number, identity?: string) {
    const now = Date.now();
-   const key = `${bucket}:${getClientAddress(req)}`;
+   const key = `${bucket}:${identity ?? getClientAddress(req)}`;
    const current = entries.get(key);
 
    if (!current || current.resetAt <= now) {
@@ -28,6 +30,7 @@ export function enforceRateLimit(req: IncomingMessage, bucket: string, limit: nu
          code: "INVALID_REQUEST",
          status: 429,
          retryable: true,
+         retryAfterMs: current.resetAt - now,
       });
    }
 }
@@ -75,4 +78,16 @@ function trimEntries(now: number) {
       }
       entries.delete(oldestKey);
    }
+}
+
+/** A shared school address gets an abuse ceiling; each credential has its own normal allowance. */
+export function enforceRosterRateLimit(req: IncomingMessage) {
+   enforceRateLimit(req, "roster-ip", 6000, 60_000);
+   const context = getCredentialContext(resolveOsirisBearerToken(req.headers.cookie));
+   if (context) enforceRateLimit(req, "roster-session", 120, 60_000, context);
+}
+export function enforceTokenRateLimit(req: IncomingMessage) {
+   enforceRateLimit(req, "token-mutation-ip", 1000, 15 * 60_000);
+   const context = getCredentialContext(resolveOsirisBearerToken(req.headers.cookie));
+   if (context) enforceRateLimit(req, "token-mutation-session", 20, 15 * 60_000, context);
 }

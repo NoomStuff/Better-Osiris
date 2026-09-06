@@ -1,5 +1,7 @@
 import { defineConfig, devices } from "@playwright/test";
 
+const port = process.env["PLAYWRIGHT_PORT"] ?? "5173";
+
 export default defineConfig({
    testDir: "./tests/e2e",
    testMatch: /.*\.e2e\.ts/,
@@ -7,12 +9,12 @@ export default defineConfig({
    workers: 4,
    reporter: "list",
    use: {
-      baseURL: "http://127.0.0.1:5173",
+      baseURL: `http://127.0.0.1:${port}`,
       trace: "on-first-retry",
    },
    webServer: {
-      command: "bunx vite --host 127.0.0.1",
-      url: "http://127.0.0.1:5173",
+      command: `bunx vite --host 127.0.0.1 --port ${port} --strictPort`,
+      url: `http://127.0.0.1:${port}`,
       reuseExistingServer: !process.env["CI"],
       stdout: "ignore",
       stderr: "pipe",
@@ -28,6 +30,8 @@ export default defineConfig({
       },
       {
          name: "firefox",
+         // Held-key tests depend on window focus. Isolate Firefox contexts from competing windows.
+         workers: 1,
          use: { ...devices["Desktop Firefox"] },
       },
       {

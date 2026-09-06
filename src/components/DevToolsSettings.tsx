@@ -3,7 +3,7 @@ import type { DevClassStatusPreviewMode } from "../lib/devStatusPreview";
 import { DEV_CLASS_STATUS_PREVIEW_MODES } from "../lib/devStatusPreview";
 import { notifyError, notifySuccess, notifyWarning } from "../lib/notyf";
 import type { SessionClassDiff } from "../lib/classDiffs";
-import type { Class, ClassSnapshot } from "../types/weeks";
+import type { ClassSnapshot } from "../types/weeks";
 import { ActionButtons, ActionSelector } from "./ActionGroup";
 import { Button } from "./Button";
 import { IconButton } from "./IconButton";
@@ -166,7 +166,7 @@ export function DevToolsSettings({
 
 function createSampleClassDiff(perceivedNow: Date): SessionClassDiff {
    const dayKey = formatDateInputValue(perceivedNow);
-   const schoolClass: Class = {
+   const schoolClass: ClassSnapshot = {
       id: "devtools-sample",
       title: "Testles",
       subject: "Devtools",
@@ -176,11 +176,11 @@ function createSampleClassDiff(perceivedNow: Date): SessionClassDiff {
       room: "B12",
       location: "Main building",
       description: "",
-      status: "changed",
+      status: "scheduled",
    };
    const previousClass: ClassSnapshot = { ...schoolClass, room: "A101", status: "scheduled" };
 
-   return { schoolClass, previousClass, status: "changed" };
+   return { schoolClass: { ...schoolClass, status: "changed", previous: previousClass }, previousClass, status: "changed" };
 }
 
 function formatSliderLabel(minutes: number) {

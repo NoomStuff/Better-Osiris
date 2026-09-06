@@ -1,0 +1,68 @@
+/* Inline form (agenda rows): a status-colored icon to the right of the start time. */
+.class-status-marker {
+   display: inline-flex;
+   align-items: center;
+   color: var(--warning);
+}
+
+.class-status-marker[data-status="cancelled"] {
+   color: var(--danger);
+}
+
+.agenda-class__time .class-status-marker {
+   margin-inline-start: 0.35em;
+   vertical-align: -0.125em;
+}
+
+.class-status-marker > i {
+   font-size: 0.85em;
+}
+
+/*
+   Grid form: a small tab tucked into the card's bottom-right corner — square with a
+   fully rounded top-left, tinted with the card's border color, and a status-colored
+   glyph centered inside. Constant size across card densities so short classes
+   keep a readable indicator.
+*/
+.grid-class .class-status-marker {
+   position: absolute;
+   right: 0;
+   bottom: 0;
+   display: grid;
+   place-items: center;
+   margin: 0;
+   width: 22px;
+   height: 22px;
+   border-bottom-right-radius: 6px;
+   border-top-left-radius: 12px;
+   background: var(--class-border);
+   color: var(--warning);
+}
+
+.grid-class .class-status-marker[data-status="cancelled"] {
+   color: var(--danger);
+}
+
+.grid-class .class-status-marker > i {
+   width: 13px;
+   height: 13px;
+   font-size: 13px;
+   /* The glyph shares its hue with the cancelled card surface; the halo keeps it legible there. */
+   filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.4));
+}
+
+.grid-class.is-tight .class-status-marker {
+   width: 21px;
+   height: 21px;
+}
+
+.grid-class.is-tiny .class-status-marker {
+   width: 20px;
+   height: 20px;
+}
+
+.grid-class.is-tiny .class-status-marker > i {
+   width: 12px;
+   height: 12px;
+   font-size: 12px;
+}

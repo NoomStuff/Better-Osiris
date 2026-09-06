@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef } from "react";
+import { useCallback, useLayoutEffect, useRef } from "react";
 
 const MIN_DISTANCE_PX = 56;
 const MAX_VERTICAL_DRIFT_PX = 72;
@@ -39,7 +39,7 @@ export function useWeekSwipeNavigation(enabled: boolean, goPrevious: () => void,
       startRef.current = null;
    }, []);
 
-   useEffect(() => {
+   useLayoutEffect(() => {
       if (!enabled) {
          startRef.current = null;
          return;

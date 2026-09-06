@@ -16,8 +16,8 @@ Anyway, this is heavily vibe coded, but I vibe code with class, so every detail 
 - Clean and speedy week navigation with minimal load times, well designed keyboard shortcuts and swipe gestures
 - Lesson details, detailed cancellation & change information, and the ability to be notified when a change happens
 - Lots of pretty themes to choose from and a good amount of preference settings to display the roster how you desire
-- Skim quickly with current time/class progress displays, readability aiding icon use, break indicators 
-- Many neat touches that just make it *feel right*
+- Skim quickly with current time/class progress displays, readability aiding icon use, break indicators
+- Many neat touches that just make it _feel right_
 
 ---
 
@@ -25,7 +25,7 @@ Anyway, this is heavily vibe coded, but I vibe code with class, so every detail 
 
 You grab your own bearer token from the official OSIRIS Student site and slap it into the app. [Here's how to do that](https://youtu.be/MbcI61KIQbI)
 
-The token is stored encrypted in a cookie and OSIRIS requests happen server-side, so it never touches frontend JavaScript.
+The paste field and submission handle your token in frontend JavaScript. The server then stores it in an encrypted HttpOnly cookie, so frontend JavaScript cannot read the saved credential back. Requests to OSIRIS happen server-side.
 
 ---
 

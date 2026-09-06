@@ -44,6 +44,7 @@ export interface OsirisRosterResponse {
    offset: number;
    count: number;
    source?: "per_week";
+   fetchedAt?: number;
 }
 
 const WEEK_CACHE_TTL_MS = 60_000;
@@ -94,6 +95,7 @@ export async function fetchOsirisRosterWeeks(offset: number, limit = 1, tokenOve
 
    const request = fetchOsirisRosterWeeksFromEndpoint(rosterUrl, offset, safeLimit, bearerToken)
       .then((data) => {
+         data.fetchedAt = Date.now();
          weekCache.set(cacheKey, {
             data,
             expiresAt: Date.now() + WEEK_CACHE_TTL_MS,

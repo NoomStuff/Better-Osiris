@@ -6,6 +6,7 @@ export interface WeekLoadError {
    log: string;
    isAuthRelated: boolean;
    retryable: boolean;
+   retryAfterMs?: number;
 }
 
 export function toWeekLoadError(error: unknown): WeekLoadError {
@@ -16,6 +17,7 @@ export function toWeekLoadError(error: unknown): WeekLoadError {
          log: error.message,
          isAuthRelated: error.isAuthRelated,
          retryable: error.retryable,
+         retryAfterMs: error.retryAfterMs,
       };
    }
 

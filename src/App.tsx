@@ -1,3 +1,4 @@
+import { onSessionInvalidated } from "./lib/sessionStore";
 import { useCallback, useEffect, useMemo, useRef, useState, type AnimationEvent, type CSSProperties } from "react";
 import { AgendaView } from "./components/AgendaView";
 import { AppToolbar } from "./components/AppToolbar";
@@ -6,6 +7,7 @@ import { ClassDrawer } from "./components/ClassDrawer";
 import { HiddenDaysWarning } from "./components/HiddenDaysWarning";
 import { HiddenGridHoursWarning } from "./components/HiddenGridHoursWarning";
 import { WarningBanner } from "./components/WarningBanner";
+import { Button } from "./components/Button";
 import { BearerTokenState, ErrorState, LoadingState, WeekOverlayState } from "./components/LoadingState";
 import { SettingsDialog } from "./components/SettingsDialog";
 import { WeekNavigator } from "./components/WeekNavigator";
@@ -31,10 +33,8 @@ import { getEmptyWeekMessage } from "./lib/flavor";
 import { getHiddenDaysWithClasses, getWeekdaysWithClasses } from "./lib/weekLayout";
 import { countClassesOutsideGridHours, getRequiredGridHours, getSmartGridHours, mergeGridHourRanges } from "./lib/gridHours";
 import { ErrorBoundary } from "./components/ErrorBoundary";
-import { notifyError } from "./lib/notyf";
-import { OsirisTokenSettingsError } from "./api/settings";
+import { useTokenValidation } from "./hooks/useTokenValidation";
 import type { GridZoom, Class, WeekMeta, ViewMode } from "./types/weeks";
-import type { OsirisTokenValidationStatus } from "./types/osirisToken";
 import "./styles/App.css";
 
 type WeekTransitionDirection = "default" | "previous" | "next" | "settled";
@@ -56,13 +56,12 @@ export default function App() {
    const [agendaFoldingMode, setAgendaFoldingMode] = useAgendaFoldingPreference();
    const appContentRef = useRef<HTMLElement>(null);
    const weekOffsetRef = useRef(0);
+   const [seekingHome, setSeekingHome] = useState(true);
    const isBarDocked = useDockedMobileBar(appContentRef);
    const [gridZoom, setGridZoom] = useState<GridZoom>("hour");
    const [selectedClassId, setSelectedClassId] = useState<string | null>(null);
    const [isSettingsOpen, setIsSettingsOpen] = useState(false);
    const [bearerTokenInput, setBearerTokenInput] = useState("");
-   const [pendingTokenValidationKey, setPendingTokenValidationKey] = useState<string | null>(null);
-   const [tokenSaveFailure, setTokenSaveFailure] = useState<"rejected" | "unavailable" | null>(null);
    const devPreview = useDevPreview();
    const classNotifications = useClassNotificationsPreference();
    const rosterTimeZone = useRosterTimeZone();
@@ -73,12 +72,10 @@ export default function App() {
       initialLoadError: tokenSettingsLoadError,
       isMutating: isTokenMutating,
       weeksResetKey,
-      saveToken,
       clearToken,
       refreshAfterAuthError,
    } = useOsirisTokenSettings();
    useViewportMetrics();
-   const weeksQueryResetKey = `${weeksResetKey}:${rosterTimeZone.cacheResetKey}`;
    const {
       areInitialWeeksLoaded,
       canGoNext,
@@ -86,8 +83,13 @@ export default function App() {
       data,
       error,
       initialWeeks,
+      homeWeekOffset,
+      homePendingOffset,
+      previousWeekOffset,
+      nextWeekOffset,
       lastSuccessfulResetKey,
       isWeekNavigable,
+      weekNotReturned,
       loading,
       retryCountdownMs,
       retrying,
@@ -97,7 +99,9 @@ export default function App() {
    } = useWeeks(weekOffset, {
       enabled: !isTokenSettingsLoading && hasBearerToken && rosterTimeZone.isKnown,
       clearCache: !isTokenSettingsLoading && !hasBearerToken,
-      resetKey: weeksQueryResetKey,
+      contextId: tokenSettings?.contextId ?? null,
+      resetKey: weeksResetKey,
+      timeZone: rosterTimeZone.declaredTimeZone,
    });
    const perceivedNow = devPreview.perceivedNow;
    const perceivedDayKey = rosterTimeZone.isKnown ? toDayKey(perceivedNow) : null;
@@ -118,21 +122,18 @@ export default function App() {
       return error.detail;
    }, [error, tokenSettings?.hasCustomToken]);
 
-   const isTokenValidationPending = pendingTokenValidationKey !== null && pendingTokenValidationKey !== lastSuccessfulResetKey;
-   const successfulTokenValidationKey =
-      pendingTokenValidationKey !== null && pendingTokenValidationKey === lastSuccessfulResetKey ? pendingTokenValidationKey : null;
-
+   const tokenValidation = useTokenValidation(hasBearerToken, error, lastSuccessfulResetKey, weeksResetKey);
+   const {
+      pending: isTokenValidationPending,
+      successfulKey: successfulTokenValidationKey,
+      status: tokenValidationStatus,
+      submit: submitBearerToken,
+   } = tokenValidation;
    useEffect(() => {
-      if (pendingTokenValidationKey === null || pendingTokenValidationKey !== lastSuccessfulResetKey) {
-         return;
-      }
-
-      const resetTimerId = window.setTimeout(() => {
-         setPendingTokenValidationKey(null);
-         setBearerTokenInput("");
-      }, 0);
-      return () => window.clearTimeout(resetTimerId);
-   }, [lastSuccessfulResetKey, pendingTokenValidationKey]);
+      if (successfulTokenValidationKey === null) return;
+      const timer = window.setTimeout(() => setBearerTokenInput(""), 0);
+      return () => window.clearTimeout(timer);
+   }, [successfulTokenValidationKey]);
 
    useEffect(() => {
       if (!error?.isAuthRelated) {
@@ -181,6 +182,7 @@ export default function App() {
 
    const updateWeekOffset = useCallback(
       (updater: number | ((current: number) => number), transitionDirection: WeekTransitionDirection = "default") => {
+         setSeekingHome(false);
          const current = weekOffsetRef.current;
          const next = typeof updater === "function" ? updater(current) : updater;
 
@@ -201,6 +203,33 @@ export default function App() {
       [resetAgenda]
    );
 
+   useEffect(() => {
+      if (!seekingHome) return;
+      const target = homeWeekOffset ?? homePendingOffset;
+      if (target === null) return;
+      const timer = window.setTimeout(() => {
+         if (homeWeekOffset !== null) {
+            updateWeekOffset(target);
+            resetAgenda(true);
+         } else {
+            // Follow the week being checked, without treating it as a user selection.
+            weekOffsetRef.current = target;
+            setWeekOffset(target);
+         }
+      }, 0);
+      return () => window.clearTimeout(timer);
+   }, [seekingHome, homeWeekOffset, homePendingOffset, updateWeekOffset, resetAgenda]);
+
+   useEffect(
+      () =>
+         onSessionInvalidated(() => {
+            setSelectedClassId(null);
+            updateWeekOffset(0);
+            setSeekingHome(true);
+         }),
+      [updateWeekOffset]
+   );
+
    const selectedClass: Class | null = useMemo(() => {
       if (!displayedData || !selectedClassId) {
          return null;
@@ -215,36 +244,29 @@ export default function App() {
    }, []);
 
    const goPreviousWeek = useCallback(() => {
-      const targetOffset = weekOffsetRef.current - 1;
-      if (!isWeekNavigable(targetOffset)) {
+      if (previousWeekOffset === null) {
          return;
       }
 
-      updateWeekOffset(targetOffset, "previous");
-   }, [isWeekNavigable, updateWeekOffset]);
+      updateWeekOffset(previousWeekOffset, "previous");
+   }, [previousWeekOffset, updateWeekOffset]);
 
    const goNextWeek = useCallback(() => {
-      const targetOffset = weekOffsetRef.current + 1;
-      if (!isWeekNavigable(targetOffset)) {
+      if (nextWeekOffset === null) {
          return;
       }
 
-      updateWeekOffset(targetOffset, "next");
-   }, [isWeekNavigable, updateWeekOffset]);
+      updateWeekOffset(nextWeekOffset, "next");
+   }, [nextWeekOffset, updateWeekOffset]);
 
    const handleCurrentWeek = useCallback(() => {
-      if (weekOffsetRef.current === 0) {
-         setSelectedClassId(null);
+      setSelectedClassId(null);
+      if (homeWeekOffset === null) setSeekingHome(true);
+      else {
+         updateWeekOffset(homeWeekOffset);
          resetAgenda(true);
-         return;
       }
-
-      if (!isWeekNavigable(0)) {
-         return;
-      }
-
-      updateWeekOffset(0);
-   }, [isWeekNavigable, resetAgenda, updateWeekOffset]);
+   }, [homeWeekOffset, resetAgenda, updateWeekOffset]);
 
    useWeekSwipeNavigation(!isSettingsOpen && selectedClass === null, goPreviousWeek, goNextWeek);
 
@@ -273,27 +295,6 @@ export default function App() {
 
    const closeSettings = useCallback(() => setIsSettingsOpen(false), []);
 
-   const submitBearerToken = useCallback(
-      async (token: string) => {
-         const nextToken = token.trim();
-         if (!nextToken) {
-            return;
-         }
-
-         const validationKey = `${weeksResetKey + 1}:${rosterTimeZone.cacheResetKey}`;
-         setTokenSaveFailure(null);
-         setPendingTokenValidationKey(validationKey);
-         try {
-            await saveToken(nextToken);
-         } catch (requestError) {
-            setPendingTokenValidationKey(null);
-            setTokenSaveFailure(requestError instanceof OsirisTokenSettingsError && requestError.isTokenRejected ? "rejected" : "unavailable");
-            notifyError(requestError, "Failed to save Osiris token.");
-         }
-      },
-      [rosterTimeZone.cacheResetKey, saveToken, weeksResetKey]
-   );
-
    useAppKeyboardShortcuts({
       enabled: !isSettingsOpen && selectedClass === null,
       viewMode,
@@ -317,18 +318,6 @@ export default function App() {
 
    const hasDisplayedData = Boolean(displayedData);
    const hasTokenAccessError = Boolean(error?.isAuthRelated && !data);
-   const tokenValidationStatus: OsirisTokenValidationStatus = isTokenMutating
-      ? "checking"
-      : (tokenSaveFailure ??
-        (error?.isAuthRelated
-           ? "rejected"
-           : isTokenValidationPending && error
-             ? "unavailable"
-             : isTokenValidationPending
-               ? "checking"
-               : hasBearerToken
-                 ? "ready"
-                 : "required"));
    const shouldShowTokenEntry = !isTokenSettingsLoading && (!hasBearerToken || isTokenValidationPending || hasTokenAccessError);
    const hasBlockingTokenState = isTokenSettingsLoading ? !hasDisplayedData : shouldShowTokenEntry;
    const hasOverlayUnderlay = hasBlockingTokenState || loading || (Boolean(error) && !data) || hasBlankWeekUnderlay;
@@ -352,6 +341,7 @@ export default function App() {
                retryCountdownMs={0}
                isRetrying={false}
                canRetry={false}
+               onRetry={rosterTimeZone.retry}
             />
          );
       }
@@ -366,7 +356,7 @@ export default function App() {
                status={tokenStatus}
                onTokenChange={(token) => {
                   setBearerTokenInput(token);
-                  setTokenSaveFailure(null);
+                  tokenValidation.clearFailure();
                }}
                onSubmit={() => void submitBearerToken(bearerTokenInput)}
             />
@@ -385,6 +375,18 @@ export default function App() {
                isRetrying={retrying}
                canRetry={error.retryable}
             />
+         );
+      }
+      if (weekNotReturned && !displayedData) {
+         return (
+            <WeekOverlayState
+               title="Week not returned"
+               detail="OSIRIS did not include this week in its latest response."
+               icon="fa-solid fa-triangle-exclamation"
+               role="status"
+            >
+               <Button onClick={refresh}>Try again</Button>
+            </WeekOverlayState>
          );
       }
       if (displayedData?.classes.length === 0) {
@@ -410,6 +412,7 @@ export default function App() {
             <WeekNavigator
                title={title}
                weekOffset={weekOffset}
+               homeWeekOffset={homeWeekOffset}
                onPreviousWeek={goPreviousWeek}
                onNextWeek={goNextWeek}
                onCurrentWeek={handleCurrentWeek}
@@ -421,10 +424,15 @@ export default function App() {
          <main className="app-content" ref={appContentRef}>
             {error && displayedData ? (
                <WarningBanner
-                  icon="fa-solid fa-cloud-arrow-rotate"
+                  icon="fa-solid fa-cloud-arrow-down"
                   action={error.isAuthRelated ? { label: "Replace token", onClick: openSettings } : { label: "Try again", onClick: refresh }}
                >
                   Fetching your latest roster went wrong: {errorDetail}
+               </WarningBanner>
+            ) : null}
+            {weekNotReturned && displayedData && !error ? (
+               <WarningBanner icon="fa-solid fa-cloud-arrow-down" action={{ label: "Try again", onClick: refresh }}>
+                  OSIRIS did not include this week in its latest response. Showing your saved roster.
                </WarningBanner>
             ) : null}
             {hiddenDays.length > 0 ? <HiddenDaysWarning labels={hiddenDays.map((day) => dayLabel.format(day.date))} onShow={showHiddenDays} /> : null}
@@ -448,6 +456,7 @@ export default function App() {
                         expandedDays={visibleExpandedDays}
                         animate={animateAgenda}
                         now={perceivedNow}
+                        timeOverride={devPreview.isEnabled ? devPreview.timeOverride : null}
                         onToggleDay={toggleDay}
                         onSelectClass={selectClass}
                      />
@@ -464,37 +473,45 @@ export default function App() {
          <ClassDrawer schoolClass={selectedClass} onClose={closeClass} />
          <SettingsDialog
             isOpen={isSettingsOpen}
-            areNotificationsBlocked={classNotifications.isBlocked}
-            areNotificationsEnabled={classNotifications.enabled}
-            areNotificationsSupported={classNotifications.isSupported}
-            areNotificationsUpdating={classNotifications.isUpdating}
-            theme={theme}
-            shownWeekdays={shownWeekdays}
-            smartWeekdays={smartWeekdays}
-            isSmartDaysReady={areInitialWeeksLoaded}
-            gridHours={gridHours}
-            smartGridHours={smartGridHours}
-            agendaFoldingMode={agendaFoldingMode}
-            isDevToolsEnabled={devPreview.isEnabled}
-            perceivedNow={perceivedNow}
-            timeOverride={devPreview.timeOverride}
-            statusPreviewMode={devPreview.statusPreviewMode}
-            tokenSettings={tokenSettings}
-            isTokenLoading={isTokenMutating}
-            tokenValidationStatus={tokenValidationStatus}
-            successfulTokenValidationKey={successfulTokenValidationKey}
-            onTokenDraftChange={() => setTokenSaveFailure(null)}
-            onSaveToken={submitBearerToken}
-            onClearToken={clearToken}
             onClose={closeSettings}
-            onChangeNotifications={(enabled) => void classNotifications.setEnabled(enabled)}
-            onChangeTheme={setTheme}
-            onChangeShownWeekdays={setShownWeekdays}
-            onChangeGridHours={setGridHours}
-            onChangeAgendaFoldingMode={changeAgendaFoldingMode}
-            onToggleDevTools={devPreview.toggle}
-            onChangeTimeOverride={devPreview.changeTimeOverride}
-            onChangeStatusPreviewMode={devPreview.setStatusPreviewMode}
+            notifications={{
+               areNotificationsBlocked: classNotifications.isBlocked,
+               areNotificationsEnabled: classNotifications.enabled,
+               areNotificationsSupported: classNotifications.isSupported,
+               areNotificationsUpdating: classNotifications.isUpdating,
+               onChangeNotifications: (enabled) => void classNotifications.setEnabled(enabled),
+            }}
+            preferences={{
+               theme: theme,
+               shownWeekdays: shownWeekdays,
+               smartWeekdays: smartWeekdays,
+               isSmartDaysReady: areInitialWeeksLoaded,
+               gridHours: gridHours,
+               smartGridHours: smartGridHours,
+               agendaFoldingMode: agendaFoldingMode,
+               tokenValidationStatus: tokenValidationStatus,
+               onChangeTheme: setTheme,
+               onChangeShownWeekdays: setShownWeekdays,
+               onChangeGridHours: setGridHours,
+               onChangeAgendaFoldingMode: changeAgendaFoldingMode,
+            }}
+            access={{
+               tokenSettings: tokenSettings,
+               isTokenLoading: isTokenMutating,
+               successfulTokenValidationKey: successfulTokenValidationKey,
+               onTokenDraftChange: () => tokenValidation.clearFailure(),
+               onSaveToken: submitBearerToken,
+               onClearToken: clearToken,
+            }}
+            preview={{
+               isDevToolsEnabled: devPreview.isEnabled,
+               perceivedNow: perceivedNow,
+               timeOverride: devPreview.timeOverride,
+               statusPreviewMode: devPreview.statusPreviewMode,
+               onToggleDevTools: devPreview.toggle,
+               onChangeTimeOverride: devPreview.changeTimeOverride,
+               onChangeStatusPreviewMode: devPreview.setStatusPreviewMode,
+            }}
          />
       </div>
    );

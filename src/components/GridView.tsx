@@ -1,10 +1,12 @@
+import { getGridCurrentTime } from "../lib/dayTimeline";
 import { useEffect, useMemo, useRef, useState, type CSSProperties, type MouseEvent } from "react";
-import { dayShortLabel, fullDayLabel, getMinutesFromMidnight, timeLabel, toDayKey } from "../lib/date";
+import { dayShortLabel, fullDayLabel, timeLabel, getMinutesFromMidnight } from "../lib/date";
 import { clamp } from "../lib/clamp";
 import { DETAILS_SEPARATOR, getClassLocationLabel } from "../lib/classFormat";
 import type { GridHourRange } from "../lib/gridHours";
 import type { Day, GridZoom, Class } from "../types/weeks";
 import "./GridView.css";
+import { ClassStatusMarker } from "./ClassStatusMarker";
 
 interface GridViewProps {
    days: Day[];
@@ -56,11 +58,7 @@ export function GridView({ days, zoom: zoomId, hours, now, onSelectClass }: Grid
    );
    const timeLabels = timeMarks.filter((minutes) => minutes !== startMinutes && minutes !== endMinutes);
    const getOffsetPercent = (minutes: number) => ((minutes - startMinutes) / shownMinutes) * 100;
-   const todayKey = toDayKey(now);
-   const nowMinutes = getMinutesFromMidnight(now);
-   const todayIndex = days.findIndex((group) => group.key === todayKey);
-   const showNowLine = todayIndex >= 0 && nowMinutes >= startMinutes && nowMinutes <= endMinutes;
-   const nowLineTop = getOffsetPercent(clamp(nowMinutes, startMinutes, endMinutes));
+   const { todayKey, visible: showNowLine, top: nowLineTop } = getGridCurrentTime(days, hours, now);
 
    useEffect(() => () => cancelAnimationFrame(guideMotion.current.frame), []);
 
@@ -285,6 +283,7 @@ export function GridView({ days, zoom: zoomId, hours, now, onSelectClass }: Grid
                                  title={schoolClass.title}
                                  aria-label={accessibleLabel}
                               >
+                                 <ClassStatusMarker status={schoolClass.status} />
                                  <strong>{classLabel}</strong>
                                  {subtitleLabel ? <span className="grid-class__title">{subtitleLabel}</span> : null}
                                  <span className="grid-class__meta">

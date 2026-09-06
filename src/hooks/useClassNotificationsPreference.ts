@@ -20,10 +20,14 @@ export function useClassNotificationsPreference() {
    const [isUpdating, setIsUpdating] = useState(false);
 
    useEffect(() => {
-      if (!enabled && getClassNotificationsEnabled()) {
-         setClassNotificationsEnabled(false);
-      }
-   }, [enabled]);
+      const update = () => setState(getInitialState());
+      window.addEventListener("storage", update);
+      document.addEventListener("visibilitychange", update);
+      return () => {
+         window.removeEventListener("storage", update);
+         document.removeEventListener("visibilitychange", update);
+      };
+   }, []);
 
    const setEnabled = useCallback(async (nextEnabled: boolean) => {
       if (!nextEnabled) {

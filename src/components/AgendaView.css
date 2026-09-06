@@ -202,13 +202,12 @@
    color: var(--warning);
 }
 
-.agenda-class.status-cancelled {
-   opacity: 0.6;
+.agenda-class:is(.status-cancelled, .status-removed) {
    color: var(--danger);
    border-color: rgba(var(--danger-rgb), 0.25);
 }
 
-.agenda-class.status-cancelled .agenda-class__time {
+.agenda-class:is(.status-cancelled, .status-removed) .agenda-class__time {
    color: var(--danger);
 }
 
@@ -252,7 +251,9 @@
    white-space: nowrap;
 }
 
-.agenda-class__time span:last-child {
+/* Direct child: the status marker inside the start-time span is also a last-child
+   span and must not inherit this muted color. */
+.agenda-class__time > span:last-child {
    color: var(--text-muted);
 }
 

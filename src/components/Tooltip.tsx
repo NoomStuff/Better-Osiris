@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useLayoutEffect, useRef, useState, type ReactNode } from "react";
+import { createContext, useContext, useLayoutEffect, useRef, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import "./Tooltip.css";
 
@@ -24,10 +24,6 @@ export function TooltipContent({ id, anchorName, open, placement, label, shortcu
    const tooltipRef = useRef<HTMLSpanElement | null>(null);
    const [renderedPlacement, setRenderedPlacement] = useState<TooltipPlacement>(placement);
 
-   useEffect(() => {
-      setRenderedPlacement(placement);
-   }, [placement]);
-
    // position-try-fallbacks can land the tooltip on the opposite side of the requested
    // placement. The browser picks the side during layout, so read back the applied
    // position-area and keep data-placement on it so the arrow keeps pointing at the anchor.
@@ -46,6 +42,8 @@ export function TooltipContent({ id, anchorName, open, placement, label, shortcu
             setRenderedPlacement("top");
          } else if (area.includes("bottom")) {
             setRenderedPlacement("bottom");
+         } else {
+            setRenderedPlacement(placement);
          }
       };
 
@@ -56,7 +54,7 @@ export function TooltipContent({ id, anchorName, open, placement, label, shortcu
          window.removeEventListener("resize", syncPlacement);
          window.removeEventListener("scroll", syncPlacement, true);
       };
-   }, [open]);
+   }, [open, placement]);
 
    if (overlayTarget === null) {
       return null;

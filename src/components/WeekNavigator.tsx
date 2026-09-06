@@ -10,6 +10,7 @@ import "./WeekNavigator.css";
 interface WeekNavigatorProps {
    title: string;
    weekOffset: number;
+   homeWeekOffset: number | null;
    onPreviousWeek: () => void;
    onNextWeek: () => void;
    onCurrentWeek: () => void;
@@ -43,6 +44,7 @@ function formatWeekLabel(weekOffset: number) {
 export const WeekNavigator = memo(function WeekNavigator({
    title,
    weekOffset,
+   homeWeekOffset,
    onPreviousWeek,
    onNextWeek,
    onCurrentWeek,
@@ -50,13 +52,14 @@ export const WeekNavigator = memo(function WeekNavigator({
    canGoNext,
 }: WeekNavigatorProps) {
    const label = formatWeekLabel(weekOffset);
-   const isCurrentWeek = weekOffset === 0;
-   const weekPosition = weekOffset < 0 ? "past" : weekOffset > 0 ? "future" : "current";
+   const resetDistance = weekOffset - (homeWeekOffset ?? 0);
+   const isHomeWeek = resetDistance === 0;
+   const weekPosition = resetDistance < 0 ? "past" : resetDistance > 0 ? "future" : "current";
    const tooltipId = useId();
    const anchorName = getTooltipAnchorName(tooltipId);
    const { hideTooltip, isTooltipEnabled, isTooltipOpen, showTooltip, showTooltipForFocus } = useDelayedTooltip();
    const isShortcutActive = useShortcutActivation("current-week");
-   const weekTooltip = isCurrentWeek ? "Reset the current week view" : "Jump back to the current week";
+   const weekTooltip = weekOffset === homeWeekOffset ? "Reset the week view" : "Return to the default week";
 
    const handleMouseEnter = (_event: MouseEvent<HTMLButtonElement>) => {
       showTooltip();
@@ -98,7 +101,7 @@ export const WeekNavigator = memo(function WeekNavigator({
                className="weekbar__content"
                type="button"
                aria-describedby={isTooltipEnabled ? tooltipId : undefined}
-               data-current={isCurrentWeek}
+               data-current={isHomeWeek}
                data-tooltip-open={isTooltipOpen ? "true" : undefined}
                data-shortcut-active={isShortcutActive ? "true" : undefined}
                data-week-position={weekPosition}

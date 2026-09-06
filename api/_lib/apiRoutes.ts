@@ -1,5 +1,5 @@
 import { MAX_WEEK_LIMIT, type OsirisTokenSettings, type RosterConfig } from "../../shared/weeks.js";
-import { toApiError, toApiErrorPayload } from "./errors.js";
+import { toApiError, toApiErrorPayload, errorHeaders } from "./errors.js";
 import { clearOsirisTokenSetting, getOsirisTokenSettings, saveOsirisTokenSetting } from "./osirisTokenSettingsService.js";
 import { getRosterTimeZone, normalizeBearerToken } from "./osirisConfig.js";
 import { loadWeekBatch, loadWeekBatchWithToken, type WeeksRequest } from "./weeksService.js";
@@ -64,6 +64,7 @@ function errorResponse(error: unknown, fallbackMessage: string): ApiRouteRespons
    const apiError = toApiError(error, fallbackMessage);
    return {
       statusCode: apiError.status,
+      headers: errorHeaders(apiError),
       payload: toApiErrorPayload(apiError),
    };
 }

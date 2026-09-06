@@ -1,15 +1,17 @@
 import { removeBrowserStorage } from "./browserStorage";
 
-export const CURRENT_WEEK_CACHE_KEY = "roster-current-week-cache-v2";
-export const LAST_WEEK_CACHE_KEY = "roster-last-week-cache-v1";
-export const SESSION_CLASS_DIFFS_KEY = "roster-session-class-diffs-v2";
+export const WEEK_CACHE_KEY = "roster-weeks-v3";
+export const SESSION_CLASS_DIFFS_KEY = "roster-session-class-diffs-v3";
+
+export function clearLegacyWeekCache() {
+   removeBrowserStorage("localStorage", "roster-current-week-cache-v2");
+   removeBrowserStorage("localStorage", "roster-last-week-cache-v1");
+   removeBrowserStorage("sessionStorage", "roster-session-class-diffs-v2");
+}
 
 export function clearWeekBrowserCache() {
-   if (typeof window === "undefined") {
-      return;
-   }
-
-   removeBrowserStorage("localStorage", CURRENT_WEEK_CACHE_KEY);
-   removeBrowserStorage("localStorage", LAST_WEEK_CACHE_KEY);
+   clearLegacyWeekCache();
+   removeBrowserStorage("localStorage", WEEK_CACHE_KEY);
    removeBrowserStorage("sessionStorage", SESSION_CLASS_DIFFS_KEY);
+   removeBrowserStorage("localStorage", "roster-notification-deliveries-v1");
 }

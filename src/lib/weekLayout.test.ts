@@ -6,7 +6,7 @@ import { DEFAULT_SHOWN_WEEKDAYS, getDays, getHiddenDaysWithClasses, getPositione
 import type { Class } from "../types/weeks";
 
 function createClass(overrides: Partial<Class> = {}): Class {
-   return {
+   const item = {
       id: "class-1",
       title: "Web Development",
       subject: "Programming",
@@ -16,9 +16,13 @@ function createClass(overrides: Partial<Class> = {}): Class {
       room: "A101",
       location: "Main building",
       description: "",
-      status: "scheduled",
+      status: "scheduled" as const,
       ...overrides,
    };
+   const { previous, ...details } = item;
+   if (details.status === "changed") return { ...details, status: details.status, previous: previous ?? { ...details, status: "scheduled" } };
+   if (details.status === "cancelled") return { ...details, status: "cancelled", ...(previous ? { previous } : {}) };
+   return { ...details, status: details.status };
 }
 
 void describe("roster layout", () => {

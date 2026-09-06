@@ -1,3 +1,4 @@
+import { shiftCalendarDate } from "../../shared/calendar";
 import assert from "node:assert/strict";
 import { Readable } from "node:stream";
 import { afterEach, describe, it } from "node:test";
@@ -14,6 +15,9 @@ interface MockRequestOptions {
 }
 
 class MockResponse {
+   once() {
+      return this;
+   }
    statusCode = 200;
    readonly headers = new Map<string, number | string | string[]>();
    body = "";
@@ -205,7 +209,13 @@ function mockOsirisFetch(requests: OsirisRequest[], response: OsirisRosterRespon
               offset: requestedOffset,
               limit: requestedLimit,
               count: requestedLimit,
-              items: Array.from({ length: requestedLimit }, (_, index) => ({ ...firstItem, week: firstItem.week + index })),
+              items: Array.from({ length: requestedLimit }, (_, index) => ({
+                 ...firstItem,
+                 week: firstItem.week + index,
+                 startdatum: shiftCalendarDate(firstItem.startdatum, index * 7),
+                 einddatum: shiftCalendarDate(firstItem.einddatum, index * 7),
+                 dagen: index === 0 ? firstItem.dagen : [],
+              })),
            }
          : response;
 

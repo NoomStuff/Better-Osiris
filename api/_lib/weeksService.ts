@@ -4,6 +4,8 @@ import { normalizeWeeksResponse } from "./osirisRosterNormalizer.js";
 import { getRosterTimeZone } from "./osirisConfig.js";
 import { resolveOsirisBearerToken } from "./osirisTokenSettingsService.js";
 import { ApiError } from "./errors.js";
+import { getCredentialContext } from "./credentialContext.js";
+import { parseWeekBatch, ResponseValidationError } from "../../shared/rosterValidation.js";
 
 export interface WeeksRequest {
    offset: string | null | undefined;
@@ -29,12 +31,19 @@ export async function loadWeekBatch(request: WeeksRequest): Promise<WeekBatch> {
 export async function loadWeekBatchWithToken(offset: number, limit: number, token: string | null): Promise<WeekBatch> {
    const rawResponse = await fetchOsirisRosterWeeks(offset, limit, token);
 
-   return {
-      weeks: normalizeWeeksResponse(rawResponse, offset, limit),
-      offset,
-      limit,
-      timeZone: getRosterTimeZone(),
-   };
+   try {
+      return parseWeekBatch({
+         weeks: normalizeWeeksResponse(rawResponse, offset, limit),
+         offset,
+         limit,
+         timeZone: getRosterTimeZone(),
+         contextId: getCredentialContext(token),
+         fetchedAt: rawResponse.fetchedAt ?? Date.now(),
+      });
+   } catch (error) {
+      if (!(error instanceof ResponseValidationError)) throw error;
+      throw new ApiError("OSIRIS returned an inconsistent timetable.", { code: "UPSTREAM_INVALID_RESPONSE", status: 502, cause: error });
+   }
 }
 
 function parseBoundedInt(value: string | null | undefined, fallback: number, min: number, max: number) {

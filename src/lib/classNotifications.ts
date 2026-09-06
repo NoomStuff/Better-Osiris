@@ -1,5 +1,6 @@
 import { dayLabel, parseLocalDateTime, timeLabel } from "./date";
 import type { SessionClassDiff } from "./classDiffs";
+import { notifyWarning } from "./notyf";
 import { readBrowserStorage, writeBrowserStorage } from "./browserStorage";
 
 let permissionRequest: Promise<NotificationPermission> | null = null;
@@ -33,18 +34,90 @@ export async function requestNotificationPermission(): Promise<ClassNotification
    }
 }
 
-export function notifyClassDiffs(diffs: SessionClassDiff[]) {
-   if (!getClassNotificationsEnabled() || getClassNotificationPermission() !== "granted") {
-      return;
-   }
+const DELIVERY_KEY = "roster-notification-deliveries-v1";
+let deliveryWarningShown = false;
+let workerRegistration: Promise<ServiceWorkerRegistration> | undefined;
 
-   getClassNotificationBodies(diffs).forEach((body) => {
+async function digest(value: unknown) {
+   const bytes = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(JSON.stringify(value)));
+   return Array.from(new Uint8Array(bytes), (byte) => byte.toString(16).padStart(2, "0")).join("");
+}
+function stillCurrent(epoch: string | null) {
+   return epoch === readBrowserStorage("localStorage", "roster-session-epoch-v1") && getClassNotificationsEnabled();
+}
+async function deliver(body: string, tag: string, epoch: string | null) {
+   if (!stillCurrent(epoch)) return false;
+   try {
+      new window.Notification("Better Osiris", { body, tag });
+   } catch {
+      if (!("serviceWorker" in navigator)) throw new Error("Notification delivery unavailable");
+      workerRegistration ??= navigator.serviceWorker.register("/notifications-sw.js").then(async () => navigator.serviceWorker.ready);
+      let timeout: ReturnType<typeof setTimeout> | undefined;
       try {
-         new window.Notification("Better Osiris", { body });
-      } catch {
-         // Notification support varies between browsers and operating systems.
+         const registration = await Promise.race([
+            workerRegistration,
+            new Promise<never>((_, reject) => {
+               timeout = setTimeout(() => reject(new Error("Notification worker did not activate")), 10_000);
+            }),
+         ]);
+         if (!stillCurrent(epoch)) return false;
+         await registration.showNotification("Better Osiris", { body, tag });
+      } catch (error) {
+         workerRegistration = undefined;
+         throw error;
+      } finally {
+         clearTimeout(timeout);
       }
-   });
+   }
+   return true;
+}
+function readDeliveryLedger(): Record<string, number> {
+   try {
+      const parsed: unknown = JSON.parse(readBrowserStorage("localStorage", DELIVERY_KEY) ?? "{}");
+      if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
+         return Object.fromEntries(
+            Object.entries(parsed).filter((entry): entry is [string, number] => typeof entry[1] === "number" && entry[1] > Date.now() - 7 * 86400_000)
+         );
+      }
+   } catch {
+      /* Corrupt delivery history must not prevent alerts. */
+   }
+   return {};
+}
+/** The page detects changes. The worker only provides notification delivery on mobile. */
+export async function notifyClassDiffs(diffs: SessionClassDiff[], contextId = "dev-preview") {
+   if (!getClassNotificationsEnabled() || getClassNotificationPermission() !== "granted" || !diffs.length) return;
+   const epoch = readBrowserStorage("localStorage", "roster-session-epoch-v1");
+   const send = async () => {
+      const ledger = readDeliveryLedger();
+      const keyed = await Promise.all(
+         diffs.map(async (diff) => {
+            const { previous: _previous, ...current } = diff.schoolClass;
+            return { diff, key: await digest([contextId, current]) };
+         })
+      );
+      for (const status of ["added", "changed", "cancelled"] as const) {
+         const group = keyed.filter((item) => item.diff.status === status && !ledger[item.key]);
+         if (!group.length) continue;
+         const body = getClassNotificationBodies(group.map((item) => item.diff))[0];
+         if (!body || !stillCurrent(epoch)) return;
+         const tag = await digest(group.map((item) => item.key).sort());
+         if (!(await deliver(body, tag, epoch))) return;
+         group.forEach((item) => {
+            ledger[item.key] = Date.now();
+         });
+         writeBrowserStorage("localStorage", DELIVERY_KEY, JSON.stringify(Object.fromEntries(Object.entries(ledger).slice(-200))));
+      }
+   };
+   try {
+      if ("locks" in navigator) await navigator.locks.request("roster-notifications", send);
+      else await send();
+   } catch {
+      if (!deliveryWarningShown) {
+         deliveryWarningShown = true;
+         notifyWarning("This browser could not deliver a class-change notification.");
+      }
+   }
 }
 
 export function getClassNotificationBodies(diffs: SessionClassDiff[]) {
@@ -66,7 +139,7 @@ function formatDiffGroup(diffs: SessionClassDiff[], status: DiffNotificationStat
    return diffs.length === 1 ? formatSingleDiff(firstDiff) : `${diffs.length} classes were ${status}`;
 }
 
-type DiffNotificationStatus = Extract<SessionClassDiff["status"], "added" | "changed" | "cancelled">;
+type DiffNotificationStatus = "added" | "changed" | "cancelled";
 
 function formatSingleDiff(diff: SessionClassDiff) {
    const schoolClass = diff.schoolClass;

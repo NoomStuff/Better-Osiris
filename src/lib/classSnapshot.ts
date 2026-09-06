@@ -1,4 +1,4 @@
-import type { Class, ClassSnapshot } from "../types/weeks";
+import type { Class, ClassSnapshot, ClassDetails } from "../types/weeks";
 
 /** Fields that define a schoolClass as users see it; id and status are compared separately where they matter. */
 const CLASS_DETAIL_FIELDS = ["title", "subject", "start", "end", "teacher", "room", "location", "description"] as const;
@@ -14,10 +14,10 @@ export function toClassSnapshot(schoolClass: Class): ClassSnapshot {
       room: schoolClass.room,
       location: schoolClass.location,
       description: schoolClass.description,
-      status: schoolClass.status,
+      status: schoolClass.status === "cancelled" ? "cancelled" : "scheduled",
    };
 }
 
-export function isSameClassDetails(left: ClassSnapshot, right: ClassSnapshot) {
+export function isSameClassDetails(left: ClassDetails, right: ClassDetails) {
    return CLASS_DETAIL_FIELDS.every((field) => left[field] === right[field]);
 }

@@ -4,6 +4,14 @@ import { applySessionClassDiffs, recordSessionClassDiffs, type SessionClassDiffs
 import type { Class, Week } from "../types/weeks";
 
 void describe("session roster diff states", () => {
+   void it("retains a previously confirmed cancellation when the upstream row disappears", () => {
+      const previous = createWeek([createClass({ status: "cancelled" })]);
+      const next = createWeek([]);
+      const changes: SessionClassDiffsByWeek = new Map();
+      assert.deepEqual(recordSessionClassDiffs(previous, next, changes), []);
+      assert.equal(applySessionClassDiffs(next, changes).classes[0]?.status, "cancelled");
+   });
+
    void it("keeps same-id schoolClass edits marked as changed across later refreshes", () => {
       const previous = createWeek([createClass({ id: "class-1", room: "A101" })]);
       const next = createWeek([createClass({ id: "class-1", room: "B202" })]);
@@ -18,12 +26,12 @@ void describe("session roster diff states", () => {
       const displayedLaterClass = displayLater.classes[0];
 
       assert.equal(displayedNextClass?.status, "changed");
-      assert.equal(displayedNextClass.previous?.room, "A101");
+      assert.equal(displayedNextClass.previous.room, "A101");
       assert.equal(displayedLaterClass?.status, "changed");
-      assert.equal(displayedLaterClass.previous?.room, "A101");
+      assert.equal(displayedLaterClass.previous.room, "A101");
    });
 
-   void it("keeps removed classes visible as cancelled", () => {
+   void it("keeps classes that vanish from the roster visible as cancelled", () => {
       const previous = createWeek([createClass({ id: "class-1" }), createClass({ id: "class-2", title: "Databases" })]);
       const next = createWeek([createClass({ id: "class-2", title: "Databases" })]);
       const diffs: SessionClassDiffsByWeek = new Map();
@@ -37,7 +45,7 @@ void describe("session roster diff states", () => {
       assert.equal(cancelledClass?.status, "cancelled");
    });
 
-   void it("marks likely moved replacement classes as changed", () => {
+   void it("does not infer identity from a similar replacement", () => {
       const previous = createWeek([createClass({ id: "old-id", start: "2026-06-16T09:00:00", end: "2026-06-16T10:30:00" })]);
       const next = createWeek([createClass({ id: "new-id", start: "2026-06-16T13:00:00", end: "2026-06-16T14:30:00" })]);
       const diffs: SessionClassDiffsByWeek = new Map();
@@ -46,12 +54,9 @@ void describe("session roster diff states", () => {
 
       const display = applySessionClassDiffs(next, diffs);
 
-      assert.equal(
-         display.classes.find((schoolClass) => schoolClass.id === "old-id"),
-         undefined
-      );
-      assert.equal(display.classes.find((schoolClass) => schoolClass.id === "new-id")?.status, "changed");
-      assert.equal(display.classes.find((schoolClass) => schoolClass.id === "new-id")?.previous?.start, "2026-06-16T09:00:00");
+      assert.equal(display.classes.find((item) => item.id === "old-id")?.status, "cancelled");
+      assert.equal(display.classes.find((item) => item.id === "new-id")?.status, "added");
+      assert.equal(display.classes.find((item) => item.id === "new-id")?.previous, undefined);
    });
 
    void it("marks unmatched new classes as added without inventing a previous snapshot", () => {
@@ -115,7 +120,7 @@ void describe("session roster diff states", () => {
       const diffs: SessionClassDiffsByWeek = new Map();
 
       recordSessionClassDiffs(original, changed, diffs);
-      assert.equal(diffs.get(0)?.size, 1);
+      assert.equal(diffs.get("2026-06-15")?.size, 1);
       recordSessionClassDiffs(changed, original, diffs);
       assert.equal(diffs.size, 0);
       assert.equal(applySessionClassDiffs(original, diffs).classes[0]?.status, "scheduled");
@@ -132,13 +137,13 @@ void describe("session roster diff states", () => {
       const display = applySessionClassDiffs(original, diffs);
       assert.equal(diffs.size, 0);
       assert.equal(display.classes.length, 1);
-      const revertedLesson = display.classes[0];
-      assert.ok(revertedLesson);
-      assert.equal(revertedLesson.id, "old-id");
-      assert.equal(revertedLesson.status, "scheduled");
+      const revertedClass = display.classes[0];
+      assert.ok(revertedClass);
+      assert.equal(revertedClass.id, "old-id");
+      assert.equal(revertedClass.status, "scheduled");
    });
 
-   void it("does not guess when multiple removed classes are equally plausible", () => {
+   void it("does not guess when multiple vanished classes are equally plausible", () => {
       const first = createClass({ id: "first", title: "Math", subject: "Math", teacher: "Teacher" });
       const second = createClass({ id: "second", title: "Math", subject: "Math", teacher: "Teacher" });
       const replacement = createClass({ id: "replacement", title: "Math", subject: "Math", teacher: "Teacher" });
@@ -162,14 +167,14 @@ function createWeek(classes: Class[]): Week {
          offset: 0,
          number: 25,
          start: "2026-06-15",
-         end: "2026-06-19",
+         end: "2026-06-21",
       },
       classes,
    };
 }
 
 function createClass(overrides: Partial<Class> = {}): Class {
-   return {
+   const item = {
       id: "schoolClass",
       title: "Programming",
       subject: "TypeScript",
@@ -179,7 +184,11 @@ function createClass(overrides: Partial<Class> = {}): Class {
       room: "A101",
       location: "Main building",
       description: "Class",
-      status: "scheduled",
+      status: "scheduled" as const,
       ...overrides,
    };
+   const { previous, ...details } = item;
+   if (details.status === "changed") return { ...details, status: details.status, previous: previous ?? { ...details, status: "scheduled" } };
+   if (details.status === "cancelled") return { ...details, status: "cancelled", ...(previous ? { previous } : {}) };
+   return { ...details, status: details.status };
 }

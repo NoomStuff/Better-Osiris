@@ -3,6 +3,7 @@ import { createEncryptedOsirisTokenCookieValue, hasOsirisTokenCookie, readOsiris
 import { ApiError } from "./errors.js";
 import { getCookieSecret, getDefaultOsirisToken, isProduction, normalizeBearerToken } from "./osirisConfig.js";
 import type { OsirisTokenSettings } from "../../shared/weeks.js";
+import { getCredentialContext } from "./credentialContext.js";
 
 export interface OsirisTokenSettingsResult {
    settings: OsirisTokenSettings;
@@ -15,13 +16,13 @@ export function getOsirisTokenSettings(cookieHeader: string | undefined): Osiris
 
    if (hasCustomToken) {
       return {
-         settings: { hasCustomToken: true, hasBearerToken: true },
+         settings: { hasCustomToken: true, hasBearerToken: true, contextId: getCredentialContext(readOsirisTokenFromCookie(cookieHeader, cookieSecret)) },
          cookieHeader: null,
       };
    }
 
    return {
-      settings: { hasCustomToken: false, hasBearerToken: Boolean(getDefaultOsirisToken()) },
+      settings: { hasCustomToken: false, hasBearerToken: Boolean(getDefaultOsirisToken()), contextId: getCredentialContext(getDefaultOsirisToken()) },
       cookieHeader: null,
    };
 }
@@ -31,7 +32,7 @@ export function saveOsirisTokenSetting(rawToken: unknown): OsirisTokenSettingsRe
    const token = normalizeBearerToken(rawToken);
 
    return {
-      settings: { hasCustomToken: true, hasBearerToken: true },
+      settings: { hasCustomToken: true, hasBearerToken: true, contextId: getCredentialContext(token) },
       cookieHeader: buildOsirisTokenCookieHeader(createEncryptedOsirisTokenCookieValue(token, cookieSecret), isProduction()),
    };
 }
@@ -41,6 +42,7 @@ export function clearOsirisTokenSetting(): OsirisTokenSettingsResult {
       settings: {
          hasCustomToken: false,
          hasBearerToken: Boolean(getDefaultOsirisToken()),
+         contextId: getCredentialContext(getDefaultOsirisToken()),
       },
       cookieHeader: buildClearOsirisTokenCookieHeader(isProduction()),
    };

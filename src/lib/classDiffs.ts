@@ -1,207 +1,104 @@
-import type { Class, ClassSnapshot, ClassStatus, Week } from "../types/weeks";
+import type { Class, ClassSnapshot, Week } from "../types/weeks";
 import { isSameClassDetails, toClassSnapshot } from "./classSnapshot";
-
-type DiffLessonStatus = Extract<ClassStatus, "added" | "changed" | "cancelled">;
 
 export interface SessionClassDiff {
    schoolClass: Class;
    previousClass?: ClassSnapshot;
-   status: DiffLessonStatus;
+   status: "added" | "changed" | "cancelled";
 }
 
-export type SessionClassDiffsByWeek = Map<number, Map<string, SessionClassDiff>>;
+/** Absolute Monday dates. Offsets are only meaningful at request time. */
+export type SessionClassDiffsByWeek = Map<string, Map<string, SessionClassDiff>>;
 
-function cloneLessonWithStatus(schoolClass: Class, status: DiffLessonStatus, previousClass?: ClassSnapshot): Class {
+export function applySessionClassDiffs(week: Week, changes: SessionClassDiffsByWeek): Week {
+   const diffs = changes.get(week.week.start);
+   if (!diffs?.size) return week;
+   const ids = new Set(week.classes.map((item) => item.id));
    return {
-      ...toClassSnapshot(schoolClass),
-      status,
-      ...(previousClass ? { previous: previousClass } : {}),
+      ...week,
+      classes: [
+         ...week.classes.map((item) => diffs.get(item.id)?.schoolClass ?? item),
+         ...[...diffs.values()].filter((diff) => diff.status === "cancelled" && !ids.has(diff.schoolClass.id)).map((diff) => diff.schoolClass),
+      ],
    };
 }
 
-function getClassDayKey(schoolClass: Class) {
-   return schoolClass.start.split("T")[0] ?? schoolClass.start;
+function same(left: ClassSnapshot, right: ClassSnapshot) {
+   return left.status === right.status && isSameClassDetails(left, right);
 }
 
-function normalizeMatchValue(value: string) {
-   return value.trim().toLowerCase();
-}
+/** Pure reconciliation. Stable IDs establish moves; changed IDs remain separate removals/additions. */
+export function reconcileWeeks(previous: ReadonlyMap<string, Week>, incoming: readonly Week[], previousChanges: SessionClassDiffsByWeek) {
+   const rawWeeks = new Map(previous);
+   const changes: SessionClassDiffsByWeek = new Map([...previousChanges].map(([date, diffs]) => [date, new Map(diffs)]));
+   const notifications: SessionClassDiff[] = [];
+   const incomingIds = new Set(incoming.flatMap((week) => week.classes.map((item) => item.id)));
+   const incomingDates = new Set(incoming.map((week) => week.week.start));
+   const previousById = new Map([...previous.values()].flatMap((week) => week.classes.map((item) => [item.id, item] as const)));
+   const oldDiffsById = new Map([...changes.values()].flatMap((diffs) => [...diffs]));
 
-function getClassMatchScore(previousClass: Class, nextClass: Class) {
-   const same = (left: string, right: string) => Boolean(left.trim()) && normalizeMatchValue(left) === normalizeMatchValue(right);
-   let score = 0;
-
-   if (same(previousClass.title, nextClass.title)) score += 4;
-   if (same(previousClass.subject, nextClass.subject)) score += 4;
-   if (same(previousClass.teacher, nextClass.teacher)) score += 2;
-   if (same(previousClass.description, nextClass.description)) score += 1;
-   if (same(previousClass.room, nextClass.room)) score += 1;
-   if (getClassDayKey(previousClass) === getClassDayKey(nextClass)) score += 1;
-
-   const hasMatchingIdentity = same(previousClass.title, nextClass.title) || same(previousClass.subject, nextClass.subject);
-   return hasMatchingIdentity ? score : 0;
-}
-
-function getWeekDiffs(weekDiffs: SessionClassDiffsByWeek, weekOffset: number) {
-   let diffs = weekDiffs.get(weekOffset);
-   if (!diffs) {
-      diffs = new Map<string, SessionClassDiff>();
-      weekDiffs.set(weekOffset, diffs);
-   }
-
-   return diffs;
-}
-
-/**
- * Stores a diff anchored to the first-seen version of the schoolClass (so rendering keeps the original details) but
- * returns a diff against the immediately previous version, which is what change notifications should announce.
- */
-function rememberClassDiff(weekDiffs: SessionClassDiffsByWeek, weekOffset: number, schoolClass: Class, previousClass: Class, status: DiffLessonStatus) {
-   const diffs = getWeekDiffs(weekDiffs, weekOffset);
-   const existingDiff = diffs.get(schoolClass.id) ?? diffs.get(previousClass.id);
-   const originalClass = existingDiff?.previousClass ?? toClassSnapshot(previousClass);
-   if (schoolClass.id !== previousClass.id) {
-      diffs.delete(previousClass.id);
-   }
-   const diff: SessionClassDiff = {
-      schoolClass: cloneLessonWithStatus(schoolClass, status, originalClass),
-      previousClass: originalClass,
-      status,
-   };
-   diffs.set(schoolClass.id, diff);
-
-   return {
-      schoolClass: cloneLessonWithStatus(schoolClass, status, toClassSnapshot(previousClass)),
-      previousClass: toClassSnapshot(previousClass),
-      status,
-   } satisfies SessionClassDiff;
-}
-
-function rememberAddedClass(weekDiffs: SessionClassDiffsByWeek, weekOffset: number, schoolClass: Class) {
-   const diff: SessionClassDiff = {
-      schoolClass: cloneLessonWithStatus(schoolClass, "added"),
-      status: "added",
-   };
-   getWeekDiffs(weekDiffs, weekOffset).set(schoolClass.id, diff);
-   return diff;
-}
-
-export function recordSessionClassDiffs(previousWeek: Week, nextWeek: Week, weekDiffs: SessionClassDiffsByWeek) {
-   const nextById = new Map(nextWeek.classes.map((schoolClass) => [schoolClass.id, schoolClass]));
-   const previousById = new Map(previousWeek.classes.map((schoolClass) => [schoolClass.id, schoolClass]));
-   const removedLessons = previousWeek.classes.filter((schoolClass) => !nextById.has(schoolClass.id));
-   const addedClasses = nextWeek.classes.filter((schoolClass) => !previousById.has(schoolClass.id));
-   const matchedRemovedClassIds = new Set<string>();
-   const recordedDiffs: SessionClassDiff[] = [];
-
-   previousWeek.classes.forEach((previousClass) => {
-      const nextClass = nextById.get(previousClass.id);
-      if (!nextClass) {
-         return;
-      }
-
-      if (clearRevertedDiff(weekDiffs, previousWeek.week.offset, nextClass).length) {
-         return;
-      }
-
-      if (nextClass.status === "cancelled" && previousClass.status !== "cancelled") {
-         recordedDiffs.push(rememberClassDiff(weekDiffs, previousWeek.week.offset, nextClass, previousClass, "cancelled"));
-      } else if (!isSameClassDetails(previousClass, nextClass) || previousClass.status !== nextClass.status) {
-         recordedDiffs.push(rememberClassDiff(weekDiffs, previousWeek.week.offset, nextClass, previousClass, "changed"));
+   rawWeeks.forEach((week, date) => {
+      if (!incomingDates.has(date) && week.classes.some((item) => incomingIds.has(item.id))) {
+         rawWeeks.set(date, { ...week, classes: week.classes.filter((item) => !incomingIds.has(item.id)) });
       }
    });
-
-   addedClasses.forEach((addedLesson) => {
-      const revertedDiffIds = clearRevertedDiff(weekDiffs, previousWeek.week.offset, addedLesson);
-      if (revertedDiffIds.length) {
-         revertedDiffIds.forEach((classId) => {
-            if (removedLessons.some((schoolClass) => schoolClass.id === classId)) {
-               matchedRemovedClassIds.add(classId);
-            }
-         });
-         return;
+   incoming.forEach((week) => rawWeeks.set(week.week.start, week));
+   const nextById = new Map([...rawWeeks.values()].flatMap((week) => week.classes.map((item) => [item.id, item] as const)));
+   const forget = (id: string) => changes.forEach((diffs) => diffs.delete(id));
+   const remember = (date: string, item: Class, old: ClassSnapshot | undefined, status: SessionClassDiff["status"], notify = true) => {
+      const original = oldDiffsById.get(item.id)?.previousClass ?? old;
+      let displayed: Class;
+      if (status === "added") displayed = { ...toClassSnapshot(item), status };
+      else if (status === "cancelled") displayed = { ...toClassSnapshot(item), status, ...(original ? { previous: original } : {}) };
+      else {
+         if (!original) throw new Error("A changed or removed class requires its original snapshot.");
+         displayed = { ...toClassSnapshot(item), status, previous: original };
       }
+      const diff: SessionClassDiff = { schoolClass: displayed, status, ...(original ? { previousClass: original } : {}) };
+      const weekChanges = changes.get(date) ?? new Map<string, SessionClassDiff>();
+      weekChanges.set(item.id, diff);
+      changes.set(date, weekChanges);
+      if (notify) notifications.push({ ...diff, ...(old ? { previousClass: old } : {}) });
+   };
 
-      const candidates = removedLessons
-         .filter((removedClass) => !matchedRemovedClassIds.has(removedClass.id))
-         .map((removedClass) => ({ schoolClass: removedClass, score: getClassMatchScore(removedClass, addedLesson) }))
-         .filter((candidate) => candidate.score >= 7)
-         .sort((left, right) => right.score - left.score);
-      const likelyPreviousLesson = candidates[0]?.schoolClass;
-
-      if (!likelyPreviousLesson || candidates[0]?.score === candidates[1]?.score) {
-         recordedDiffs.push(rememberAddedClass(weekDiffs, previousWeek.week.offset, addedLesson));
-         return;
-      }
-
-      matchedRemovedClassIds.add(likelyPreviousLesson.id);
-      recordedDiffs.push(rememberClassDiff(weekDiffs, previousWeek.week.offset, addedLesson, likelyPreviousLesson, "changed"));
-   });
-
-   removedLessons.forEach((removedClass) => {
-      const existingDiff = weekDiffs.get(previousWeek.week.offset)?.get(removedClass.id);
-      if (existingDiff?.status === "added") {
-         const diffs = weekDiffs.get(previousWeek.week.offset);
-         diffs?.delete(removedClass.id);
-         if (diffs?.size === 0) {
-            weekDiffs.delete(previousWeek.week.offset);
+   incoming.forEach((week) => {
+      week.classes.forEach((item) => {
+         const old = previousById.get(item.id);
+         const existing = oldDiffsById.get(item.id);
+         const original = existing?.previousClass;
+         forget(item.id);
+         if (original && same(original, toClassSnapshot(item))) return;
+         if (!old) {
+            if (original) remember(week.week.start, item, original, item.status === "cancelled" ? "cancelled" : "changed");
+            else if (previous.has(week.week.start)) remember(week.week.start, item, undefined, item.status === "cancelled" ? "cancelled" : "added");
+            return;
          }
-         return;
-      }
-
-      if (!matchedRemovedClassIds.has(removedClass.id)) {
-         recordedDiffs.push(rememberClassDiff(weekDiffs, previousWeek.week.offset, removedClass, removedClass, "cancelled"));
-      }
+         if (same(toClassSnapshot(old), toClassSnapshot(item))) {
+            if (existing) remember(week.week.start, item, original, existing.status, false);
+            return;
+         }
+         const status = item.status === "cancelled" ? "cancelled" : existing?.status === "added" ? "added" : "changed";
+         remember(week.week.start, item, toClassSnapshot(old), status);
+      });
+      previous.get(week.week.start)?.classes.forEach((old) => {
+         if (nextById.has(old.id)) return;
+         const existing = oldDiffsById.get(old.id);
+         forget(old.id);
+         if (existing?.status === "added") return;
+         // A row that vanished without an explicit upstream cancellation still presents as
+         // cancelled; it is held back from notifications until concurrent batches settle.
+         remember(week.week.start, old, toClassSnapshot(old), "cancelled", old.status !== "cancelled");
+      });
    });
-
-   return recordedDiffs;
+   changes.forEach((diffs, date) => {
+      if (!diffs.size) changes.delete(date);
+   });
+   return { rawWeeks, changes, notifications, weeks: [...rawWeeks.values()].map((week) => applySessionClassDiffs(week, changes)) };
 }
 
-function clearRevertedDiff(weekDiffs: SessionClassDiffsByWeek, weekOffset: number, schoolClass: Class) {
-   const diffs = weekDiffs.get(weekOffset);
-   if (!diffs) {
-      return [];
-   }
-
-   const revertedDiffIds = [...diffs.entries()]
-      .filter(
-         ([currentLessonId, diff]) =>
-            diff.previousClass !== undefined &&
-            (currentLessonId === schoolClass.id || diff.previousClass.id === schoolClass.id) &&
-            isSameClassDetails(diff.previousClass, schoolClass) &&
-            diff.previousClass.status === schoolClass.status
-      )
-      .map(([currentLessonId]) => currentLessonId);
-
-   revertedDiffIds.forEach((classId) => diffs.delete(classId));
-   if (diffs.size === 0) {
-      weekDiffs.delete(weekOffset);
-   }
-   return revertedDiffIds;
-}
-
-export function applySessionClassDiffs(weekData: Week, weekDiffs: SessionClassDiffsByWeek): Week {
-   const diffs = weekDiffs.get(weekData.week.offset);
-   if (!diffs?.size) {
-      return weekData;
-   }
-
-   const freshClassIds = new Set(weekData.classes.map((schoolClass) => schoolClass.id));
-   const classes = weekData.classes.map((schoolClass) => {
-      const diff = diffs.get(schoolClass.id);
-      return diff ? cloneLessonWithStatus(schoolClass, diff.status, diff.previousClass) : schoolClass;
-   });
-
-   diffs.forEach((diff, classId) => {
-      if (diff.status !== "cancelled" || freshClassIds.has(classId)) {
-         return;
-      }
-
-      classes.push(cloneLessonWithStatus(diff.schoolClass, "cancelled", diff.previousClass));
-   });
-
-   return {
-      ...weekData,
-      classes,
-   };
+export function recordSessionClassDiffs(previous: Week, next: Week, changes: SessionClassDiffsByWeek) {
+   const result = reconcileWeeks(new Map([[previous.week.start, previous]]), [next], changes);
+   changes.clear();
+   result.changes.forEach((diffs, date) => changes.set(date, diffs));
+   return result.notifications;
 }

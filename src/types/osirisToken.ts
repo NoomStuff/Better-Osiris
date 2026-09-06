@@ -1,1 +1,1 @@
-export type OsirisTokenValidationStatus = "ready" | "required" | "checking" | "rejected" | "unavailable";
+export type OsirisTokenValidationStatus = "ready" | "required" | "checking" | "rejected" | "unavailable" | "save-unavailable";

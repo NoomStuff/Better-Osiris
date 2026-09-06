@@ -14,7 +14,7 @@ interface ClassDrawerProps {
 }
 
 export function ClassDrawer({ schoolClass, onClose }: ClassDrawerProps) {
-   const [displayLesson, setDisplayLesson] = useState<Class | null>(schoolClass);
+   const [displayClass, setDisplayClass] = useState<Class | null>(schoolClass);
    const [isClosing, setIsClosing] = useState(false);
    const closeTimerRef = useRef<number | null>(null);
    const detailsRef = useOverlayScrollbar();
@@ -26,7 +26,7 @@ export function ClassDrawer({ schoolClass, onClose }: ClassDrawerProps) {
 
       setIsClosing(true);
       closeTimerRef.current = window.setTimeout(() => {
-         setDisplayLesson(null);
+         setDisplayClass(null);
          setIsClosing(false);
          onClose();
       }, PANEL_CLOSE_MS);
@@ -43,7 +43,7 @@ export function ClassDrawer({ schoolClass, onClose }: ClassDrawerProps) {
       }
 
       void Promise.resolve().then(() => {
-         setDisplayLesson(schoolClass);
+         setDisplayClass(schoolClass);
          setIsClosing(false);
       });
    }, [schoolClass]);
@@ -56,7 +56,7 @@ export function ClassDrawer({ schoolClass, onClose }: ClassDrawerProps) {
       };
    }, []);
 
-   const activeClass = schoolClass === null && !isClosing ? null : displayLesson;
+   const activeClass = schoolClass === null && !isClosing ? null : displayClass;
 
    if (!activeClass) {
       return null;
@@ -220,7 +220,7 @@ function ChangeValue({ className, current, previous, cancelled = false, added = 
 }
 
 function ClassStatusBadge({ status }: { status: Exclude<Class["status"], "scheduled"> }) {
-   const icon = status === "added" ? "fa-plus" : status === "changed" ? "fa-pen" : "fa-trash-can";
+   const icon = status === "added" ? "fa-thumbtack" : status === "changed" ? "fa-pen" : "fa-trash-can";
 
    return (
       <span className={`class-panel__status class-panel__status--${status}`}>

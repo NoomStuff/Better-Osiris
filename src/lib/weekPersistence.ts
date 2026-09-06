@@ -1,229 +1,134 @@
-import type { Week } from "../../shared/weeks";
 import { parseClass, parseWeek } from "../../shared/rosterValidation";
-import { getIsoWeekNumber, getLocalWeekStartIso, shiftIsoDateByDays } from "./date";
-import { isRosterTimeZoneKnown } from "./rosterTimeZone";
-import { notifyError } from "./notyf";
+import { isValidTimeZone } from "../../shared/timeZone";
+import { shiftCalendarDate } from "../../shared/calendar";
+import type { Week } from "../types/weeks";
 import { readBrowserStorage, removeBrowserStorage, writeBrowserStorage } from "./browserStorage";
-import { CURRENT_WEEK_CACHE_KEY, LAST_WEEK_CACHE_KEY, SESSION_CLASS_DIFFS_KEY } from "./weekCache";
-import type { SessionClassDiff, SessionClassDiffsByWeek } from "./classDiffs";
+import { WEEK_CACHE_KEY, SESSION_CLASS_DIFFS_KEY, clearLegacyWeekCache } from "./weekCache";
+import type { SessionClassDiffsByWeek } from "./classDiffs";
 
-interface CachedWeek {
+export interface StoredWeek {
    data: Week;
-   weekNumber: number;
-   weekStart?: string;
+   fetchedAt: number;
+   checkedAt: number;
+   changedAt: number;
+   /** Includes removed/moved IDs, so deleting a class cannot erase its freshness history. */
+   classFetchTimes?: Record<string, number>;
+}
+export interface WeekCache {
+   contextId: string;
+   timeZone: string;
+   weeks: StoredWeek[];
 }
 
-function getReferenceDate() {
-   return new Date();
-}
-
-function getCurrentWeekNumber() {
-   return getIsoWeekNumber(getCurrentWeekStartIso());
-}
-
-function getCurrentWeekStartIso() {
-   return getLocalWeekStartIso(getReferenceDate());
-}
-
-function getLastWeekStartIso() {
-   return shiftIsoDateByDays(getCurrentWeekStartIso(), -7);
-}
-
-function normalizeCachedWeek(data: Week, offset: number): Week {
-   return {
-      ...data,
-      week: { ...data.week, offset },
-   };
-}
-
-function parseCachedWeek(cacheKey: string) {
-   const cached = readBrowserStorage("localStorage", cacheKey);
-   if (!cached) {
-      return null;
-   }
-
-   const parsed = JSON.parse(cached) as unknown;
-   const record = readRecord(parsed, "cached roster");
-   const hasWrapper = "data" in record;
-   const data = parseWeek(hasWrapper ? record["data"] : record);
-   const weekNumber = hasWrapper ? readNumber(record["weekNumber"], "cached roster week number") : data.week.number;
-   const weekStart = hasWrapper ? readString(record["weekStart"], "cached roster week start") : data.week.start;
-   return { data, weekNumber, weekStart };
-}
-
-export function readCachedCurrentWeek() {
-   if (typeof window === "undefined" || !isRosterTimeZoneKnown()) {
-      return null;
-   }
-
-   try {
-      const cached = parseCachedWeek(CURRENT_WEEK_CACHE_KEY);
-      if (!cached) {
-         return null;
-      }
-
-      if (cached.weekNumber !== getCurrentWeekNumber() || cached.weekStart !== getCurrentWeekStartIso()) {
-         removeBrowserStorage("localStorage", CURRENT_WEEK_CACHE_KEY);
-         return null;
-      }
-
-      return normalizeCachedWeek(cached.data, 0);
-   } catch (error) {
-      removeBrowserStorage("localStorage", CURRENT_WEEK_CACHE_KEY);
-      notifyError(error, "Failed to parse cached current week.");
-      return null;
-   }
-}
-
-export function readCachedLastWeek() {
-   if (typeof window === "undefined" || !isRosterTimeZoneKnown()) {
-      return null;
-   }
-
-   const lastWeekStart = getLastWeekStartIso();
-
-   try {
-      const cachedLastWeek = parseCachedWeek(LAST_WEEK_CACHE_KEY);
-      if (cachedLastWeek?.weekStart === lastWeekStart) {
-         return normalizeCachedWeek(cachedLastWeek.data, -1);
-      }
-
-      if (cachedLastWeek) {
-         removeBrowserStorage("localStorage", LAST_WEEK_CACHE_KEY);
-      }
-
-      const cachedCurrentWeek = parseCachedWeek(CURRENT_WEEK_CACHE_KEY);
-      if (cachedCurrentWeek?.weekStart !== lastWeekStart) {
-         return null;
-      }
-
-      const lastWeek = normalizeCachedWeek(cachedCurrentWeek.data, -1);
-      storeCachedLastWeek(lastWeek);
-      removeBrowserStorage("localStorage", CURRENT_WEEK_CACHE_KEY);
-      return lastWeek;
-   } catch (error) {
-      removeBrowserStorage("localStorage", LAST_WEEK_CACHE_KEY);
-      removeBrowserStorage("localStorage", CURRENT_WEEK_CACHE_KEY);
-      notifyError(error, "Failed to parse cached last week.");
-      return null;
-   }
-}
-
-function storeCachedLastWeek(data: Week) {
-   if (typeof window === "undefined") {
-      return;
-   }
-
-   writeBrowserStorage(
-      "localStorage",
-      LAST_WEEK_CACHE_KEY,
-      JSON.stringify({
-         data: normalizeCachedWeek(data, -1),
-         weekNumber: data.week.number,
-         weekStart: data.week.start,
-      } satisfies CachedWeek)
+/** A delayed server-cache response must not undo fresher data, including a class moved between weeks. */
+export function getFreshIncomingWeeks(incoming: readonly Week[], fetchedAt: number, stored: ReadonlyMap<string, StoredWeek>): Week[] {
+   const classFetchTimes = new Map<string, number>();
+   stored.forEach((week) => {
+      week.data.classes.forEach((schoolClass) => {
+         classFetchTimes.set(schoolClass.id, Math.max(classFetchTimes.get(schoolClass.id) ?? 0, week.fetchedAt));
+      });
+      Object.entries(week.classFetchTimes ?? {}).forEach(([id, fetchedAt]) => classFetchTimes.set(id, Math.max(classFetchTimes.get(id) ?? 0, fetchedAt)));
+   });
+   return incoming.filter(
+      (week) =>
+         fetchedAt >= (stored.get(week.week.start)?.fetchedAt ?? 0) &&
+         week.classes.every((schoolClass) => fetchedAt >= (classFetchTimes.get(schoolClass.id) ?? 0))
    );
 }
 
-export function storeCachedCurrentWeek(data: Week) {
-   if (typeof window === "undefined" || data.week.offset !== 0) {
-      return;
-   }
-
-   try {
-      const cachedCurrentWeek = parseCachedWeek(CURRENT_WEEK_CACHE_KEY);
-      if (cachedCurrentWeek?.weekStart === getLastWeekStartIso()) {
-         storeCachedLastWeek(cachedCurrentWeek.data);
-      }
-   } catch (error) {
-      notifyError(error, "Failed to update cached last week.");
-   }
-
-   writeBrowserStorage(
-      "localStorage",
-      CURRENT_WEEK_CACHE_KEY,
-      JSON.stringify({
-         data,
-         weekNumber: data.week.number,
-         weekStart: data.week.start,
-      } satisfies CachedWeek)
-   );
+export function getClassFetchTimes(old: StoredWeek | undefined, next: Week, fetchedAt: number, directlyFetched: boolean): Record<string, number> {
+   const times = new Map(Object.entries(old?.classFetchTimes ?? {}));
+   const nextIds = new Set(next.classes.map((item) => item.id));
+   old?.data.classes.forEach((item) => {
+      const observedAt = directlyFetched || !nextIds.has(item.id) ? fetchedAt : old.fetchedAt;
+      times.set(item.id, Math.max(times.get(item.id) ?? 0, observedAt));
+   });
+   if (directlyFetched) next.classes.forEach((item) => times.set(item.id, Math.max(times.get(item.id) ?? 0, fetchedAt)));
+   return Object.fromEntries(times);
 }
 
-export function readSessionClassDiffs(): SessionClassDiffsByWeek {
-   if (typeof window === "undefined") {
-      return new Map();
-   }
-
+export function readWeekCache(): WeekCache | null {
+   clearLegacyWeekCache();
+   const text = readBrowserStorage("localStorage", WEEK_CACHE_KEY);
+   if (!text) return null;
    try {
-      const stored = readBrowserStorage("sessionStorage", SESSION_CLASS_DIFFS_KEY);
-      if (!stored) {
-         return new Map();
-      }
+      const record = readRecord(JSON.parse(text) as unknown);
+      const contextId = readString(record["contextId"]);
+      const timeZone = readString(record["timeZone"]);
+      if (!isValidTimeZone(timeZone) || !Array.isArray(record["weeks"])) throw new Error("Invalid cache.");
+      const weeks = record["weeks"].map((value: unknown) => {
+         const row = readRecord(value);
+         return {
+            data: parseWeek(row["data"]),
+            fetchedAt: timestamp(row["fetchedAt"]),
+            checkedAt: timestamp(row["checkedAt"]),
+            changedAt: timestamp(row["changedAt"]),
+            ...(row["classFetchTimes"] === undefined
+               ? {}
+               : { classFetchTimes: Object.fromEntries(Object.entries(readRecord(row["classFetchTimes"])).map(([id, time]) => [id, timestamp(time)])) }),
+         };
+      });
+      if (weeks.length > 32 || new Set(weeks.map((week) => week.data.week.start)).size !== weeks.length) throw new Error("Invalid cached weeks.");
+      return { contextId, timeZone, weeks };
+   } catch {
+      removeBrowserStorage("localStorage", WEEK_CACHE_KEY);
+      return null;
+   }
+}
 
-      const parsed = readRecord(JSON.parse(stored) as unknown, "session roster changes");
+export function storeWeekCache(cache: WeekCache, currentWeek: string) {
+   const weeks = [...cache.weeks]
+      .sort((a, b) => {
+         const priority = (week: StoredWeek) => (week.data.week.start <= currentWeek ? 1 : 0);
+         return priority(b) - priority(a) || b.checkedAt - a.checkedAt;
+      })
+      .slice(0, 32);
+   writeBrowserStorage("localStorage", WEEK_CACHE_KEY, JSON.stringify({ ...cache, weeks }));
+}
+
+export function readSessionClassDiffs(contextId: string, timeZone: string): SessionClassDiffsByWeek {
+   const text = readBrowserStorage("sessionStorage", SESSION_CLASS_DIFFS_KEY);
+   if (!text) return new Map();
+   try {
+      const record = readRecord(JSON.parse(text) as unknown);
+      if (record["contextId"] !== contextId || record["timeZone"] !== timeZone) return new Map();
+      const weeks = readRecord(record["weeks"]);
       return new Map(
-         Object.entries(parsed).map(([weekOffset, value]) => {
-            if (!Array.isArray(value) || !Number.isSafeInteger(Number(weekOffset))) {
-               throw new Error("Stored session roster changes have an invalid shape.");
-            }
-            const diffs = value.map((diff, index) => parseSessionClassDiff(diff, `session roster changes ${weekOffset}[${index}]`));
-            return [Number(weekOffset), new Map(diffs.map((diff) => [diff.schoolClass.id, diff]))];
+         Object.entries(weeks).map(([date, values]) => {
+            if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || !Array.isArray(values)) throw new Error("Invalid changes.");
+            return [
+               date,
+               new Map(
+                  values.map((value: unknown) => {
+                     const item = parseClass(value);
+                     if (item.status === "scheduled" || item.start.slice(0, 10) < date || item.start.slice(0, 10) > shiftCalendarDate(date, 6))
+                        throw new Error("Invalid change date.");
+                     return [item.id, { schoolClass: item, status: item.status, ...(item.previous ? { previousClass: item.previous } : {}) }];
+                  })
+               ),
+            ];
          })
       );
-   } catch (error) {
+   } catch {
       removeBrowserStorage("sessionStorage", SESSION_CLASS_DIFFS_KEY);
-      notifyError(error, "Failed to parse session roster changes.");
       return new Map();
    }
 }
 
-export function storeSessionClassDiffs(weekDiffs: SessionClassDiffsByWeek) {
-   if (typeof window === "undefined") {
-      return;
-   }
-
-   const serialized = Object.fromEntries(
-      [...weekDiffs.entries()].filter(([, diffs]) => diffs.size > 0).map(([weekOffset, diffs]) => [String(weekOffset), [...diffs.values()]])
-   );
-
-   writeBrowserStorage("sessionStorage", SESSION_CLASS_DIFFS_KEY, JSON.stringify(serialized));
+export function storeSessionClassDiffs(changes: SessionClassDiffsByWeek, contextId: string, timeZone: string) {
+   const weeks = Object.fromEntries([...changes].map(([date, diffs]) => [date, [...diffs.values()].map((diff) => diff.schoolClass)]));
+   writeBrowserStorage("sessionStorage", SESSION_CLASS_DIFFS_KEY, JSON.stringify({ contextId, timeZone, weeks }));
 }
 
-function parseSessionClassDiff(value: unknown, path: string): SessionClassDiff {
-   const record = readRecord(value, path);
-   const status = record["status"];
-   if (status !== "added" && status !== "changed" && status !== "cancelled") {
-      throw new Error(`${path} has an invalid status.`);
-   }
-   const previousClass = record["previousClass"];
-   if (status !== "added" && previousClass === undefined) {
-      throw new Error(`${path} is missing its previous class.`);
-   }
-   return {
-      schoolClass: parseClass(record["schoolClass"], `${path}.schoolClass`),
-      ...(previousClass === undefined ? {} : { previousClass: parseClass(previousClass, `${path}.previousClass`) }),
-      status,
-   };
-}
-
-function readRecord(value: unknown, label: string): Record<string, unknown> {
-   if (!value || typeof value !== "object" || Array.isArray(value)) {
-      throw new Error(`${label} must be an object.`);
-   }
+function readRecord(value: unknown): Record<string, unknown> {
+   if (!value || typeof value !== "object" || Array.isArray(value)) throw new Error("Expected record.");
    return value as Record<string, unknown>;
 }
-
-function readNumber(value: unknown, label: string) {
-   if (typeof value !== "number" || !Number.isSafeInteger(value)) {
-      throw new Error(`${label} must be an integer.`);
-   }
+function readString(value: unknown): string {
+   if (typeof value !== "string" || !value) throw new Error("Expected string.");
    return value;
 }
-
-function readString(value: unknown, label: string) {
-   if (typeof value !== "string") {
-      throw new Error(`${label} must be a string.`);
-   }
+function timestamp(value: unknown): number {
+   if (typeof value !== "number" || !Number.isSafeInteger(value) || value <= 0) throw new Error("Expected timestamp.");
    return value;
 }

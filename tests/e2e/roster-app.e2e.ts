@@ -1,3 +1,4 @@
+import { isoWeekNumber } from "../../shared/calendar";
 import { expect, test, type Page } from "@playwright/test";
 import AxeBuilder from "@axe-core/playwright";
 
@@ -11,6 +12,10 @@ test.beforeEach(async ({ page }) => {
    const errors: string[] = [];
    pageErrors.set(page, errors);
    page.on("pageerror", (error) => errors.push(error.stack ?? error.message));
+   page.on("console", (message) => {
+      if (message.type() === "error" && /Cannot update a component|Maximum update depth|Each child in a list should/.test(message.text()))
+         errors.push(message.text());
+   });
    await page.emulateMedia({ colorScheme: "dark" });
    await installFixedClock(page);
    await mockAppApis(page);
@@ -85,6 +90,7 @@ test("prefetches the batch after the active batch", async ({ page }) => {
 
 test("holding a week arrow keeps advancing through the roster", async ({ page }) => {
    await page.goto("/");
+   await expect(page.locator(".grid-class").first()).toBeVisible();
 
    await page.keyboard.down("ArrowRight");
    await expect(page.locator(".weekbar__label")).toHaveText("Next week");
@@ -141,6 +147,7 @@ test("week buttons accept another click before their transition finishes", async
 
 test("week swipe plays the same content transition", async ({ page }) => {
    await page.goto("/");
+   await expect(page.locator(".grid-class").first()).toBeVisible();
 
    await swipeWeek(page, "next");
    await expect(page.locator(".weekbar__label")).toHaveText("Next week");
@@ -157,6 +164,7 @@ test("week swipe plays the same content transition", async ({ page }) => {
 
 test("shift and an arrow moves by one roster batch", async ({ page }) => {
    await page.goto("/");
+   await expect(page.locator(".grid-class").first()).toBeVisible();
 
    await page.keyboard.press("Shift+ArrowRight");
    await expect(page.locator(".weekbar__label")).toHaveText("In 5 weeks");
@@ -607,7 +615,7 @@ test("an aborted credential request cannot restore stale roster data", async ({ 
       await route.fulfill({
          status: 200,
          contentType: "application/json",
-         body: JSON.stringify({ hasCustomToken: tokenVersion > 0, hasBearerToken: tokenVersion > 0 }),
+         body: JSON.stringify({ hasCustomToken: tokenVersion > 0, hasBearerToken: tokenVersion > 0, contextId: tokenVersion > 0 ? "test-context" : null }),
       });
    });
 
@@ -769,7 +777,7 @@ test("cancelled class details strike through place, date and time", async ({ pag
    await expect(cancelledValues.nth(1)).toHaveText("09:00 – 10:30");
 });
 
-test("added class details show plus markers in the status, place and time", async ({ page }) => {
+test("added class details show the pin status marker and plus markers for place and time", async ({ page }) => {
    await page.addInitScript(() => {
       window.localStorage.setItem("roster-devtools-enabled", "true");
       window.localStorage.setItem("roster-devtools-status-preview", "added");
@@ -780,7 +788,7 @@ test("added class details show plus markers in the status, place and time", asyn
    const dialog = page.getByRole("dialog", { name: "Class details" });
    const status = dialog.locator(".class-panel__status--added");
    await expect(status).toContainText("added");
-   await expect(status.locator(".fa-plus")).toBeVisible();
+   await expect(status.locator(".fa-thumbtack")).toBeVisible();
    await expect(dialog.locator(".class-panel__place .class-panel__added-value > .fa-plus")).toBeVisible();
    await expect(dialog.locator(".class-panel__time .class-panel__added-value > .fa-plus")).toBeVisible();
 });
@@ -804,7 +812,7 @@ test("missing bearer token shows an entry overlay without requesting roster data
       await route.fulfill({
          status: 200,
          contentType: "application/json",
-         body: JSON.stringify({ hasCustomToken: false, hasBearerToken: false }),
+         body: JSON.stringify({ hasCustomToken: false, hasBearerToken: false, contextId: null }),
       });
    });
 
@@ -831,6 +839,10 @@ test("missing bearer token shows an entry overlay without requesting roster data
 });
 
 test("keeps token entry open until OSIRIS accepts the token", async ({ page }) => {
+   let releaseRoster = () => undefined;
+   const rosterGate = new Promise<void>((resolve) => {
+      releaseRoster = resolve;
+   });
    let hasToken = false;
    let rejectToken = true;
 
@@ -849,10 +861,11 @@ test("keeps token entry open until OSIRIS accepts the token", async ({ page }) =
       await route.fulfill({
          status: 200,
          contentType: "application/json",
-         body: JSON.stringify({ hasCustomToken: hasToken, hasBearerToken: hasToken }),
+         body: JSON.stringify({ hasCustomToken: hasToken, hasBearerToken: hasToken, contextId: hasToken ? "test-context" : null }),
       });
    });
    await page.route("**/api/roster/weeks?*", async (route) => {
+      await rosterGate;
       const url = new URL(route.request().url());
       const offset = Number(url.searchParams.get("offset") ?? "0");
       const limit = Number(url.searchParams.get("limit") ?? "5");
@@ -872,6 +885,7 @@ test("keeps token entry open until OSIRIS accepts the token", async ({ page }) =
    await page.getByRole("button", { name: "Load roster" }).click();
 
    await expect(page.getByRole("heading", { name: "Checking bearer token" })).toBeVisible();
+   releaseRoster();
    await expect(page.getByRole("button", { name: "SOURCE_TITLE_0_1" })).toBeVisible();
    await expect(page.getByRole("heading", { name: /Bearer token/ })).toHaveCount(0);
 });
@@ -888,7 +902,7 @@ test("retries token settings instead of showing the entry form after a transient
       await route.fulfill({
          status: 200,
          contentType: "application/json",
-         body: JSON.stringify({ hasCustomToken: false, hasBearerToken: true }),
+         body: JSON.stringify({ hasCustomToken: false, hasBearerToken: true, contextId: "test-context" }),
       });
    });
 
@@ -1062,8 +1076,18 @@ test("desktop grid and mobile agenda match their visual baselines", async ({ pag
 
 async function installFixedClock(page: Page) {
    await page.addInitScript((fixedNowIso) => {
-      const fixedNow = new Date(fixedNowIso).getTime();
       const RealDate = Date;
+      let timestamp: number | undefined;
+      const fixedNow = () => {
+         if (timestamp !== undefined) return timestamp;
+         try {
+            timestamp = new RealDate(localStorage.getItem("test-clock") ?? fixedNowIso).getTime();
+         } catch {
+            timestamp = new RealDate(fixedNowIso).getTime();
+         }
+         // Read once after the init scripts run; dates must not access storage during render or teardown.
+         return timestamp;
+      };
       type DateConstructorArgs =
          | []
          | [string | number | Date]
@@ -1076,7 +1100,7 @@ async function installFixedClock(page: Page) {
       class MockDate extends RealDate {
          constructor(...args: DateConstructorArgs) {
             if (args.length === 0) {
-               super(fixedNow);
+               super(fixedNow());
                return;
             }
 
@@ -1089,7 +1113,7 @@ async function installFixedClock(page: Page) {
          }
 
          static now() {
-            return fixedNow;
+            return fixedNow();
          }
       }
 
@@ -1105,14 +1129,14 @@ async function installCachedLastWeek(page: Page) {
          window.localStorage.setItem(
             cacheKey,
             JSON.stringify({
-               data: week,
-               weekNumber: week.week.number,
-               weekStart: week.week.start,
+               contextId: "test-context",
+               timeZone,
+               weeks: [{ data: week, fetchedAt: Date.now(), checkedAt: Date.now(), changedAt: Date.now() }],
             })
          );
       },
       {
-         cacheKey: "roster-last-week-cache-v1",
+         cacheKey: "roster-weeks-v3",
          timeZoneKey: "roster-time-zone-v1",
          timeZone: "Europe/Amsterdam",
          week: createWeek(-1),
@@ -1158,7 +1182,7 @@ async function mockAppApis(page: Page) {
       await route.fulfill({
          status: 200,
          contentType: "application/json",
-         body: JSON.stringify({ hasCustomToken, hasBearerToken: hasCustomToken }),
+         body: JSON.stringify({ hasCustomToken, hasBearerToken: hasCustomToken, contextId: hasCustomToken ? "test-context" : null }),
       });
    });
 
@@ -1179,10 +1203,21 @@ function createRosterBatch(offset: number, limit: number) {
    return {
       offset,
       limit,
+      contextId: "test-context",
+      fetchedAt: Date.now(),
       hasMore: offset + limit < 50,
       timeZone: "Europe/Amsterdam",
       weeks: Array.from({ length: limit }, (_, index) => createWeek(offset + index)),
    };
+}
+
+function createShiftedRosterBatch(offset: number, limit: number, shift: number) {
+   const batch = createRosterBatch(offset + shift, limit);
+   batch.offset = offset;
+   batch.weeks.forEach((week) => {
+      week.week.offset -= shift;
+   });
+   return batch;
 }
 
 function createWeek(offset: number) {
@@ -1196,7 +1231,7 @@ function createWeek(offset: number) {
    return {
       week: {
          offset,
-         number: 25 + offset,
+         number: isoWeekNumber(start),
          start,
          end: toIsoDate(endDate),
       },
@@ -1247,3 +1282,561 @@ function waitForRosterResponseTitle(page: Page, expectedTitle: string) {
       return payload.weeks?.[0]?.classes?.[0]?.title === expectedTitle;
    });
 }
+
+test("switching credentials in another tab discards account data and diff history", async ({ page, context }) => {
+   await page.unroute("**/api/settings/osiris-token");
+   await page.unroute("**/api/roster/weeks?*");
+   let account = "A";
+   await context.route("**/api/settings/osiris-token", async (route) => {
+      if (route.request().method() === "PUT") account = (route.request().postDataJSON() as { token: string }).token.endsWith("-b") ? "B" : "A";
+      await route.fulfill({ json: { hasCustomToken: true, hasBearerToken: true, contextId: account } });
+   });
+   await context.route("**/api/roster/config", (route) => route.fulfill({ json: { timeZone: "Europe/Amsterdam" } }));
+   await context.route("**/api/roster/weeks?*", async (route) => {
+      const url = new URL(route.request().url());
+      const batch = createRosterBatch(Number(url.searchParams.get("offset")), Number(url.searchParams.get("limit")));
+      batch.contextId = account;
+      batch.weeks.forEach((week) =>
+         week.classes.forEach((item) => {
+            item.id = account + item.id;
+            item.title = account + item.title;
+         })
+      );
+      await route.fulfill({ json: batch });
+   });
+   await page.goto("/");
+   await expect(page.locator(".grid-class").first()).toContainText("ASOURCE");
+   await page.getByRole("button", { name: "Open settings" }).click();
+   await page.getByRole("dialog", { name: "Preferences" }).getByLabel("Bearer token").fill("Bearer account-a");
+   await page.getByRole("button", { name: "Save", exact: true }).click();
+   await expect(page.getByRole("dialog", { name: "Preferences" }).getByLabel("Bearer token")).toHaveValue("");
+   await page.getByRole("dialog", { name: "Preferences" }).getByRole("button", { name: "Close settings", exact: true }).click();
+   const second = await context.newPage();
+   await installFixedClock(second);
+   await second.goto("/");
+   await expect(second.locator(".grid-class").first()).toContainText("ASOURCE");
+   await second.getByRole("button", { name: "Open settings" }).click();
+   await second.getByRole("dialog", { name: "Preferences" }).getByLabel("Bearer token").fill("Bearer account-b");
+   await second.getByRole("button", { name: "Save", exact: true }).click();
+   await expect(page.locator(".grid-class").first()).toContainText("BSOURCE");
+   await expect(page.locator(".grid-class", { hasText: "ASOURCE" })).toHaveCount(0);
+   await expect(page.locator(".grid-class.status-added,.grid-class.status-cancelled")).toHaveCount(0);
+   await expect(page.getByRole("heading", { name: "Checking bearer token" })).toHaveCount(0);
+   await second.close();
+});
+
+test("configuration recovers on an online event and has a manual retry action", async ({ page }) => {
+   let available = false;
+   await page.route("**/api/roster/config", (route) =>
+      route.fulfill(available ? { json: { timeZone: "Europe/Amsterdam" } } : { status: 503, json: { error: "Unavailable" } })
+   );
+   await page.goto("/");
+   await expect(page.getByText("Roster configuration unavailable", { exact: true })).toBeVisible();
+   await expect(page.getByRole("button", { name: "Try again", exact: true })).toBeVisible();
+   available = true;
+   await page.evaluate(() => window.dispatchEvent(new Event("online")));
+   await expect(page.locator(".grid-class").first()).toBeVisible();
+});
+
+test("a failed first token save retains the draft and does not promise an automatic save retry", async ({ page }) => {
+   let saves = 0;
+   await page.route("**/api/settings/osiris-token", (route) => {
+      if (route.request().method() === "PUT") {
+         saves += 1;
+         return route.fulfill({ status: 503, json: { error: "Unavailable", retryable: true } });
+      }
+      return route.fulfill({ json: { hasBearerToken: false, hasCustomToken: false, contextId: null } });
+   });
+   await page.goto("/");
+   await page.getByLabel("Bearer token", { exact: true }).fill("Bearer same-token");
+   await page.getByRole("button", { name: "Load roster" }).click();
+   await expect(page.getByText("Could not save bearer token", { exact: true })).toBeVisible();
+   await expect(page.getByLabel("Bearer token", { exact: true })).toHaveValue("Bearer same-token");
+   await expect(page.getByText(/will retry automatically/)).toHaveCount(0);
+   await page.getByRole("button", { name: "Load roster" }).click();
+   await expect.poll(() => saves).toBe(2);
+});
+
+test("downloaded future weeks survive a reload while roster requests are offline", async ({ page }) => {
+   await page.goto("/");
+   await expect(page.locator(".grid-class").first()).toBeVisible();
+   await page.keyboard.press("3");
+   await expect(page.locator(".grid-class").first()).toContainText("SOURCE_TITLE_3_1");
+   await page.route("**/api/roster/weeks?*", (route) => route.abort());
+   await page.reload();
+   await expect(page.locator(".grid-class").first()).toBeVisible();
+   await page.keyboard.press("3");
+   await expect(page.locator(".grid-class").first()).toContainText("SOURCE_TITLE_3_1");
+});
+
+test("overlapping and cancelled agenda classes do not invent a break or hide status", async ({ page }) => {
+   await page.setViewportSize({ width: 390, height: 844 });
+   await page.route("**/api/roster/weeks?*", (route) => {
+      const url = new URL(route.request().url());
+      const batch = createRosterBatch(Number(url.searchParams.get("offset")), Number(url.searchParams.get("limit")));
+      const week = batch.weeks[0];
+      const first = week?.classes[0];
+      if (week && first)
+         week.classes = [
+            { ...first, end: first.end.replace("10:30", "12:00") },
+            {
+               ...first,
+               id: first.id + "short",
+               title: "Short overlap",
+               start: first.start.replace("09:00", "09:30"),
+               end: first.end.replace("10:30", "10:00"),
+            },
+            {
+               ...first,
+               id: first.id + "third",
+               title: "Third overlap",
+               start: first.start.replace("09:00", "11:00"),
+               end: first.end.replace("10:30", "11:30"),
+            },
+            { ...first, id: first.id + "cancelled", title: "Cancelled example", status: "cancelled" },
+         ];
+      return route.fulfill({ json: batch });
+   });
+   await page.goto("/");
+   await expect(page.getByRole("button", { name: /Cancelled.*Cancelled example/ })).toBeVisible();
+   await expect(page.locator(".agenda-breaktime")).toHaveCount(0);
+   await expect(page.locator('.day-group[data-day="2026-06-16"] .day-group__meta')).toContainText("3 classes");
+});
+
+test("Sunday changes remain in the previous week after a Monday reload", async ({ page }) => {
+   let removed = false;
+   let monday = false;
+   await page.route("**/api/roster/weeks?*", (route) => {
+      const url = new URL(route.request().url());
+      const offset = Number(url.searchParams.get("offset"));
+      const batch = createRosterBatch(offset + (monday ? 1 : 0), Number(url.searchParams.get("limit")));
+      batch.offset = offset;
+      batch.weeks.forEach((week) => {
+         if (week.week.start === "2026-06-22" || (removed && week.week.start === "2026-06-15")) week.classes = [];
+         if (monday) week.week.offset -= 1;
+      });
+      return route.fulfill({ json: batch });
+   });
+   await page.addInitScript(() => localStorage.setItem("test-clock", localStorage.getItem("test-clock") ?? "2026-06-21T23:55:00+02:00"));
+   await page.goto("/");
+   await expect(page.getByRole("button", { name: "SOURCE_TITLE_0_1" })).toBeVisible();
+   removed = true;
+   await page.evaluate(() => window.dispatchEvent(new Event("online")));
+   await expect(page.locator(".grid-class.status-cancelled")).toHaveCount(2);
+   monday = true;
+   await page.evaluate(() => localStorage.setItem("test-clock", "2026-06-22T00:05:00+02:00"));
+   await page.reload();
+   await expect(page.getByRole("heading", { name: /Week 27:/ })).toBeVisible();
+   await page.getByRole("button", { name: "Previous week" }).click();
+   await expect(page.getByRole("heading", { name: /Week 26:/ })).toBeVisible();
+   await expect(page.locator(".grid-class")).toHaveCount(0);
+   await page.getByRole("button", { name: "Previous week" }).click();
+   await expect(page.locator(".grid-class.status-cancelled")).toHaveCount(2);
+});
+
+test("notification delivery falls back to a worker and deduplicates a change across tabs", async ({ page, context }) => {
+   const deliveries: string[] = [];
+   await context.exposeBinding("recordDelivery", (_source, body: string) => {
+      deliveries.push(body);
+   });
+   await context.addInitScript(() => {
+      function MobileNotification() {
+         throw new TypeError("Use a service worker");
+      }
+      Object.defineProperty(MobileNotification, "permission", { value: "granted" });
+      Object.defineProperty(window, "Notification", { value: MobileNotification });
+      Object.defineProperty(navigator, "serviceWorker", {
+         value: {
+            register: () => Promise.resolve({}),
+            ready: Promise.resolve({
+               showNotification: (_title: string, options: { body: string }) =>
+                  (window as unknown as { recordDelivery: (body: string) => Promise<void> }).recordDelivery(options.body),
+            }),
+         },
+      });
+      localStorage.setItem("roster-class-notifications", "true");
+   });
+   let changed = false;
+   const second = await context.newPage();
+   await installFixedClock(second);
+   await mockAppApis(second);
+   for (const tab of [page, second]) {
+      await tab.route("**/api/roster/weeks?*", (route) => {
+         const url = new URL(route.request().url());
+         const batch = createRosterBatch(Number(url.searchParams.get("offset")), Number(url.searchParams.get("limit")));
+         const first = batch.weeks[0]?.classes[0];
+         if (changed && first) first.room = "NEW_ROOM";
+         return route.fulfill({ json: batch });
+      });
+      await tab.goto("/");
+      await expect(tab.locator(".grid-class").first()).toBeVisible();
+   }
+   changed = true;
+   await Promise.all([page, second].map((tab) => tab.evaluate(() => window.dispatchEvent(new Event("online")))));
+   for (const tab of [page, second]) await expect(tab.locator(".grid-class.status-changed")).toHaveCount(1);
+   await expect.poll(() => deliveries).toEqual(["SOURCE_TITLE_0_1 changed: SOURCE_ROOM → NEW_ROOM"]);
+   await second.close();
+});
+
+test("status rows expose readable text in both views across themes", async ({ page, browserName }) => {
+   test.skip(browserName !== "chromium", "Computed contrast is deterministic in one browser.");
+   test.setTimeout(90_000);
+   await page.route("**/api/roster/weeks?*", (route) => {
+      const url = new URL(route.request().url());
+      const batch = createRosterBatch(Number(url.searchParams.get("offset")), Number(url.searchParams.get("limit")));
+      batch.weeks.forEach((week) => {
+         const first = week.classes[0];
+         if (first) first.status = "cancelled";
+         const second = week.classes[1];
+         if (second) Object.assign(second, { status: "changed", previous: { ...second, status: "scheduled", room: "OLD_ROOM" } });
+      });
+      return route.fulfill({ json: batch });
+   });
+   await page.goto("/");
+   await expect(page.locator(".grid-class.status-cancelled")).toBeVisible();
+   const themes = [
+      "dark",
+      "frost",
+      "espresso",
+      "moss",
+      "dusk",
+      "ember",
+      "abyss",
+      "noir",
+      "contrast",
+      "light",
+      "thaw",
+      "latte",
+      "ivy",
+      "dawn",
+      "flare",
+      "bloom",
+      "paper",
+      "osiris",
+   ];
+   for (const view of ["Grid view", "Agenda view"]) {
+      await page.getByRole("button", { name: view, exact: true }).click();
+      for (const theme of themes) {
+         await page.evaluate((id) => document.documentElement.setAttribute("data-theme", id), theme);
+         const scope = view === "Grid view" ? ".grid-class" : ".agenda-class";
+         const results = await new AxeBuilder({ page }).include(scope).withRules(["color-contrast"]).analyze();
+         expect(results.violations, `${theme} ${view} class text`).toEqual([]);
+      }
+   }
+});
+
+test("replacing a token from the cache-only previous week returns to the current roster", async ({ page }) => {
+   await installCachedLastWeek(page);
+   await page.goto("/");
+   await expect(page.locator(".grid-class").first()).toBeVisible();
+   await page.getByRole("button", { name: "Previous week", exact: true }).click();
+   await expect(page.locator(".weekbar__label")).toHaveText("Last week");
+   await page.getByRole("button", { name: "Open settings" }).click();
+   const settings = page.getByRole("dialog", { name: "Preferences" });
+   await settings.getByLabel("Bearer token").fill("Bearer replacement-from-last-week");
+   await settings.getByRole("button", { name: "Save", exact: true }).click();
+   await expect(settings.getByLabel("Bearer token")).toHaveValue("");
+   await settings.getByRole("button", { name: "Close settings", exact: true }).click();
+   await expect(page.locator(".weekbar__label")).toHaveText("This week");
+   await expect(page.locator(".grid-class").first()).toContainText("SOURCE_TITLE_0_1");
+});
+
+test("startup and reset choose the upcoming roster and exclude uncached omitted weeks", async ({ page }) => {
+   await page.route("**/api/roster/weeks?*", (route) => {
+      const url = new URL(route.request().url());
+      return route.fulfill({ json: createShiftedRosterBatch(Number(url.searchParams.get("offset")), Number(url.searchParams.get("limit")), 1) });
+   });
+   await page.goto("/");
+   await expect(page.getByRole("button", { name: "SOURCE_TITLE_1_1" })).toBeVisible();
+   await expect(page.locator(".weekbar__content")).toHaveAttribute("data-week-position", "current");
+   await expect(page.locator(".weekbar__label")).toHaveText("Next week");
+   await expect(page.getByRole("button", { name: "Previous week" })).toBeDisabled();
+   await page.keyboard.press("ArrowLeft");
+   await swipeWeek(page, "previous");
+   await expect(page.locator(".weekbar__label")).toHaveText("Next week");
+   for (const key of ["Space", "r", "0"]) {
+      await page.keyboard.press("5");
+      await expect(page.getByRole("button", { name: "SOURCE_TITLE_5_1" })).toBeVisible();
+      await expect(page.locator(".weekbar__content")).toHaveAttribute("data-week-position", "future");
+      await page.keyboard.press(key);
+      await expect(page.getByRole("button", { name: "SOURCE_TITLE_1_1" })).toBeVisible();
+   }
+   await page.getByRole("button", { name: "Next week", exact: true }).click();
+   await page.locator(".weekbar__content").click();
+   await expect(page.getByRole("button", { name: "SOURCE_TITLE_1_1" })).toBeVisible();
+   await expect(page.getByRole("heading", { name: "Week not returned" })).toHaveCount(0);
+});
+
+test("an empty weekend opens next week while the saved current week stays browsable", async ({ page }) => {
+   await page.addInitScript(() => localStorage.setItem("test-clock", "2026-06-21T12:00:00+02:00"));
+   await page.goto("/");
+   await expect(page.getByRole("button", { name: "SOURCE_TITLE_1_1" })).toBeVisible();
+   await expect(page.locator(".weekbar__content")).toHaveAttribute("data-week-position", "current");
+   await page.getByRole("button", { name: "Previous week" }).click();
+   await expect(page.getByRole("button", { name: "SOURCE_TITLE_0_1" })).toBeVisible();
+   await expect(page.locator(".weekbar__content")).toHaveAttribute("data-week-position", "past");
+   await page.evaluate(() => (document.activeElement instanceof HTMLElement ? document.activeElement.blur() : undefined));
+   await page.keyboard.press("Space");
+   await expect(page.getByRole("button", { name: "SOURCE_TITLE_1_1" })).toBeVisible();
+   await page.reload();
+   await expect(page.getByRole("button", { name: "SOURCE_TITLE_1_1" })).toBeVisible();
+   await page.getByRole("button", { name: "Previous week" }).click();
+   await expect(page.getByRole("button", { name: "SOURCE_TITLE_0_1" })).toBeVisible();
+});
+
+test("a remaining weekend class keeps this week as the reset destination even when weekends are hidden", async ({ page }) => {
+   await page.addInitScript(() => {
+      localStorage.setItem("test-clock", "2026-06-21T08:00:00+02:00");
+      localStorage.setItem("roster-shown-weekdays", "1,2,3,4,5");
+   });
+   await page.route("**/api/roster/weeks?*", (route) => {
+      const url = new URL(route.request().url());
+      const batch = createRosterBatch(Number(url.searchParams.get("offset")), Number(url.searchParams.get("limit")));
+      const current = batch.weeks.find((week) => week.week.offset === 0);
+      if (current) current.classes = current.classes.slice(0, 1).map((item) => ({ ...item, start: "2026-06-21T09:00:00", end: "2026-06-21T10:00:00" }));
+      return route.fulfill({ json: batch });
+   });
+   await page.goto("/");
+   await expect(page.getByRole("button", { name: "Show Sunday" })).toBeVisible();
+   await expect(page.locator(".weekbar__label")).toHaveText("This week");
+   await expect(page.locator(".weekbar__content")).toHaveAttribute("data-week-position", "current");
+   await page.getByRole("button", { name: "Next week", exact: true }).click();
+   await page.locator(".weekbar__content").click();
+   await expect(page.locator(".weekbar__label")).toHaveText("This week");
+   await expect(page.getByRole("button", { name: "Show Sunday" })).toBeVisible();
+});
+
+test("previous-week cache remains reachable across an omitted uncached current week", async ({ page }) => {
+   await installCachedLastWeek(page);
+   const offsets: number[] = [];
+   await page.route("**/api/roster/weeks?*", (route) => {
+      const url = new URL(route.request().url());
+      const offset = Number(url.searchParams.get("offset"));
+      offsets.push(offset);
+      return route.fulfill({ json: createShiftedRosterBatch(offset, Number(url.searchParams.get("limit")), 1) });
+   });
+   await page.goto("/");
+   await expect(page.getByRole("button", { name: "SOURCE_TITLE_1_1" })).toBeVisible();
+   await page.getByRole("button", { name: "Previous week" }).click();
+   await expect(page.getByRole("button", { name: "SOURCE_TITLE_-1_1" })).toBeVisible();
+   await expect(page.locator(".weekbar__label")).toHaveText("Last week");
+   await page.getByRole("button", { name: "Next week", exact: true }).click();
+   await expect(page.getByRole("button", { name: "SOURCE_TITLE_1_1" })).toBeVisible();
+   expect(offsets.every((offset) => offset >= 0)).toBe(true);
+});
+
+test("startup and reset keep an empty vacation week instead of jumping to distant classes", async ({ page }) => {
+   await page.route("**/api/roster/weeks?*", (route) => {
+      const url = new URL(route.request().url());
+      const batch = createRosterBatch(Number(url.searchParams.get("offset")), Number(url.searchParams.get("limit")));
+      batch.weeks.forEach((week) => {
+         if (week.week.offset < 7) week.classes = [];
+      });
+      return route.fulfill({ json: batch });
+   });
+   await page.goto("/");
+   await expect(page.locator(".weekbar__label")).toHaveText("This week");
+   await expect(page.getByRole("heading", { name: /Week 25:/ })).toBeVisible();
+   await expect(page.locator(".grid-class")).toHaveCount(0);
+   await page.keyboard.press("3");
+   await expect(page.locator(".weekbar__label")).toHaveText("In 3 weeks");
+   await page.keyboard.press("Space");
+   await expect(page.locator(".weekbar__label")).toHaveText("This week");
+   await expect(page.getByRole("heading", { name: /Week 25:/ })).toBeVisible();
+});
+
+test("agenda startup opens the next week with classes", async ({ page }) => {
+   await page.addInitScript(() => localStorage.setItem("roster-view-mode", "agenda"));
+   await page.route("**/api/roster/weeks?*", (route) => {
+      const url = new URL(route.request().url());
+      return route.fulfill({ json: createShiftedRosterBatch(Number(url.searchParams.get("offset")), Number(url.searchParams.get("limit")), 1) });
+   });
+   await page.goto("/");
+   await expect(page.getByRole("button", { name: "SOURCE_TITLE_1_1" })).toBeVisible();
+   await expect(page.locator(".weekbar__label")).toHaveText("Next week");
+   await expect(page.getByRole("heading", { name: "Week not returned" })).toHaveCount(0);
+});
+
+for (const target of [0, 2])
+   test(`choosing week ${target} during startup prevents later automatic selection`, async ({ page }) => {
+      let releaseRequest: (() => void) | undefined;
+      const gate = new Promise<void>((resolve) => {
+         releaseRequest = resolve;
+      });
+      await page.route("**/api/roster/weeks?*", async (route) => {
+         const url = new URL(route.request().url());
+         await gate;
+         return route.fulfill({ json: createShiftedRosterBatch(Number(url.searchParams.get("offset")), Number(url.searchParams.get("limit")), 1) });
+      });
+      await page.goto("/");
+      await expect(page.locator(".weekbar__label")).toHaveText("This week");
+      if (target === 0) await page.locator(".weekbar__content").click();
+      else await page.keyboard.press(String(target));
+      releaseRequest?.();
+      if (target === 0) {
+         await expect(page.getByRole("button", { name: "SOURCE_TITLE_1_1" })).toBeVisible();
+         await expect(page.locator(".weekbar__label")).toHaveText("Next week");
+      } else {
+         await expect(page.getByRole("button", { name: "SOURCE_TITLE_2_1" })).toBeVisible();
+         await expect(page.locator(".weekbar__label")).toHaveText("In 2 weeks");
+      }
+   });
+
+test("next-week source data remains instantly available from cache during a failed reload", async ({ page }) => {
+   let offline = false;
+   await page.route("**/api/roster/weeks?*", (route) => {
+      if (offline) return route.fulfill({ status: 503, json: { error: "Temporarily unavailable" } });
+      const url = new URL(route.request().url());
+      return route.fulfill({ json: createShiftedRosterBatch(Number(url.searchParams.get("offset")), Number(url.searchParams.get("limit")), 1) });
+   });
+   await page.goto("/");
+   await expect(page.getByRole("button", { name: "SOURCE_TITLE_1_1" })).toBeVisible();
+   offline = true;
+   await page.reload();
+   await expect(page.locator(".weekbar__label")).toHaveText("Next week");
+   await expect(page.getByRole("button", { name: "SOURCE_TITLE_1_1" })).toBeVisible();
+   await expect(page.getByText(/Fetching your latest roster went wrong/)).toBeVisible();
+});
+
+for (const view of ["grid", "agenda"] as const)
+   test(`advancing the OSIRIS source preserves visible today in ${view}`, async ({ page }) => {
+      await page.addInitScript((mode) => localStorage.setItem("roster-view-mode", mode), view);
+      let shift = 0;
+      await page.route("**/api/roster/weeks?*", (route) => {
+         const url = new URL(route.request().url());
+         return route.fulfill({ json: createShiftedRosterBatch(Number(url.searchParams.get("offset")), Number(url.searchParams.get("limit")), shift) });
+      });
+      await page.goto("/");
+      await expect(page.getByRole("button", { name: "SOURCE_TITLE_0_1" })).toBeVisible();
+      shift = 1;
+      await page.evaluate(() => window.dispatchEvent(new Event("online")));
+      await expect
+         .poll(() =>
+            page.evaluate(() => {
+               const cache = JSON.parse(localStorage.getItem("roster-weeks-v3") ?? "{}") as { weeks?: { data: { week: { start: string; offset: number } } }[] };
+               return cache.weeks?.find((week) => week.data.week.start === "2026-06-22")?.data.week.offset;
+            })
+         )
+         .toBe(0);
+      await expect(page.locator(".weekbar__label")).toHaveText("This week");
+      await expect(page.getByRole("button", { name: "SOURCE_TITLE_0_1" })).toBeVisible();
+      await expect(page.getByText(/Showing your saved roster/)).toBeVisible();
+      if (view === "grid") await expect(page.locator(".grid-now-line")).toBeVisible();
+      else await expect(page.locator('.day-group[data-today="true"] .day-group__header')).toHaveAttribute("aria-expanded", "true");
+      await expect(page.locator(".status-cancelled")).toHaveCount(0);
+      await page.getByRole("button", { name: "Next week", exact: true }).click();
+      await expect(page.getByRole("button", { name: "SOURCE_TITLE_1_1" })).toBeVisible();
+      await page.getByRole("button", { name: "Previous week" }).click();
+      await expect(page.getByRole("button", { name: "SOURCE_TITLE_0_1" })).toBeVisible();
+      await page.reload();
+      await expect(page.locator(".weekbar__label")).toHaveText("This week");
+      await expect(page.getByRole("button", { name: "SOURCE_TITLE_0_1" })).toBeVisible();
+      await expect(page.getByText(/Showing your saved roster/)).toBeVisible();
+   });
+
+test("a weekend source week becomes this week on Monday", async ({ page }) => {
+   await page.addInitScript(() => localStorage.setItem("test-clock", localStorage.getItem("test-clock") ?? "2026-06-21T23:55:00+02:00"));
+   await page.route("**/api/roster/weeks?*", (route) => {
+      const url = new URL(route.request().url());
+      return route.fulfill({ json: createShiftedRosterBatch(Number(url.searchParams.get("offset")), Number(url.searchParams.get("limit")), 1) });
+   });
+   await page.goto("/");
+   await expect(page.locator(".weekbar__label")).toHaveText("Next week");
+   await expect(page.getByRole("button", { name: "SOURCE_TITLE_1_1" })).toBeVisible();
+   await page.evaluate(() => localStorage.setItem("test-clock", "2026-06-22T00:05:00+02:00"));
+   await page.reload();
+   await expect(page.locator(".weekbar__label")).toHaveText("This week");
+   await expect(page.getByRole("heading", { name: /Week 26:/ })).toBeVisible();
+   await expect(page.getByRole("button", { name: "SOURCE_TITLE_1_1" })).toBeVisible();
+   await expect(page.locator(".status-changed, .status-cancelled")).toHaveCount(0);
+});
+
+test("an advanced source discovered by prefetch still exposes the active request failure", async ({ page }) => {
+   let releaseActive: (() => void) | undefined;
+   const release = new Promise<void>((resolve) => {
+      releaseActive = resolve;
+   });
+   await page.route("**/api/roster/weeks?*", async (route) => {
+      const url = new URL(route.request().url());
+      const offset = Number(url.searchParams.get("offset"));
+      if (offset === 0) {
+         await release;
+         return route.fulfill({ status: 503, json: { error: "Active batch unavailable" } });
+      }
+      return route.fulfill({ json: createShiftedRosterBatch(offset, Number(url.searchParams.get("limit")), 1) });
+   });
+   await page.goto("/");
+   releaseActive?.();
+   await expect(page.getByRole("alert").getByRole("heading", { name: "Could not load your roster." })).toBeVisible();
+   await page.getByText("Error log", { exact: true }).click();
+   await expect(page.getByRole("alert")).toContainText("Active batch unavailable");
+});
+
+test("reset can return to today's classes if a later response restores that week", async ({ page }) => {
+   let shift = 1;
+   await page.route("**/api/roster/weeks?*", (route) => {
+      const url = new URL(route.request().url());
+      return route.fulfill({ json: createShiftedRosterBatch(Number(url.searchParams.get("offset")), Number(url.searchParams.get("limit")), shift) });
+   });
+   await page.goto("/");
+   await expect(page.getByRole("button", { name: "SOURCE_TITLE_1_1" })).toBeVisible();
+   shift = 0;
+   const response = page.waitForResponse((response) => response.url().includes("/api/roster/weeks?offset=0&"));
+   await page.evaluate(() => window.dispatchEvent(new Event("online")));
+   await response;
+   await expect(page.getByRole("button", { name: "Previous week" })).toBeEnabled();
+   await expect(page.locator(".weekbar__label")).toHaveText("Next week");
+   await page.keyboard.press("Space");
+   await expect(page.getByRole("button", { name: "SOURCE_TITLE_0_1" })).toBeVisible();
+   await expect(page.locator(".grid-now-line")).toBeVisible();
+});
+
+test("an older overlapping batch cannot overwrite a newer week refresh", async ({ page }) => {
+   const baseline = Date.now();
+   let refreshing = false;
+   let releaseOlder: (() => void) | undefined;
+   const olderGate = new Promise<void>((resolve) => {
+      releaseOlder = resolve;
+   });
+   await page.route("**/api/roster/weeks?*", async (route) => {
+      const url = new URL(route.request().url());
+      const offset = Number(url.searchParams.get("offset"));
+      const batch = createShiftedRosterBatch(offset, Number(url.searchParams.get("limit")), 1);
+      batch.fetchedAt = baseline;
+      if (refreshing && offset === 0) {
+         await olderGate;
+         batch.fetchedAt = baseline + 1000;
+         const schoolClass = batch.weeks.find((week) => week.week.start === "2026-07-20")?.classes[0];
+         if (schoolClass) schoolClass.room = "STALE_ROOM";
+      }
+      if (refreshing && offset === 4) {
+         batch.fetchedAt = baseline + 2000;
+         const schoolClass = batch.weeks[0]?.classes[0];
+         if (schoolClass) schoolClass.room = "FRESH_ROOM";
+      }
+      return route.fulfill({ json: batch });
+   });
+   await page.goto("/");
+   await expect(page.getByRole("button", { name: "SOURCE_TITLE_1_1" })).toBeVisible();
+   await page.keyboard.press("5");
+   await expect(page.getByRole("button", { name: "SOURCE_TITLE_5_1" })).toBeVisible();
+   refreshing = true;
+   await page.evaluate(() => window.dispatchEvent(new Event("online")));
+   await expect(page.getByRole("button", { name: "SOURCE_TITLE_5_1" })).toContainText("FRESH_ROOM");
+   const olderResponse = page.waitForResponse((response) => response.url().includes("/api/roster/weeks?offset=0&"));
+   releaseOlder?.();
+   await olderResponse;
+   await expect
+      .poll(() =>
+         page.evaluate(() => {
+            const cache = JSON.parse(localStorage.getItem("roster-weeks-v3") ?? "{}") as {
+               weeks?: { data: { week: { start: string }; classes: { room: string }[] }; fetchedAt: number }[];
+            };
+            const week = cache.weeks?.find((item) => item.data.week.start === "2026-07-20");
+            const olderWeek = cache.weeks?.find((item) => item.data.week.start === "2026-06-22");
+            return { fetchedAt: week?.fetchedAt, room: week?.data.classes[0]?.room, olderFetchedAt: olderWeek?.fetchedAt };
+         })
+      )
+      .toEqual({ fetchedAt: baseline + 2000, room: "FRESH_ROOM", olderFetchedAt: baseline + 1000 });
+   await expect(page.locator(".weekbar__label")).toHaveText("In 5 weeks");
+});

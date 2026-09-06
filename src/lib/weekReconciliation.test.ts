@@ -1,30 +1,36 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import type { Week, WeekBatch } from "../types/weeks";
-import { getDisplayWeeksFromPayload } from "./weekPayload";
-import { createWeekEntry, type WeekEntries } from "./weekPolicy";
+import type { Week } from "../types/weeks";
+import { reconcileWeeks } from "./classDiffs";
 import type { SessionClassDiffsByWeek } from "./classDiffs";
 
 void describe("roster payload display state", () => {
+   void it("reconciles stable IDs moved between batches without a removal placeholder", () => {
+      const old = createWeek("2026-06-15", "same-id");
+      const next = createWeek("2026-06-22", "same-id");
+      const previous = new Map([[old.week.start, old]]);
+      const result = reconcileWeeks(previous, [next], new Map());
+      assert.equal(result.weeks.find((week) => week.week.start === old.week.start)?.classes.length, 0);
+      assert.equal(result.weeks.find((week) => week.week.start === next.week.start)?.classes[0]?.status, "changed");
+      assert.deepEqual(
+         result.notifications.map((diff) => diff.status),
+         ["changed"]
+      );
+      assert.equal(previous.get(old.week.start)?.classes.length, 1, "reconciliation must not mutate its input");
+   });
+
    void it("does not turn a calendar rollover into cancelled classes", () => {
       const previousWeek = createWeek("2026-06-15", "old");
       const currentWeek = createWeek("2026-06-22", "new");
-      const entries: WeekEntries = { 0: createWeekEntry(previousWeek) };
       const sessionDiffs: SessionClassDiffsByWeek = new Map();
-      const payload: WeekBatch = {
-         offset: 0,
-         limit: 1,
-         timeZone: "Europe/Amsterdam",
-         weeks: [currentWeek],
-      };
-
-      const displayed = getDisplayWeeksFromPayload(payload, entries, new Map(), sessionDiffs);
+      const result = reconcileWeeks(new Map([[previousWeek.week.start, previousWeek]]), [currentWeek], sessionDiffs);
+      const displayed = result.weeks.filter((week) => week.week.start === currentWeek.week.start);
 
       assert.deepEqual(
          displayed[0]?.classes.map((schoolClass) => [schoolClass.id, schoolClass.status]),
          [["new", "scheduled"]]
       );
-      assert.equal(sessionDiffs.size, 0);
+      assert.equal(result.changes.size, 0);
    });
 });
 

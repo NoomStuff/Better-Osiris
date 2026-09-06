@@ -23,6 +23,17 @@ afterEach(() => {
 });
 
 void describe("rate limiting client identity", () => {
+   void it("gives distinct sessions behind one school address independent allowances and explicit retry timing", () => {
+      const request = createRequest("203.0.113.1", "");
+      for (let student = 0; student < 40; student += 1) {
+         for (let fetch = 0; fetch < 120; fetch += 1) enforceRateLimit(request, "session", 120, 60_000, `student-${student}`);
+      }
+      assert.throws(
+         () => enforceRateLimit(request, "session", 120, 60_000, "student-0"),
+         (error: unknown) => error instanceof ApiError && error.status === 429 && error.retryAfterMs > 0 && error.retryAfterMs <= 60_000
+      );
+   });
+
    void it("ignores spoofed forwarded addresses in standalone deployments", () => {
       enforceRateLimit(createRequest("127.0.0.1", "198.51.100.1"), "test", 1, 60_000);
 

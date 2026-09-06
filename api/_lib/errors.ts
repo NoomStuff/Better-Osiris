@@ -11,13 +11,15 @@ export class ApiError extends Error {
    readonly code: ApiErrorCode;
    readonly status: number;
    readonly retryable: boolean;
+   readonly retryAfterMs: number;
 
-   constructor(message: string, options: { code: ApiErrorCode; status: number; retryable?: boolean; cause?: unknown }) {
+   constructor(message: string, options: { code: ApiErrorCode; status: number; retryable?: boolean; retryAfterMs?: number; cause?: unknown }) {
       super(message, options.cause === undefined ? undefined : { cause: options.cause });
       this.name = "ApiError";
       this.code = options.code;
       this.status = options.status;
       this.retryable = options.retryable ?? false;
+      this.retryAfterMs = options.retryAfterMs ?? 0;
    }
 }
 
@@ -40,4 +42,8 @@ export function toApiErrorPayload(error: unknown, fallbackMessage?: string) {
       code: apiError.code,
       retryable: apiError.retryable,
    };
+}
+
+export function errorHeaders(error: ApiError): Record<string, string> {
+   return error.retryAfterMs > 0 ? { "Retry-After": String(Math.ceil(error.retryAfterMs / 1000)) } : {};
 }

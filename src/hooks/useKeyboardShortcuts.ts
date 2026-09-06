@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useRef } from "react";
+import { useLayoutEffect, useRef } from "react";
 import { triggerShortcutActivation } from "./useShortcutActivation";
 
 export const HOLD_REPEAT_INITIAL_DELAY_MS = 500;
@@ -26,7 +26,7 @@ export function useKeyboardShortcuts(shortcuts: readonly KeyboardShortcut[], ena
       shortcutsRef.current = shortcuts;
    });
 
-   useEffect(() => {
+   useLayoutEffect(() => {
       if (!enabled) {
          return;
       }

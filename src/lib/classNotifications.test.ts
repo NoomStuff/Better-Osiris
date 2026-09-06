@@ -58,7 +58,7 @@ function createDiff(status: "changed" | "cancelled", classOverrides: Partial<Cla
 }
 
 function createClass(overrides: Partial<Class> = {}): Class {
-   return {
+   const item = {
       id: "schoolClass",
       title: "Web Development",
       subject: "TypeScript",
@@ -68,7 +68,11 @@ function createClass(overrides: Partial<Class> = {}): Class {
       room: "B12",
       location: "Main building",
       description: "Class",
-      status: "scheduled",
+      status: "scheduled" as const,
       ...overrides,
    };
+   const { previous, ...details } = item;
+   if (details.status === "changed") return { ...details, status: details.status, previous: previous ?? { ...details, status: "scheduled" } };
+   if (details.status === "cancelled") return { ...details, status: "cancelled", ...(previous ? { previous } : {}) };
+   return { ...details, status: details.status };
 }
