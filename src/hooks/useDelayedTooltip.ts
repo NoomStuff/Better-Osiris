@@ -6,24 +6,13 @@ const MOBILE_TOOLTIP_MEDIA_QUERY = "(hover: none), (pointer: coarse), (max-width
 
 let lastTooltipClosedAt = Number.NEGATIVE_INFINITY;
 
-interface DelayedTooltipOptions {
-   disabled?: boolean | undefined;
-   enabled?: boolean | undefined;
-}
-
-export function useDelayedTooltip({ disabled = false, enabled = true }: DelayedTooltipOptions = {}) {
+export function useDelayedTooltip({ disabled = false }: { disabled?: boolean | undefined } = {}) {
    const timerRef = useRef<number | null>(null);
    const isTooltipOpenRef = useRef(false);
    const [isTooltipOpen, setIsTooltipOpen] = useState(false);
-   const [isMobileTooltipContext, setIsMobileTooltipContext] = useState(() => {
-      if (typeof window === "undefined") {
-         return false;
-      }
+   const [isMobileTooltipContext, setIsMobileTooltipContext] = useState(() => window.matchMedia(MOBILE_TOOLTIP_MEDIA_QUERY).matches);
 
-      return window.matchMedia(MOBILE_TOOLTIP_MEDIA_QUERY).matches;
-   });
-
-   const isTooltipEnabled = enabled && !disabled && !isMobileTooltipContext;
+   const isTooltipEnabled = !disabled && !isMobileTooltipContext;
    const isTooltipEnabledRef = useRef(isTooltipEnabled);
 
    const clearTooltipTimer = useCallback(() => {

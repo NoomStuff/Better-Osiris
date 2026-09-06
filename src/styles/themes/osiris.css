@@ -25,7 +25,6 @@ html[data-theme="osiris"] {
    --overlay-surface: rgba(255, 255, 255, 0.97);
    --backdrop: rgba(40, 32, 50, 0.42);
    --backdrop-strong: rgba(40, 32, 50, 0.46);
-   --panel-veil: 0.62;
    --class-surface: rgba(255, 255, 255, 0.96);
    --class-surface-raised: rgba(255, 255, 255, 1);
    --class-border: rgba(35, 45, 60, 0.16);

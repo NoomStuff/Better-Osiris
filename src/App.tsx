@@ -21,14 +21,14 @@ import { useRosterTimeZone } from "./hooks/useRosterTimeZone";
 import { useDockedMobileBar } from "./hooks/useDockedMobileBar";
 import { useShownWeekdaysPreference } from "./hooks/useShownWeekdaysPreference";
 import { useGridHoursPreference } from "./hooks/useGridHoursPreference";
-import { getPerceivedDay, useWeekDays } from "./hooks/useWeekDays";
+import { useWeekDays } from "./hooks/useWeekDays";
 import { useThemePreference } from "./hooks/useThemePreference";
 import { useViewportMetrics } from "./hooks/useViewportMetrics";
 import { useViewModePreference } from "./hooks/useViewModePreference";
 import { useWeekSwipeNavigation } from "./hooks/useWeekSwipeNavigation";
 import { applyDevClassStatusPreview } from "./lib/devStatusPreview";
 import { useWeeks } from "./hooks/useWeeks";
-import { dayLabel, getIsoWeekday, toDayKey } from "./lib/date";
+import { dayLabel, getIsoWeekday, parseIsoDateToLocal, toDayKey } from "./lib/date";
 import { getEmptyWeekMessage } from "./lib/flavor";
 import { getHiddenDaysWithClasses, getWeekdaysWithClasses } from "./lib/weekLayout";
 import { countClassesOutsideGridHours, getRequiredGridHours, getSmartGridHours, mergeGridHourRanges } from "./lib/gridHours";
@@ -105,7 +105,7 @@ export default function App() {
    });
    const perceivedNow = devPreview.perceivedNow;
    const perceivedDayKey = rosterTimeZone.isKnown ? toDayKey(perceivedNow) : null;
-   const perceivedDay = useMemo(() => (perceivedDayKey ? getPerceivedDay(perceivedDayKey) : null), [perceivedDayKey]);
+   const perceivedDay = useMemo(() => (perceivedDayKey ? parseIsoDateToLocal(perceivedDayKey) : null), [perceivedDayKey]);
    const displayedData = useMemo(
       () => applyDevClassStatusPreview(data, devPreview.isEnabled ? devPreview.statusPreviewMode : "none"),
       [data, devPreview.isEnabled, devPreview.statusPreviewMode]
@@ -122,13 +122,13 @@ export default function App() {
       return error.detail;
    }, [error, tokenSettings?.hasCustomToken]);
 
-   const tokenValidation = useTokenValidation(hasBearerToken, error, lastSuccessfulResetKey, weeksResetKey);
    const {
       pending: isTokenValidationPending,
       successfulKey: successfulTokenValidationKey,
       status: tokenValidationStatus,
       submit: submitBearerToken,
-   } = tokenValidation;
+      clearFailure: clearTokenValidationFailure,
+   } = useTokenValidation(hasBearerToken, error, lastSuccessfulResetKey, weeksResetKey);
    useEffect(() => {
       if (successfulTokenValidationKey === null) return;
       const timer = window.setTimeout(() => setBearerTokenInput(""), 0);
@@ -356,7 +356,7 @@ export default function App() {
                status={tokenStatus}
                onTokenChange={(token) => {
                   setBearerTokenInput(token);
-                  tokenValidation.clearFailure();
+                  clearTokenValidationFailure();
                }}
                onSubmit={() => void submitBearerToken(bearerTokenInput)}
             />
@@ -499,7 +499,7 @@ export default function App() {
                tokenSettings: tokenSettings,
                isTokenLoading: isTokenMutating,
                successfulTokenValidationKey: successfulTokenValidationKey,
-               onTokenDraftChange: () => tokenValidation.clearFailure(),
+               onTokenDraftChange: () => clearTokenValidationFailure(),
                onSaveToken: submitBearerToken,
                onClearToken: clearToken,
             }}

@@ -23,7 +23,6 @@ html[data-theme="contrast"] {
    --overlay-surface: rgba(8, 8, 9, 0.99);
    --backdrop: rgba(0, 0, 0, 0.72);
    --backdrop-strong: rgba(0, 0, 0, 0.78);
-   --panel-veil: 0.28;
    --class-surface: rgba(20, 20, 21, 0.99);
    --class-surface-raised: rgba(31, 31, 32, 1);
    --class-border: rgba(255, 255, 255, 0.38);

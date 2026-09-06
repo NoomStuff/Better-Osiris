@@ -24,7 +24,6 @@ html[data-theme="bloom"] {
    --overlay-surface: rgba(231, 242, 234, 0.99);
    --backdrop: rgba(37, 11, 25, 0.48);
    --backdrop-strong: rgba(37, 11, 25, 0.56);
-   --panel-veil: 0.86;
    --frame-veil: 0.96;
    --class-surface: rgba(255, 239, 244, 0.96);
    --class-surface-raised: rgba(255, 249, 251, 1);

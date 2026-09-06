@@ -23,7 +23,6 @@ html[data-theme="espresso"] {
    --overlay-surface: rgba(34, 35, 38, 0.97);
    --backdrop: rgba(17, 6, 8, 0.58);
    --backdrop-strong: rgba(17, 6, 8, 0.64);
-   --panel-veil: 0.56;
    --frame-veil: 0.9;
    --class-surface: rgba(48, 49, 52, 0.96);
    --class-surface-raised: rgba(59, 60, 63, 0.98);

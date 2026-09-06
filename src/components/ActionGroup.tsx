@@ -1,4 +1,4 @@
-import { useId, type CSSProperties, type FocusEvent, type KeyboardEvent, type MouseEvent } from "react";
+import { useId, type CSSProperties, type FocusEvent, type KeyboardEvent } from "react";
 import { useDelayedTooltip } from "../hooks/useDelayedTooltip";
 import { useShortcutActivation } from "../hooks/useShortcutActivation";
 import { TooltipContent, type TooltipPlacement } from "./Tooltip";
@@ -155,14 +155,6 @@ function ActionItem({
    const isShortcutActive = useShortcutActivation(activationId);
    const anchorName = getTooltipAnchorName(tooltipId);
 
-   const handleMouseEnter = (_event: MouseEvent<HTMLButtonElement>) => {
-      showTooltip();
-   };
-
-   const handleMouseLeave = (_event: MouseEvent<HTMLButtonElement>) => {
-      hideTooltip();
-   };
-
    const handleFocus = (event: FocusEvent<HTMLButtonElement>) => {
       showTooltipForFocus(event.currentTarget);
    };
@@ -170,10 +162,6 @@ function ActionItem({
    const handlePress = () => {
       hideTooltip();
       onPress();
-   };
-
-   const handleBlur = (_event: FocusEvent<HTMLButtonElement>) => {
-      hideTooltip();
    };
 
    return (
@@ -190,11 +178,11 @@ function ActionItem({
          data-tooltip-open={isTooltipOpen ? "true" : undefined}
          data-shortcut-active={isShortcutActive ? "true" : undefined}
          style={{ anchorName }}
-         onBlur={handleBlur}
+         onBlur={hideTooltip}
          onClick={handlePress}
          onFocus={handleFocus}
-         onMouseEnter={handleMouseEnter}
-         onMouseLeave={handleMouseLeave}
+         onMouseEnter={showTooltip}
+         onMouseLeave={hideTooltip}
       >
          {label}
          {isTooltipEnabled ? (

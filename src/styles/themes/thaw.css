@@ -24,7 +24,6 @@ html[data-theme="thaw"] {
    --overlay-surface: rgba(246, 242, 234, 0.99);
    --backdrop: rgba(25, 39, 44, 0.46);
    --backdrop-strong: rgba(25, 39, 44, 0.52);
-   --panel-veil: 0.7;
    --frame-veil: 0.95;
    --class-surface: rgba(255, 250, 240, 0.97);
    --class-surface-raised: rgba(255, 254, 249, 1);

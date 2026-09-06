@@ -24,7 +24,6 @@ html[data-theme="moss"] {
    --overlay-surface: rgba(22, 29, 18, 0.96);
    --backdrop: rgba(5, 9, 5, 0.55);
    --backdrop-strong: rgba(5, 9, 5, 0.6);
-   --panel-veil: 0.42;
    --class-surface: rgba(39, 47, 29, 0.96);
    --class-surface-raised: rgba(51, 56, 37, 0.98);
    --class-border: rgba(148, 201, 110, 0.18);

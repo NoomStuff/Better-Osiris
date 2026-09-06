@@ -1,18 +1,18 @@
 import type { ClassStatus } from "../types/weeks";
+import { CLASS_STATUS_ICONS } from "../lib/classFormat";
 import "./ClassStatusMarker.css";
 
-const markers = {
-   added: { icon: "fa-solid fa-thumbtack", label: "Added" },
-   changed: { icon: "fa-solid fa-pen", label: "Changed" },
-   cancelled: { icon: "fa-solid fa-trash-can", label: "Cancelled" },
+const labels = {
+   added: "Added",
+   changed: "Changed",
+   cancelled: "Cancelled",
 } as const;
 
 export function ClassStatusMarker({ status }: { status: ClassStatus }) {
    if (status === "scheduled") return null;
-   const marker = markers[status];
    return (
-      <span className="class-status-marker" data-status={status} role="img" aria-label={marker.label} title={marker.label}>
-         <i className={marker.icon} aria-hidden="true" />
+      <span className="class-status-marker" data-status={status} role="img" aria-label={labels[status]} title={labels[status]}>
+         <i className={CLASS_STATUS_ICONS[status]} aria-hidden="true" />
       </span>
    );
 }

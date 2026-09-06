@@ -13,7 +13,9 @@ interface ButtonProps extends Omit<ButtonHTMLAttributes<HTMLButtonElement>, "chi
 /** Text-action sibling of IconButton. The surface lifts on hover while the button element stays
     put, so the hit area never moves away from the cursor mid-hover. */
 export function Button({ variant = "default", size = "regular", className, type = "button", children, ...buttonProps }: ButtonProps) {
-   const classes = ["button", `button--${variant}`, `button--${size === "compact" ? "compact" : "regular"}`, className ?? ""].filter(Boolean).join(" ");
+   const classes = ["button", variant !== "default" ? `button--${variant}` : null, size !== "regular" ? `button--${size}` : null, className ?? ""]
+      .filter(Boolean)
+      .join(" ");
 
    return (
       <span className={classes}>

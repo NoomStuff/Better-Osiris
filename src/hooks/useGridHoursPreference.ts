@@ -15,8 +15,8 @@ export function useGridHoursPreference() {
 }
 
 function readStoredGridHours(): GridHourRange {
-   const [start, end] = (readBrowserStorage("localStorage", STORAGE_KEY) ?? "").split(",").map(Number);
-   if (!Number.isInteger(start) || !Number.isInteger(end) || start === undefined || end === undefined || start < 0 || end > 24 || start >= end) {
+   const [start = Number.NaN, end = Number.NaN] = (readBrowserStorage("localStorage", STORAGE_KEY) ?? "").split(",").map(Number);
+   if (!Number.isInteger(start) || !Number.isInteger(end) || start < 0 || end > 24 || start >= end) {
       return DEFAULT_GRID_HOURS;
    }
    return normalizeGridHourRange(start, end);

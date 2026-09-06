@@ -10,7 +10,6 @@
    text-align: center;
    font-weight: 500;
    color: var(--text-dim);
-   font-size: 1em;
    background: rgba(var(--surface-rgb), 0.4);
    backdrop-filter: blur(4px);
 }
@@ -126,6 +125,7 @@
 }
 
 .roster-overlay-state__button i {
+   /* Overrides the large accent glyph styling .roster-overlay-state i applies to every icon. */
    color: currentColor;
    font-size: 1rem;
    opacity: 1;

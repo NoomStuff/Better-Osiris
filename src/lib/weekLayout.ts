@@ -1,10 +1,6 @@
-import { getIsoWeekday, parseIsoDateToLocal, parseLocalDateTime, shiftIsoDateByDays, toDayKey, type IsoWeekday } from "./date";
+import { shiftCalendarDate } from "../../shared/calendar";
+import { getIsoWeekday, parseIsoDateToLocal, parseLocalDateTime, toDayKey, type IsoWeekday } from "./date";
 import type { Day, Class, PositionedClass, Week, WeekMeta } from "../types/weeks";
-
-export const WORKDAY_START = 8 * 60;
-export const WORKDAY_END = 18 * 60;
-
-export const DAYS_PER_WEEK = 7;
 
 export const ISO_WEEKDAYS: readonly IsoWeekday[] = [1, 2, 3, 4, 5, 6, 7];
 
@@ -83,13 +79,6 @@ export function getPositionedClasses(classes: Class[]): PositionedClass[] {
          const start = schoolClass.startDate.getTime();
          const end = schoolClass.endDate.getTime();
 
-         for (let index = 0; index < columnsEnd.length; index += 1) {
-            const columnEnd = columnsEnd[index];
-            if (columnEnd !== undefined && columnEnd <= start) {
-               columnsEnd[index] = 0;
-            }
-         }
-
          const overlapsExistingClass = columnsEnd.some((value) => value > start);
          if (!overlapsExistingClass) {
             finalizeCluster();
@@ -114,18 +103,12 @@ export function getPositionedClasses(classes: Class[]): PositionedClass[] {
 }
 
 export function getDays(week: WeekMeta, classes: PositionedClass[]): Day[] {
-   const groups: Day[] = [];
-
-   for (let index = 0; index < DAYS_PER_WEEK; index += 1) {
-      const key = shiftIsoDateByDays(week.start, index);
-      const date = parseIsoDateToLocal(key);
-
-      groups.push({
+   return ISO_WEEKDAYS.map((weekday) => {
+      const key = shiftCalendarDate(week.start, weekday - 1);
+      return {
          key,
-         date,
+         date: parseIsoDateToLocal(key),
          classes: classes.filter((schoolClass) => schoolClass.dayKey === key).sort((a, b) => a.startDate.getTime() - b.startDate.getTime()),
-      });
-   }
-
-   return groups;
+      };
+   });
 }

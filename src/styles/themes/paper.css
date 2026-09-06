@@ -23,7 +23,6 @@ html[data-theme="paper"] {
    --overlay-surface: rgba(250, 243, 224, 0.99);
    --backdrop: rgba(40, 33, 24, 0.48);
    --backdrop-strong: rgba(40, 33, 24, 0.54);
-   --panel-veil: 0.58;
    --class-surface: rgba(255, 249, 232, 0.98);
    --class-surface-raised: rgba(255, 253, 243, 1);
    --class-border: rgba(29, 25, 19, 0.3);

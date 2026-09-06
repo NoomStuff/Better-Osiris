@@ -8,7 +8,7 @@
    border-radius: 14px;
    background: rgba(var(--chrome-warning-rgb), 0.1);
    color: var(--chrome-strong);
-   animation: warning-banner-enter 300ms cubic-bezier(0.22, 1, 0.36, 1) both;
+   animation: warning-banner-enter 300ms var(--ease-out) both;
 }
 
 .warning-banner > i {
@@ -31,16 +31,12 @@
    font-weight: 700;
 }
 
-.warning-banner .button--warning .button__surface {
-   border-color: rgba(var(--chrome-warning-rgb), 0.5);
-   background: rgba(var(--chrome-warning-rgb), 0.14);
-   color: var(--chrome-strong);
-}
-
-.warning-banner .button--warning:hover .button__control:not(:disabled) .button__surface,
-.warning-banner .button--warning .button__control:focus-visible .button__surface {
-   border-color: rgba(var(--chrome-warning-rgb), 0.75);
-   background: rgba(var(--chrome-warning-rgb), 0.22);
+.warning-banner .button {
+   --btn-line: rgba(var(--chrome-warning-rgb), 0.5);
+   --btn-line-hover: rgba(var(--chrome-warning-rgb), 0.75);
+   --btn-bg: rgba(var(--chrome-warning-rgb), 0.14);
+   --btn-bg-hover: rgba(var(--chrome-warning-rgb), 0.22);
+   --btn-text: var(--chrome-strong);
 }
 
 @keyframes warning-banner-enter {

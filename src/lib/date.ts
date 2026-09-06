@@ -1,3 +1,4 @@
+import { shiftCalendarDate } from "../../shared/calendar";
 import { getZoneDateFormatter } from "../../shared/timeZone";
 import { getRosterTimeZone } from "./rosterTimeZone";
 
@@ -7,7 +8,6 @@ interface RosterFormatters {
    monthDayLabel: Intl.DateTimeFormat;
    fullDayLabel: Intl.DateTimeFormat;
    timeLabel: Intl.DateTimeFormat;
-   weekRangeLabel: Intl.DateTimeFormat;
    dayParts: Intl.DateTimeFormat;
    dateKey: Intl.DateTimeFormat;
 }
@@ -29,7 +29,6 @@ function createFormatters(timeZone: string): RosterFormatters {
       monthDayLabel: new Intl.DateTimeFormat("en-GB", { day: "numeric", month: "short", timeZone }),
       fullDayLabel: new Intl.DateTimeFormat("en-GB", { weekday: "long", day: "numeric", month: "long", timeZone }),
       timeLabel: new Intl.DateTimeFormat("en-GB", { hour: "2-digit", minute: "2-digit", timeZone }),
-      weekRangeLabel: new Intl.DateTimeFormat("en-GB", { day: "numeric", month: "short", timeZone }),
       dayParts: new Intl.DateTimeFormat("en-CA", {
          timeZone,
          year: "numeric",
@@ -53,7 +52,6 @@ export const dayShortLabel = lazyLabel((formatters) => formatters.dayShortLabel)
 export const monthDayLabel = lazyLabel((formatters) => formatters.monthDayLabel);
 export const fullDayLabel = lazyLabel((formatters) => formatters.fullDayLabel);
 export const timeLabel = lazyLabel((formatters) => formatters.timeLabel);
-export const weekRangeLabel = lazyLabel((formatters) => formatters.weekRangeLabel);
 
 export function parseIsoDateToLocal(isoDate: string) {
    const datePart = isoDate.split("T")[0] ?? isoDate;
@@ -85,18 +83,16 @@ export function parseLocalDateTime(isoDateTime: string) {
    const [hoursText = "0", minutesText = "0", secondsText = "0"] = timePart.split(":");
    const secondsClean = secondsText.split(".")[0] ?? "0";
    const [yearText, monthText, dayText] = datePart.split("-");
-   const year = Number(yearText);
-   const month = Number(monthText);
-   const day = Number(dayText);
    const hours = Number(hoursText);
    const minutes = Number(minutesText);
    const seconds = Number(secondsClean);
 
-   if ([year, month, day, hours, minutes, seconds].some((value) => Number.isNaN(value))) {
+   // The date part already matched the calendar format; only the free-form time can be garbage.
+   if ([hours, minutes, seconds].some((value) => Number.isNaN(value))) {
       return new Date(isoDateTime);
    }
 
-   return createDateInRosterZone(year, month, day, hours, minutes, seconds);
+   return createDateInRosterZone(Number(yearText), Number(monthText), Number(dayText), hours, minutes, seconds);
 }
 
 export function toDayKey(date: Date) {
@@ -106,29 +102,13 @@ export function toDayKey(date: Date) {
 export function getLocalWeekStartIso(date: Date) {
    const dayKey = toDayKey(date);
    const day = getIsoWeekday(dayKey);
-   return shiftIsoDateByDays(dayKey, 1 - day);
+   return shiftCalendarDate(dayKey, 1 - day);
 }
 
 export function formatWeekTitle(startIso: string, endIso: string, weekNumber: number) {
    const start = parseIsoDateToLocal(startIso);
    const end = parseIsoDateToLocal(endIso);
-   return `Week ${weekNumber}: ${weekRangeLabel.format(start)} - ${weekRangeLabel.format(end)}`;
-}
-
-export function shiftIsoDateByDays(isoDate: string, days: number) {
-   const datePart = isoDate.split("T")[0] ?? isoDate;
-   const date = new Date(`${datePart}T00:00:00Z`);
-   date.setUTCDate(date.getUTCDate() + days);
-   return date.toISOString().slice(0, 10);
-}
-
-export function getIsoWeekNumber(isoDate: string) {
-   const date = new Date(isoDate);
-   const utcDate = new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()));
-   const day = utcDate.getUTCDay() || 7;
-   utcDate.setUTCDate(utcDate.getUTCDate() + 4 - day);
-   const yearStart = new Date(Date.UTC(utcDate.getUTCFullYear(), 0, 1));
-   return Math.ceil(((utcDate.getTime() - yearStart.getTime()) / 86_400_000 + 1) / 7);
+   return `Week ${weekNumber}: ${monthDayLabel.format(start)} - ${monthDayLabel.format(end)}`;
 }
 
 export function getMinutesFromMidnight(date: Date) {
@@ -137,8 +117,8 @@ export function getMinutesFromMidnight(date: Date) {
 }
 
 export function getRosterWeekBounds(date: Date, offset: number) {
-   const start = shiftIsoDateByDays(getLocalWeekStartIso(date), offset * 7);
-   return { start, end: shiftIsoDateByDays(start, 6) };
+   const start = shiftCalendarDate(getLocalWeekStartIso(date), offset * 7);
+   return { start, end: shiftCalendarDate(start, 6) };
 }
 
 /** ISO weekday number: 1 = Monday … 7 = Sunday. */
@@ -148,6 +128,11 @@ export type IsoWeekday = 1 | 2 | 3 | 4 | 5 | 6 | 7;
 export function getIsoWeekday(isoDate: string): IsoWeekday {
    const day = new Date(`${isoDate}T00:00:00Z`).getUTCDay();
    return (day === 0 ? 7 : day) as IsoWeekday;
+}
+
+/** Zero-padded 24-hour clock text for a minute-of-day value. */
+export function formatClock(minutes: number) {
+   return `${String(Math.floor(minutes / 60)).padStart(2, "0")}:${String(minutes % 60).padStart(2, "0")}`;
 }
 
 function createDateInRosterZone(year: number, month: number, day: number, hour: number, minute: number, second: number) {

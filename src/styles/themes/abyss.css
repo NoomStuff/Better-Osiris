@@ -24,7 +24,6 @@ html[data-theme="abyss"] {
    --overlay-surface: rgba(7, 30, 41, 0.97);
    --backdrop: rgba(1, 8, 14, 0.6);
    --backdrop-strong: rgba(1, 8, 14, 0.66);
-   --panel-veil: 0.44;
    --class-surface: rgba(10, 43, 56, 0.97);
    --class-surface-raised: rgba(14, 57, 72, 0.99);
    --class-border: rgba(93, 225, 212, 0.2);

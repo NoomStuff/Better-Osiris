@@ -85,7 +85,7 @@ function readDeliveryLedger(): Record<string, number> {
    return {};
 }
 /** The page detects changes. The worker only provides notification delivery on mobile. */
-export async function notifyClassDiffs(diffs: SessionClassDiff[], contextId = "dev-preview") {
+export async function notifyClassDiffs(diffs: SessionClassDiff[], contextId: string) {
    if (!getClassNotificationsEnabled() || getClassNotificationPermission() !== "granted" || !diffs.length) return;
    const epoch = readBrowserStorage("localStorage", "roster-session-epoch-v1");
    const send = async () => {

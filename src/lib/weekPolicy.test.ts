@@ -3,16 +3,7 @@ import { describe, it } from "node:test";
 import { isoWeekNumber, shiftCalendarDate } from "../../shared/calendar";
 import type { Class, Week } from "../types/weeks";
 import { setRosterTimeZone } from "./rosterTimeZone";
-import {
-   canNavigateToWeek,
-   createWeekEntry,
-   getHomeWeek,
-   getAdjacentWeekOffset,
-   getAdjacentBatchStarts,
-   getBatchOffsets,
-   getBatchStart,
-   type WeekEntries,
-} from "./weekPolicy";
+import { canNavigateToWeek, createWeekEntry, getHomeWeek, getAdjacentWeekOffset, getBatchOffsets, getBatchStart, type WeekEntries } from "./weekPolicy";
 
 setRosterTimeZone("Europe/Amsterdam");
 void describe("roster week batch policy", () => {
@@ -25,7 +16,6 @@ void describe("roster week batch policy", () => {
    void it("keeps the locally cached previous week in its own batch", () => {
       assert.equal(getBatchStart(-1), -1);
       assert.deepEqual(getBatchOffsets(-1), [-1]);
-      assert.deepEqual(getAdjacentBatchStarts(-1), [0]);
    });
    void it("clamps the final batch to the navigation limit", () => {
       assert.deepEqual(getBatchOffsets(50), [50]);

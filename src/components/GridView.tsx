@@ -1,6 +1,6 @@
 import { getGridCurrentTime } from "../lib/dayTimeline";
 import { useEffect, useMemo, useRef, useState, type CSSProperties, type MouseEvent } from "react";
-import { dayShortLabel, fullDayLabel, timeLabel, getMinutesFromMidnight } from "../lib/date";
+import { dayShortLabel, formatClock, fullDayLabel, timeLabel, getMinutesFromMidnight } from "../lib/date";
 import { clamp } from "../lib/clamp";
 import { DETAILS_SEPARATOR, getClassLocationLabel } from "../lib/classFormat";
 import type { GridHourRange } from "../lib/gridHours";
@@ -33,12 +33,6 @@ const GUIDE_CHASE_RATE = 18;
 const GUIDE_SETTLE_PERCENT = 0.01;
 
 type GridStyle = CSSProperties & { "--grid-day-count": number };
-
-function formatMinutes(minutes: number) {
-   const hour = Math.floor(minutes / 60);
-   const minute = minutes % 60;
-   return `${String(hour).padStart(2, "0")}:${String(minute).padStart(2, "0")}`;
-}
 
 export function GridView({ days, zoom: zoomId, hours, now, onSelectClass }: GridViewProps) {
    const [animateZoom, setAnimateZoom] = useState(false);
@@ -97,7 +91,7 @@ export function GridView({ days, zoom: zoomId, hours, now, onSelectClass }: Grid
       element.style.top = `${motion.top}%`;
       if (guideLabelRef.current) {
          const minutes = clamp(Math.round(startMinutes + (motion.top / 100) * shownMinutes), startMinutes, endMinutes);
-         guideLabelRef.current.textContent = formatMinutes(minutes);
+         guideLabelRef.current.textContent = formatClock(minutes);
       }
    };
 
@@ -208,7 +202,7 @@ export function GridView({ days, zoom: zoomId, hours, now, onSelectClass }: Grid
                         data-visible={minutes % zoom.interval === 0}
                         style={{ top: `${getOffsetPercent(minutes)}%` }}
                      >
-                        {formatMinutes(minutes)}
+                        {formatClock(minutes)}
                      </div>
                   ))}
                </div>

@@ -25,7 +25,6 @@ html[data-theme="ivy"] {
    --overlay-surface: rgba(241, 246, 236, 0.98);
    --backdrop: rgba(12, 18, 12, 0.44);
    --backdrop-strong: rgba(12, 18, 12, 0.5);
-   --panel-veil: 0.66;
    --frame-veil: 0.94;
    --class-surface: rgba(246, 242, 228, 0.94);
    --class-surface-raised: rgba(255, 251, 237, 1);

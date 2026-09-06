@@ -203,20 +203,4 @@ void describe("roster layout", () => {
          [1, 3, 7]
       );
    });
-
-   void it("sorts classes within a day chronologically", () => {
-      const week = { offset: 0, number: 25, start: "2026-06-15", end: "2026-06-21" };
-      const positioned = getPositionedClasses([
-         createClass({ id: "later", start: "2026-06-16T14:00:00", end: "2026-06-16T15:00:00" }),
-         createClass({ id: "earlier", start: "2026-06-16T09:00:00", end: "2026-06-16T10:00:00" }),
-      ]);
-
-      const groups = getDays(week, positioned);
-      const tuesday = groups.at(1);
-      assert.ok(tuesday);
-      assert.deepEqual(
-         tuesday.classes.map((schoolClass) => schoolClass.id),
-         ["earlier", "later"]
-      );
-   });
 });

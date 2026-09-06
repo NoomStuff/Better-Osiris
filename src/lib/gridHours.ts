@@ -18,16 +18,14 @@ export function normalizeGridHourRange(startHour: number, endHour: number): Grid
 }
 
 export function getSmartGridHours(weeks: readonly Week[]): GridHourRange {
-   const ranges = weeks.flatMap((week) => week.classes.map(getClassHourBounds));
-   if (ranges.length === 0) {
-      return DEFAULT_GRID_HOURS;
-   }
-
-   return normalizeGridHourRange(Math.min(...ranges.map(([start]) => start)), Math.max(...ranges.map(([, end]) => end)));
+   return getFittedHourRange(weeks.flatMap((week) => week.classes.map(getClassHourBounds))) ?? DEFAULT_GRID_HOURS;
 }
 
 export function getRequiredGridHours(days: readonly Day[]): GridHourRange | null {
-   const ranges = days.flatMap((day) => day.classes.map((schoolClass) => getClassHourBounds(schoolClass)));
+   return getFittedHourRange(days.flatMap((day) => day.classes.map(getClassHourBounds)));
+}
+
+function getFittedHourRange(ranges: GridHourRange[]): GridHourRange | null {
    if (ranges.length === 0) {
       return null;
    }

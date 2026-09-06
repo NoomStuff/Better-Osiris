@@ -1,7 +1,7 @@
 import { Fragment, useCallback, useLayoutEffect, useRef, useState, type RefObject } from "react";
 import { dayLabel, monthDayLabel, timeLabel, toDayKey } from "../lib/date";
 import { DETAILS_SEPARATOR, getClassLocationLabel } from "../lib/classFormat";
-import { getBreakIcon, getEmptyDayMessage, getEmptyTodayMessage } from "../lib/flavor";
+import { getBreakIcon, getEmptyTodayMessage } from "../lib/flavor";
 import type { Day, Class } from "../types/weeks";
 import { getBreaktimeLabel, getCurrentAgendaSegment, getDayTimeline, getSegmentProgress, getTodayProgressAnchor, isActiveClass } from "../lib/dayTimeline";
 import { useClock } from "../hooks/useClock";
@@ -164,7 +164,7 @@ export function AgendaView({ days, expandedDays, animate, now, timeOverride, onT
                                  </>
                               ) : null}
                               <span className="empty-state__copy">
-                                 {emptyTodayMessage ? <strong>{emptyTodayMessage.title}</strong> : <span>{getEmptyDayMessage()}</span>}
+                                 {emptyTodayMessage ? <strong>{emptyTodayMessage.title}</strong> : <span>No classes scheduled.</span>}
                                  {emptyTodayMessage ? <span>{emptyTodayMessage.detail}</span> : null}
                               </span>
                            </div>
@@ -174,13 +174,12 @@ export function AgendaView({ days, expandedDays, animate, now, timeOverride, onT
                               const teacherLocationLabel = locationLabel ? `${schoolClass.teacher}${DETAILS_SEPARATOR}${locationLabel}` : schoolClass.teacher;
                               const breakSegment = timeline.breaksBefore.get(schoolClass.id);
                               const breaktimeLabel = breakSegment ? getBreaktimeLabel(breakSegment) : null;
-                              const breaktimeKey = breakSegment?.key;
                               const breakIcon = breakSegment ? getBreakIcon(breakSegment.startDate, breakSegment.endDate, classIndex) : "";
 
                               return (
                                  <Fragment key={schoolClass.id}>
-                                    {breaktimeLabel && breaktimeKey ? (
-                                       <div className="agenda-breaktime" role="note" data-current-segment={breaktimeKey}>
+                                    {breakSegment && breaktimeLabel ? (
+                                       <div className="agenda-breaktime" role="note" data-current-segment={breakSegment.key}>
                                           <span className="agenda-breaktime__line" aria-hidden="true" />
                                           <span className="agenda-breaktime__label">
                                              <i className={breakIcon} aria-hidden="true" />

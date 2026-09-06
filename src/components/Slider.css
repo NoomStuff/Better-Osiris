@@ -1,5 +1,4 @@
 .slider {
-   --slider-spring: cubic-bezier(0.22, 1.7, 0.36, 1);
    --slider-start: 0%;
 
    display: grid;
@@ -49,8 +48,8 @@
    background: var(--accent);
    box-shadow: 0 0 0 1px color-mix(in srgb, var(--accent) 75%, transparent);
    transition:
-      left 320ms var(--slider-spring),
-      right 320ms var(--slider-spring),
+      left 320ms var(--spring),
+      right 320ms var(--spring),
       background-color 400ms ease,
       box-shadow 400ms ease;
 }
@@ -142,12 +141,12 @@
    border: 4px solid color-mix(in srgb, var(--text-strong) 32%, transparent);
    border-radius: 999px;
    background: color-mix(in srgb, rgb(var(--surface-rgb)) 84%, var(--text-strong));
-   box-shadow: 0 1px 4px rgb(0 0 0 / 22%);
+   box-shadow: 0 1px 4px rgba(0, 0, 0, 0.22);
    pointer-events: none;
    translate: -50% -50%;
    scale: 1;
    transition:
-      left 320ms var(--slider-spring),
+      left 320ms var(--spring),
       scale 220ms var(--bounce-overshoot),
       border-color 180ms ease-out,
       box-shadow 180ms ease;
@@ -157,17 +156,13 @@
    left: var(--slider-start);
 }
 
-.slider__thumb--end {
-   left: var(--slider-end);
-}
-
 .slider:not(.slider--range) .slider__input:is(:hover, :focus-visible) ~ .slider__thumb,
 .slider__input--start:is(:hover, :focus-visible) ~ .slider__thumb--start,
 .slider__input--end:is(:hover, :focus-visible) ~ .slider__thumb--end {
    scale: 1.2;
    border-color: rgba(var(--accent-rgb), 0.55);
    box-shadow:
-      0 1px 4px rgb(0 0 0 / 22%),
+      0 1px 4px rgba(0, 0, 0, 0.22),
       0 0 0 4px color-mix(in srgb, var(--accent) 16%, transparent);
 }
 
@@ -176,7 +171,7 @@
 .slider__input--end:active ~ .slider__thumb--end {
    border-color: rgba(var(--accent-rgb), 0.8);
    box-shadow:
-      0 1px 4px rgb(0 0 0 / 22%),
+      0 1px 4px rgba(0, 0, 0, 0.22),
       0 0 0 5px color-mix(in srgb, var(--accent) 22%, transparent);
 }
 

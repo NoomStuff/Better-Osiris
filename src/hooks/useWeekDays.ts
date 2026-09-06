@@ -1,5 +1,6 @@
 import { useMemo } from "react";
-import { getIsoWeekNumber, getRosterWeekBounds, parseIsoDateToLocal, type IsoWeekday } from "../lib/date";
+import { isoWeekNumber } from "../../shared/calendar";
+import { getRosterWeekBounds, type IsoWeekday } from "../lib/date";
 import { getDays, getPositionedClasses, getVisibleDays } from "../lib/weekLayout";
 import type { Week, WeekMeta } from "../types/weeks";
 
@@ -17,9 +18,5 @@ export function useWeekDays(displayedWeek: Week | null, weekOffset: number, perc
 
 function getBlankWeek(offset: number, now: Date): WeekMeta {
    const { start, end } = getRosterWeekBounds(now, offset);
-   return { offset, number: getIsoWeekNumber(start), start, end };
-}
-
-export function getPerceivedDay(dayKey: string) {
-   return parseIsoDateToLocal(dayKey);
+   return { offset, number: isoWeekNumber(start), start, end };
 }

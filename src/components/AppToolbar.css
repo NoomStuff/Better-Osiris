@@ -68,15 +68,14 @@
    color: var(--chrome-dim);
 }
 
-.view-toggle__button.is-selected .icon-button__surface {
-   color: var(--chrome-strong);
-   border-color: rgba(var(--chrome-accent-rgb), 0.28);
-   background: rgba(var(--chrome-accent-rgb), 0.12);
+.view-toggle__button.is-selected {
+   --ib-line: rgba(var(--chrome-accent-rgb), 0.28);
+   --ib-bg: rgba(var(--chrome-accent-rgb), 0.12);
+   --ib-text: var(--chrome-strong);
 }
 
 @media (max-width: 640px) {
    .app-toolbar {
-      align-items: center;
       justify-content: space-between;
       gap: 8px;
       padding: 0;
@@ -92,9 +91,5 @@
 
    .app-toolbar__identity {
       display: none;
-   }
-
-   .app-toolbar__spinner {
-      display: inline-block;
    }
 }

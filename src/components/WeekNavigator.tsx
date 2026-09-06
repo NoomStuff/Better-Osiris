@@ -1,4 +1,4 @@
-import { memo, useId, type FocusEvent, type MouseEvent } from "react";
+import { memo, useId, type FocusEvent } from "react";
 import { useDelayedTooltip } from "../hooks/useDelayedTooltip";
 import { useShortcutActivation } from "../hooks/useShortcutActivation";
 import { APP_SHORTCUT_LABELS } from "../lib/appShortcuts";
@@ -61,14 +61,6 @@ export const WeekNavigator = memo(function WeekNavigator({
    const isShortcutActive = useShortcutActivation("current-week");
    const weekTooltip = weekOffset === homeWeekOffset ? "Reset the week view" : "Return to the default week";
 
-   const handleMouseEnter = (_event: MouseEvent<HTMLButtonElement>) => {
-      showTooltip();
-   };
-
-   const handleMouseLeave = (_event: MouseEvent<HTMLButtonElement>) => {
-      hideTooltip();
-   };
-
    const handleFocus = (event: FocusEvent<HTMLButtonElement>) => {
       showTooltipForFocus(event.currentTarget);
    };
@@ -76,10 +68,6 @@ export const WeekNavigator = memo(function WeekNavigator({
    const handleCurrentWeek = () => {
       hideTooltip();
       onCurrentWeek();
-   };
-
-   const handleBlur = (_event: FocusEvent<HTMLButtonElement>) => {
-      hideTooltip();
    };
 
    return (
@@ -106,11 +94,11 @@ export const WeekNavigator = memo(function WeekNavigator({
                data-shortcut-active={isShortcutActive ? "true" : undefined}
                data-week-position={weekPosition}
                style={{ anchorName }}
-               onBlur={handleBlur}
+               onBlur={hideTooltip}
                onClick={handleCurrentWeek}
                onFocus={handleFocus}
-               onMouseEnter={handleMouseEnter}
-               onMouseLeave={handleMouseLeave}
+               onMouseEnter={showTooltip}
+               onMouseLeave={hideTooltip}
             >
                <span className="weekbar__label">{label}</span>
                <span className="weekbar__title">{title}</span>

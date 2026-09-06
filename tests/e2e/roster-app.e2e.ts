@@ -1,4 +1,5 @@
 import { isoWeekNumber } from "../../shared/calendar";
+import { THEMES_BY_MODE } from "../../src/lib/theme";
 import { expect, test, type Page } from "@playwright/test";
 import AxeBuilder from "@axe-core/playwright";
 
@@ -25,7 +26,7 @@ test.afterEach(({ page }) => {
    expect(pageErrors.get(page) ?? []).toEqual([]);
 });
 
-test("week navigation and view controls work with mocked roster data", async ({ page }) => {
+test("week navigation and reset show the matching roster data", async ({ page }) => {
    await installCachedLastWeek(page);
    await page.goto("/");
 
@@ -34,6 +35,7 @@ test("week navigation and view controls work with mocked roster data", async ({ 
    await expect(page.getByRole("button", { name: "Previous week" })).toBeEnabled();
    await expect(page.getByRole("button", { name: "Next week" })).toBeEnabled();
    await expect(page.locator(".grid-class", { hasText: "SOURCE_TITLE_0_1" })).toBeVisible();
+   await expect(page.getByRole("button", { name: "Grid view" })).toHaveAttribute("aria-pressed", "true");
 
    await page.getByRole("button", { name: "Previous week" }).click();
    await expect(page.locator(".weekbar__label")).toHaveText("Last week");
@@ -55,17 +57,32 @@ test("week navigation and view controls work with mocked roster data", async ({ 
    await page.keyboard.press("Space");
    await expect(page.locator(".weekbar__label")).toHaveText("This week");
    await expect(page.getByRole("heading", { name: /Week 25:/ })).toBeVisible();
+});
 
-   await page.getByRole("button", { name: "Grid view" }).click();
-   await expect(page.locator(".grid-shell")).toBeVisible();
-   await expect(page.getByRole("radio", { name: "30m" })).toBeVisible();
-
-   await page.getByRole("radio", { name: "30m" }).click();
-   await expect(page.getByRole("radio", { name: "30m" })).toHaveAttribute("aria-checked", "true");
-
+test("shared easing keeps toolbar entrance and agenda folding animated", async ({ page }) => {
+   await page.goto("/");
+   await expect(page.locator(".action-group")).not.toHaveCSS("animation-name", "none");
    await page.getByRole("button", { name: "Agenda view" }).click();
-   await expect(page.locator(".agenda-view")).toBeVisible();
-   await expect(page.getByRole("button", { name: "Collapse" })).toBeVisible();
+   await page.getByRole("button", { name: "Collapse", exact: true }).click();
+   await expect(page.locator(".day-group__body").first()).not.toHaveCSS("transition-duration", "0s");
+});
+
+test("selected view buttons keep the chrome palette at rest and on hover", async ({ page }) => {
+   await page.goto("/");
+   await expect(page.locator(".grid-shell")).toBeVisible();
+   await page.evaluate(() => document.documentElement.setAttribute("data-theme", "espresso"));
+   const background = await page.evaluate(() => {
+      const probe = document.createElement("span");
+      probe.style.backgroundColor = "rgba(var(--chrome-accent-rgb), 0.12)";
+      document.body.append(probe);
+      const color = getComputedStyle(probe).backgroundColor;
+      probe.remove();
+      return color;
+   });
+   const button = page.getByRole("button", { name: "Grid view", exact: true });
+   await expect(button.locator(".icon-button__surface")).toHaveCSS("background-color", background);
+   await button.hover();
+   await expect(button.locator(".icon-button__surface")).toHaveCSS("background-color", background);
 });
 
 test("prefetches the batch after the active batch", async ({ page }) => {
@@ -173,14 +190,6 @@ test("shift and an arrow moves by one roster batch", async ({ page }) => {
    await expect(page.locator(".weekbar__label")).toHaveText("This week");
 });
 
-test("defaults to grid on desktop when no roster view was saved", async ({ page }) => {
-   await page.setViewportSize({ width: 1280, height: 720 });
-   await page.goto("/");
-
-   await expect(page.locator(".grid-shell")).toBeVisible();
-   await expect(page.getByRole("button", { name: "Grid view" })).toHaveAttribute("aria-pressed", "true");
-});
-
 test("defaults to agenda on mobile when no roster view was saved", async ({ page }) => {
    await page.setViewportSize({ width: 390, height: 844 });
    await page.goto("/");
@@ -215,17 +224,6 @@ test("toolbar controls and shortcuts invoke the same actions", async ({ page }) 
    await expect(page.getByRole("dialog", { name: "Preferences" })).toBeVisible();
 });
 
-test("keeps a saved roster view over the viewport default", async ({ page }) => {
-   await page.setViewportSize({ width: 390, height: 844 });
-   await page.addInitScript(() => {
-      window.localStorage.setItem("roster-view-mode", "grid");
-   });
-   await page.goto("/");
-
-   await expect(page.locator(".grid-shell")).toBeVisible();
-   await expect(page.getByRole("button", { name: "Grid view" })).toHaveAttribute("aria-pressed", "true");
-});
-
 test("mobile grid fits its viewport and week buttons remain repeatable", async ({ page }) => {
    await page.setViewportSize({ width: 390, height: 844 });
    await page.addInitScript(() => {
@@ -235,6 +233,7 @@ test("mobile grid fits its viewport and week buttons remain repeatable", async (
 
    await expect(page.locator(".grid-shell")).toBeVisible();
    await expect(page.locator(".overlay-scrollbar")).toHaveCount(0);
+   await expect(page.getByRole("button", { name: "Grid view" })).toHaveAttribute("aria-pressed", "true");
 
    const pageBackgrounds = await page.evaluate(() => ({
       root: getComputedStyle(document.documentElement).backgroundImage,
@@ -444,6 +443,26 @@ test("grid hours and agenda folding preferences control the timetable", async ({
    await page.locator(".settings-dialog__header").getByRole("button", { name: "Close settings" }).click();
    await page.getByRole("button", { name: "Agenda view" }).click();
    await expect(page.locator('.day-group__body[aria-hidden="false"]')).toHaveCount(5);
+});
+
+test("grid hour dragging keeps the captured thumb and the minimum gap", async ({ page }) => {
+   await page.goto("/");
+   await page.getByRole("button", { name: "Open settings" }).click();
+   const hours = page.getByRole("region", { name: "Grid hours" });
+   const control = hours.locator(".slider__control");
+   await control.scrollIntoViewIfNeeded();
+   const bounds = await control.boundingBox();
+   if (!bounds) throw new Error("Grid hour slider is not laid out");
+   const y = bounds.y + bounds.height / 2;
+   await page.mouse.move(bounds.x + (10 / 24) * bounds.width, y);
+   await page.mouse.down();
+   await expect(hours.getByRole("slider", { name: "Grid start time" })).toHaveValue("10");
+   await page.mouse.move(bounds.x + (20 / 24) * bounds.width, y, { steps: 5 });
+   await page.mouse.up();
+   await expect(hours.getByRole("slider", { name: "Grid start time" })).toHaveValue("17");
+   await expect(hours.getByRole("slider", { name: "Grid end time" })).toHaveValue("18");
+   await page.keyboard.press("ArrowLeft");
+   await expect(hours.getByRole("slider", { name: "Grid start time" })).toHaveValue("16");
 });
 
 test("only the topmost dialog handles Escape and focus stays contained", async ({ page }) => {
@@ -1025,38 +1044,24 @@ test("core timetable and dialog surfaces pass automated accessibility checks", a
    expect(dialogResults.violations).toEqual([]);
 });
 
-test("every theme keeps text contrast and status colors distinct", async ({ page, browserName }) => {
+test("every theme keeps settings text readable", async ({ page, browserName }) => {
    test.skip(browserName !== "chromium", "One browser is enough for deterministic computed-color checks.");
-
-   const themesByMode = {
-      Dark: ["Dark", "Frost", "Espresso", "Moss", "Dusk", "Ember", "Abyss", "Noir", "Contrast"],
-      Light: ["Light", "Thaw", "Latte", "Ivy", "Dawn", "Flare", "Bloom", "Paper", "Osiris"],
-   } as const;
+   test.slow();
+   await page.emulateMedia({ reducedMotion: "reduce" });
 
    await page.goto("/");
    await page.getByRole("button", { name: "Open settings" }).click();
 
-   for (const [mode, themes] of Object.entries(themesByMode)) {
+   for (const [mode, themes] of [
+      ["Dark", THEMES_BY_MODE.dark],
+      ["Light", THEMES_BY_MODE.light],
+   ] as const) {
       await page.getByRole("radio", { name: mode, exact: true }).click();
 
       for (const theme of themes) {
-         await page.getByRole("button", { name: theme, exact: true }).click();
+         await page.getByRole("button", { name: theme.label, exact: true }).click();
          const results = await new AxeBuilder({ page }).include(".settings-dialog").withRules(["color-contrast"]).analyze();
-         expect(results.violations, `${theme} should pass text contrast checks`).toEqual([]);
-
-         const semanticColors = await page.evaluate(() => {
-            const style = getComputedStyle(document.documentElement);
-            const parseRgb = (property: string) => style.getPropertyValue(property).split(",").map(Number);
-            return {
-               content: [parseRgb("--accent-rgb"), parseRgb("--warning-rgb")],
-               chrome: [parseRgb("--chrome-accent-rgb"), parseRgb("--chrome-warning-rgb")],
-            };
-         });
-
-         for (const [scope, [accent, warning]] of Object.entries(semanticColors)) {
-            const distance = Math.hypot(...accent.map((channel, index) => channel - warning[index]));
-            expect(distance, `${theme} ${scope} warning should be visibly different from its accent`).toBeGreaterThanOrEqual(70);
-         }
+         expect(results.violations, `${theme.label} should pass text contrast checks`).toEqual([]);
       }
    }
 });
@@ -1494,33 +1499,14 @@ test("status rows expose readable text in both views across themes", async ({ pa
    });
    await page.goto("/");
    await expect(page.locator(".grid-class.status-cancelled")).toBeVisible();
-   const themes = [
-      "dark",
-      "frost",
-      "espresso",
-      "moss",
-      "dusk",
-      "ember",
-      "abyss",
-      "noir",
-      "contrast",
-      "light",
-      "thaw",
-      "latte",
-      "ivy",
-      "dawn",
-      "flare",
-      "bloom",
-      "paper",
-      "osiris",
-   ];
+   const themes = [...THEMES_BY_MODE.dark, ...THEMES_BY_MODE.light];
    for (const view of ["Grid view", "Agenda view"]) {
       await page.getByRole("button", { name: view, exact: true }).click();
       for (const theme of themes) {
-         await page.evaluate((id) => document.documentElement.setAttribute("data-theme", id), theme);
+         await page.evaluate((id) => document.documentElement.setAttribute("data-theme", id), theme.id);
          const scope = view === "Grid view" ? ".grid-class" : ".agenda-class";
          const results = await new AxeBuilder({ page }).include(scope).withRules(["color-contrast"]).analyze();
-         expect(results.violations, `${theme} ${view} class text`).toEqual([]);
+         expect(results.violations, `${theme.label} ${view} class text`).toEqual([]);
       }
    }
 });

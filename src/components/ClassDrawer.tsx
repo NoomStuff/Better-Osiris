@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { ReactNode } from "react";
 import { fullDayLabel, parseLocalDateTime, timeLabel } from "../lib/date";
-import { normalizeClassField } from "../lib/classFormat";
+import { CLASS_STATUS_ICONS, normalizeClassField } from "../lib/classFormat";
 import { useOverlayScrollbar } from "../hooks/useOverlayScrollbar";
 import type { Class } from "../types/weeks";
 import { IconButton } from "./IconButton";
@@ -70,8 +70,7 @@ export function ClassDrawer({ schoolClass, onClose }: ClassDrawerProps) {
    const subtitle = activeClass.subject.trim();
    const teacher = activeClass.teacher.trim();
    const details = activeClass.description.trim();
-   const showDetails =
-      Boolean(details) && normalizeClassField(details) !== normalizeClassField(title) && normalizeClassField(details) !== normalizeClassField(subtitle);
+   const showDetails = hasSubstantiveDetails(details, title, subtitle);
    const previous = activeClass.status === "changed" ? activeClass.previous : undefined;
    const previousStartDate = previous ? parseLocalDateTime(previous.start) : null;
    const previousEndDate = previous ? parseLocalDateTime(previous.end) : null;
@@ -83,10 +82,7 @@ export function ClassDrawer({ schoolClass, onClose }: ClassDrawerProps) {
    const previousLocation = previous?.location.trim() ?? "";
    const previousTeacher = previous?.teacher.trim() ?? "";
    const previousDetails = previous?.description.trim() ?? "";
-   const showPreviousDetails =
-      Boolean(previousDetails) &&
-      normalizeClassField(previousDetails) !== normalizeClassField(previous?.title ?? "") &&
-      normalizeClassField(previousDetails) !== normalizeClassField(previous?.subject ?? "");
+   const showPreviousDetails = hasSubstantiveDetails(previousDetails, previous?.title ?? "", previous?.subject ?? "");
    const place = getPlaceDisplay(room, location);
    const previousPlace = previous ? getPlaceDisplay(previousRoom, previousLocation) : null;
    const locationChanged = Boolean(previous && (room || previousRoom) && previousLocation !== location);
@@ -220,11 +216,9 @@ function ChangeValue({ className, current, previous, cancelled = false, added = 
 }
 
 function ClassStatusBadge({ status }: { status: Exclude<Class["status"], "scheduled"> }) {
-   const icon = status === "added" ? "fa-thumbtack" : status === "changed" ? "fa-pen" : "fa-trash-can";
-
    return (
       <span className={`class-panel__status class-panel__status--${status}`}>
-         <i className={`fa-solid ${icon}`} aria-hidden="true" />
+         <i className={CLASS_STATUS_ICONS[status]} aria-hidden="true" />
          {status}
       </span>
    );
@@ -237,6 +231,10 @@ function PreviousIdentity({ label, value }: { label: string; value: string }) {
          <s>{value || "Not set"}</s>
       </p>
    );
+}
+
+function hasSubstantiveDetails(text: string, title: string, subject: string) {
+   return Boolean(text) && normalizeClassField(text) !== normalizeClassField(title) && normalizeClassField(text) !== normalizeClassField(subject);
 }
 
 function formatTimeRange(start: Date, end: Date) {

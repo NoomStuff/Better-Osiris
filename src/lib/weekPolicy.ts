@@ -1,5 +1,6 @@
 import { MAX_WEEK_OFFSET, MIN_WEEK_OFFSET, type Week } from "../../shared/weeks";
-import { formatWeekTitle, getIsoWeekNumber, shiftIsoDateByDays, parseLocalDateTime } from "./date";
+import { isoWeekNumber, shiftCalendarDate } from "../../shared/calendar";
+import { formatWeekTitle, parseLocalDateTime } from "./date";
 import { isActiveClass } from "./dayTimeline";
 import { isSameClassDetails } from "./classSnapshot";
 import type { WeekLoadError } from "./weekLoadError";
@@ -52,9 +53,9 @@ export function getDerivedWeekTitle(offset: number, entries: WeekEntries) {
    }
 
    const offsetDelta = offset - closestOffset;
-   const derivedStart = shiftIsoDateByDays(closestData.week.start, offsetDelta * 7);
-   const derivedEnd = shiftIsoDateByDays(closestData.week.end, offsetDelta * 7);
-   return formatWeekTitle(derivedStart, derivedEnd, getIsoWeekNumber(derivedStart));
+   const derivedStart = shiftCalendarDate(closestData.week.start, offsetDelta * 7);
+   const derivedEnd = shiftCalendarDate(closestData.week.end, offsetDelta * 7);
+   return formatWeekTitle(derivedStart, derivedEnd, isoWeekNumber(derivedStart));
 }
 
 export function getBatchStart(targetOffset: number) {
@@ -68,13 +69,6 @@ export function getBatchOffsets(startOffset: number) {
 
    const endOffset = Math.min(startOffset + ROSTER_BATCH_SIZE - 1, MAX_WEEK_OFFSET);
    return Array.from({ length: endOffset - startOffset + 1 }, (_, index) => startOffset + index);
-}
-
-export function getAdjacentBatchStarts(startOffset: number) {
-   const previous = startOffset === 0 ? MIN_WEEK_OFFSET : startOffset > 0 ? Math.max(MIN_WEEK_OFFSET, startOffset - ROSTER_BATCH_SIZE) : null;
-   const next = startOffset < 0 ? 0 : startOffset + ROSTER_BATCH_SIZE;
-
-   return [previous, next].filter((batchStart): batchStart is number => batchStart !== null && batchStart >= MIN_WEEK_OFFSET && batchStart <= MAX_WEEK_OFFSET);
 }
 
 /** Prefer remaining classes this week or next; keep longer vacations visible. */

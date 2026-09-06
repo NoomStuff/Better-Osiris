@@ -26,7 +26,6 @@ html[data-theme="ember"] {
    --overlay-surface: rgba(30, 17, 29, 0.97);
    --backdrop: rgba(13, 3, 2, 0.58);
    --backdrop-strong: rgba(13, 3, 2, 0.64);
-   --panel-veil: 0.5;
    --class-surface: rgba(46, 25, 35, 0.96);
    --class-surface-raised: rgba(59, 31, 46, 0.98);
    --class-border: rgba(255, 117, 71, 0.2);

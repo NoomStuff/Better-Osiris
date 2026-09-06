@@ -105,12 +105,6 @@
    initial-value: rgba(3, 5, 11, 0.58);
 }
 
-@property --panel-veil {
-   syntax: "<number>";
-   inherits: true;
-   initial-value: 0.38;
-}
-
 @property --frame-veil {
    syntax: "<number>";
    inherits: true;
@@ -175,6 +169,8 @@
    --chrome-height: 127px;
    --shadow: 0 24px 80px rgba(0, 0, 0, 0.35);
    --bounce-overshoot: cubic-bezier(0.2, 3.2, 0.2, 1);
+   --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+   --spring: cubic-bezier(0.22, 1.7, 0.36, 1);
 
    /* Chrome layer: the page backdrop and the header that sits on it, decoupled from the
       content surfaces inside the app frame. Cohesive themes inherit the content values;
@@ -351,7 +347,7 @@ button {
    border-radius: 12px;
    box-shadow: 0 18px 48px rgba(0, 0, 0, 0.34);
    animation-duration: 260ms;
-   animation-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
+   animation-timing-function: var(--ease-out);
 }
 
 @media (max-width: 640px) {
@@ -399,13 +395,14 @@ button {
    color: var(--chrome-strong);
 }
 
+.fatal-error-boundary .button {
+   --btn-line: var(--chrome-line-strong);
+   --btn-bg: rgba(var(--chrome-accent-rgb), 0.14);
+}
+
 .fatal-error-boundary .button__surface {
    min-height: 42px;
    padding: 0 16px;
-   border: 2px solid var(--chrome-line-strong);
-   border-radius: 10px;
-   background: rgba(var(--chrome-accent-rgb), 0.14);
-   cursor: pointer;
 }
 
 .view-error-boundary {
@@ -438,13 +435,14 @@ button {
    overflow-wrap: anywhere;
 }
 
+.view-error-boundary .button {
+   --btn-line: var(--line-strong);
+   --btn-bg: rgba(var(--accent-rgb), 0.14);
+}
+
 .view-error-boundary .button__surface {
    min-height: 42px;
    padding: 0 16px;
-   border: 2px solid var(--line-strong);
-   border-radius: 10px;
-   background: rgba(var(--accent-rgb), 0.14);
-   cursor: pointer;
 }
 
 /* Set while switching themes so the registered variables interpolate instead of snapping.
@@ -468,7 +466,6 @@ html.theme-fade {
       --overlay-surface 400ms ease,
       --backdrop 400ms ease,
       --backdrop-strong 400ms ease,
-      --panel-veil 400ms ease,
       --frame-veil 400ms ease,
       --class-surface 400ms ease,
       --class-surface-raised 400ms ease,

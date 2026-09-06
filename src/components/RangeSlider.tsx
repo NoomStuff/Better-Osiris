@@ -20,7 +20,6 @@ type RangeSliderStyle = CSSProperties & {
 
 export function RangeSlider({ label, min, max, step, value, startLabel, endLabel, formatValue = String, onChange }: RangeSliderProps) {
    const labelId = useId();
-   const controlRef = useRef<HTMLDivElement | null>(null);
    const startInputRef = useRef<HTMLInputElement | null>(null);
    const endInputRef = useRef<HTMLInputElement | null>(null);
    const dragRef = useRef<{ pointerId: number; side: "start" | "end" } | null>(null);
@@ -31,11 +30,7 @@ export function RangeSlider({ label, min, max, step, value, startLabel, endLabel
    // The range inputs pass pointer events through, so the control sees every press: it snaps
    // the nearest thumb to the cursor and keeps moving that same thumb until release. Moving a
    // thumb keeps the one-step gap between the two.
-   const valueAt = (clientX: number) => {
-      const control = controlRef.current;
-      if (!control) {
-         return null;
-      }
+   const valueAt = (control: HTMLDivElement, clientX: number) => {
       const rect = control.getBoundingClientRect();
       const ratio = Math.min(Math.max((clientX - rect.left) / rect.width, 0), 1);
       return Math.min(Math.max(min + Math.round((ratio * (max - min)) / step) * step, min), max);
@@ -53,10 +48,7 @@ export function RangeSlider({ label, min, max, step, value, startLabel, endLabel
       if (!event.isPrimary || event.button !== 0) {
          return;
       }
-      const target = valueAt(event.clientX);
-      if (target === null) {
-         return;
-      }
+      const target = valueAt(event.currentTarget, event.clientX);
       const side = target - start <= end - target ? "start" : "end";
       dragRef.current = { pointerId: event.pointerId, side };
       event.currentTarget.setPointerCapture(event.pointerId);
@@ -70,10 +62,7 @@ export function RangeSlider({ label, min, max, step, value, startLabel, endLabel
       if (!drag) {
          return;
       }
-      const target = valueAt(event.clientX);
-      if (target !== null) {
-         moveThumb(drag.side, target);
-      }
+      moveThumb(drag.side, valueAt(event.currentTarget, event.clientX));
    };
 
    const onPointerEnd = (event: ReactPointerEvent<HTMLDivElement>) => {
@@ -92,7 +81,6 @@ export function RangeSlider({ label, min, max, step, value, startLabel, endLabel
             </strong>
          </div>
          <div
-            ref={controlRef}
             className="slider__control"
             onPointerDown={onPointerDown}
             onPointerMove={onPointerMove}

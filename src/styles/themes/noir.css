@@ -26,7 +26,6 @@ html[data-theme="noir"] {
    --overlay-surface: rgba(8, 8, 8, 0.98);
    --backdrop: rgba(0, 0, 0, 0.56);
    --backdrop-strong: rgba(0, 0, 0, 0.6);
-   --panel-veil: 0.42;
    --class-surface: rgba(16, 16, 16, 0.98);
    --class-surface-raised: rgba(27, 27, 27, 0.99);
    --class-border: rgba(255, 255, 255, 0.15);

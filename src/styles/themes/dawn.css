@@ -23,7 +23,6 @@ html[data-theme="dawn"] {
    --overlay-surface: rgba(246, 241, 239, 0.98);
    --backdrop: rgba(46, 28, 52, 0.42);
    --backdrop-strong: rgba(46, 28, 52, 0.46);
-   --panel-veil: 0.72;
    --frame-veil: 0.95;
    --class-surface: rgba(250, 246, 243, 0.95);
    --class-surface-raised: rgba(255, 251, 248, 0.99);

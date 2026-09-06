@@ -1,6 +1,4 @@
 .toggle-switch {
-   --toggle-switch-spring: cubic-bezier(0.22, 1.7, 0.36, 1);
-
    display: inline-grid;
    flex: 0 0 auto;
    place-items: center;
@@ -37,7 +35,7 @@
    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.28);
    transform: translateX(0);
    transition:
-      transform 340ms var(--toggle-switch-spring),
+      transform 340ms var(--spring),
       background-color 220ms ease-out,
       box-shadow 220ms ease-out;
 }
@@ -51,7 +49,7 @@
    transform: scale(0.35);
    transition:
       opacity 160ms ease-out,
-      transform 280ms var(--toggle-switch-spring);
+      transform 280ms var(--spring);
 }
 
 .toggle-switch[data-checked="true"] .toggle-switch__track {

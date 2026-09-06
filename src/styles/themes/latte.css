@@ -25,7 +25,6 @@ html[data-theme="latte"] {
    --overlay-surface: rgba(246, 241, 233, 0.98);
    --backdrop: rgba(26, 16, 8, 0.44);
    --backdrop-strong: rgba(26, 16, 8, 0.5);
-   --panel-veil: 0.66;
    --frame-veil: 0.94;
    --class-surface: rgba(250, 247, 241, 0.92);
    --class-surface-raised: rgb(255, 251, 245);

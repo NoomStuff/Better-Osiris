@@ -1,4 +1,11 @@
 .icon-button {
+   /* Palette overridable by context: the chrome layer rethemes the mobile bar's buttons. */
+   --ib-line: var(--line);
+   --ib-line-hover: var(--line-strong);
+   --ib-bg: rgba(var(--highlight-rgb), 0.035);
+   --ib-bg-hover: rgba(var(--accent-rgb), 0.14);
+   --ib-text: var(--text-strong);
+
    position: relative;
    width: 36px;
    height: 36px;
@@ -20,12 +27,12 @@
 .icon-button__surface {
    width: 100%;
    height: 100%;
-   border: 2px solid var(--line);
+   border: 2px solid var(--ib-line);
    border-radius: 10px;
    display: inline-flex;
    align-items: center;
    justify-content: center;
-   background: rgba(var(--highlight-rgb), 0.035);
+   background: var(--ib-bg);
    color: inherit;
    pointer-events: none;
    transition:
@@ -35,8 +42,8 @@
       color 220ms ease-out;
 }
 
-.icon-button--ghost .icon-button__surface {
-   background: transparent;
+.icon-button--ghost {
+   --ib-bg: transparent;
 }
 
 .icon-button:disabled {
@@ -44,31 +51,26 @@
    opacity: 0.4;
 }
 
-.icon-button:is(:hover, :focus-visible, [data-tooltip-open="true"], [data-shortcut-active="true"]):not(:disabled):not(.is-selected) .icon-button__surface {
-   border-color: var(--line-strong);
-   background: rgba(var(--accent-rgb), 0.14);
-   color: var(--text-strong);
+.icon-button:is(:hover, :focus-visible, [data-tooltip-open="true"], [data-shortcut-active="true"]):not(:disabled) .icon-button__surface {
+   border-color: var(--ib-line-hover);
+   background: var(--ib-bg-hover);
+   color: var(--ib-text);
    transition:
       transform 260ms var(--bounce-overshoot),
       border-color 0s,
       background-color 0s,
       color 0s;
+}
+
+.icon-button.is-selected {
+   --ib-line: rgba(var(--accent-rgb), 0.28);
+   --ib-line-hover: rgba(var(--accent-rgb), 0.45);
+   --ib-bg: rgba(var(--accent-rgb), 0.12);
+   --ib-bg-hover: rgba(var(--accent-rgb), 0.12);
 }
 
 .icon-button.is-selected .icon-button__surface {
-   border-color: rgba(var(--accent-rgb), 0.28);
-   background: rgba(var(--accent-rgb), 0.12);
-   color: var(--text-strong);
-}
-
-.icon-button.is-selected:is(:hover, :focus-visible, [data-tooltip-open="true"], [data-shortcut-active="true"]):not(:disabled) .icon-button__surface {
-   border-color: rgba(var(--accent-rgb), 0.45);
-   background: rgba(var(--accent-rgb), 0.12);
-   transition:
-      transform 260ms var(--bounce-overshoot),
-      border-color 0s,
-      background-color 0s,
-      color 0s;
+   color: var(--ib-text);
 }
 
 .icon-button:is(:active, [data-shortcut-active="true"]):not(:disabled) .icon-button__surface {

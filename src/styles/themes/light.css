@@ -22,7 +22,6 @@ html[data-theme="light"] {
    --overlay-surface: rgba(255, 255, 255, 0.97);
    --backdrop: rgba(24, 32, 52, 0.42);
    --backdrop-strong: rgba(24, 32, 52, 0.46);
-   --panel-veil: 0.62;
    --class-surface: rgba(255, 255, 255, 0.96);
    --class-surface-raised: rgba(255, 255, 255, 1);
    --class-border: rgba(28, 42, 84, 0.16);

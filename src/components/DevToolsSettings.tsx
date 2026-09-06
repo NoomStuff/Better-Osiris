@@ -1,6 +1,7 @@
 import { getClassNotificationBodies, requestNotificationPermission } from "../lib/classNotifications";
 import type { DevClassStatusPreviewMode } from "../lib/devStatusPreview";
 import { DEV_CLASS_STATUS_PREVIEW_MODES } from "../lib/devStatusPreview";
+import { formatClock } from "../lib/date";
 import { notifyError, notifySuccess, notifyWarning } from "../lib/notyf";
 import type { SessionClassDiff } from "../lib/classDiffs";
 import type { ClassSnapshot } from "../types/weeks";
@@ -35,17 +36,13 @@ export function DevToolsSettings({
    const perceivedMinutes = perceivedNow.getHours() * 60 + perceivedNow.getMinutes();
 
    const changeDate = (value: string) => {
-      const [yearText, monthText, dayText] = value.split("-");
-      const year = Number(yearText);
-      const month = Number(monthText);
-      const day = Number(dayText);
-
-      if ([year, month, day].some((valuePart) => Number.isNaN(valuePart))) {
+      const [yearText, monthText, dayText] = /^(\d+)-(\d+)-(\d+)$/.exec(value)?.slice(1) ?? [];
+      if (yearText === undefined || monthText === undefined || dayText === undefined) {
          return;
       }
 
       const nextDate = new Date(perceivedNow);
-      nextDate.setFullYear(year, month - 1, day);
+      nextDate.setFullYear(Number(yearText), Number(monthText) - 1, Number(dayText));
       onChangeTimeOverride(nextDate);
    };
 
@@ -113,7 +110,7 @@ export function DevToolsSettings({
                      max={DAY_MINUTES - 1}
                      step={1}
                      value={Math.min(perceivedMinutes, DAY_MINUTES - 1)}
-                     formatValue={formatSliderLabel}
+                     formatValue={formatClock}
                      onChange={changeTime}
                   />
                   <div className="devtools-ticks" aria-hidden="true">
@@ -181,14 +178,6 @@ function createSampleClassDiff(perceivedNow: Date): SessionClassDiff {
    const previousClass: ClassSnapshot = { ...schoolClass, room: "A101", status: "scheduled" };
 
    return { schoolClass: { ...schoolClass, status: "changed", previous: previousClass }, previousClass, status: "changed" };
-}
-
-function formatSliderLabel(minutes: number) {
-   return `${formatClockPart(Math.floor(minutes / 60))}:${formatClockPart(minutes % 60)}`;
-}
-
-function formatClockPart(value: number) {
-   return String(value).padStart(2, "0");
 }
 
 function formatDateInputValue(date: Date) {

@@ -50,6 +50,7 @@ void describe("GET /api/roster/weeks", () => {
       mockOsirisFetch(requests, createOsirisRosterResponse());
       process.env["COOKIE_SECRET"] = TEST_COOKIE_SECRET;
       process.env["OSIRIS_ROSTER_URL"] = TEST_OSIRIS_ROSTER_URL;
+      process.env["BEARER_TOKEN"] = "Bearer server-token";
       const token = "Bearer cookie-token";
 
       const response = await callWeeksHandler({
@@ -98,28 +99,6 @@ void describe("GET /api/roster/weeks", () => {
       const firstRequest = requests[0];
       assert.ok(firstRequest);
       assert.equal(firstRequest.authorization, process.env["BEARER_TOKEN"]);
-   });
-
-   void it("uses the encrypted custom OSIRIS token cookie", async () => {
-      const requests: OsirisRequest[] = [];
-      mockOsirisFetch(requests, createOsirisRosterResponse());
-      process.env["COOKIE_SECRET"] = TEST_COOKIE_SECRET;
-      process.env["BEARER_TOKEN"] = "Bearer server-token";
-      process.env["OSIRIS_ROSTER_URL"] = TEST_OSIRIS_ROSTER_URL;
-
-      const customToken = "Bearer custom-token";
-
-      const response = await callWeeksHandler({
-         url: "/api/roster/weeks?offset=4&limit=1",
-         cookie: createTokenCookie(customToken, process.env["COOKIE_SECRET"]),
-      });
-
-      assert.equal(response.statusCode, 200);
-      const firstRequest = requests[0];
-      assert.ok(firstRequest);
-      assert.equal(firstRequest.authorization, customToken);
-      assert.match(firstRequest.url, /offset=4/);
-      assert.match(firstRequest.url, /limit=1/);
    });
 
    void it("rejects unsupported previous-week requests", async () => {

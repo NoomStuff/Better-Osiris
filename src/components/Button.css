@@ -1,4 +1,12 @@
 .button {
+   /* A button reads its whole palette from these. Contexts (banners, pickers, error screens)
+      retheme buttons by overriding them on an ancestor instead of restyling .button__surface. */
+   --btn-line: var(--line);
+   --btn-line-hover: var(--line-strong);
+   --btn-bg: rgba(var(--highlight-rgb), 0.035);
+   --btn-bg-hover: rgba(var(--highlight-rgb), 0.06);
+   --btn-text: var(--text-strong);
+
    position: relative;
    display: inline-flex;
    color: inherit;
@@ -17,10 +25,10 @@
    justify-content: center;
    min-height: 38px;
    padding: 0 14px;
-   border: 2px solid var(--line);
+   border: 2px solid var(--btn-line);
    border-radius: 10px;
-   background: rgba(var(--highlight-rgb), 0.035);
-   color: var(--text-strong);
+   background: var(--btn-bg);
+   color: var(--btn-text);
    font-size: 0.8rem;
    font-weight: 700;
    pointer-events: none;
@@ -34,8 +42,8 @@
 
 .button:hover .button__control:not(:disabled) .button__surface,
 .button__control:focus-visible .button__surface {
-   border-color: var(--line-strong);
-   background: rgba(var(--highlight-rgb), 0.06);
+   border-color: var(--btn-line-hover);
+   background: var(--btn-bg-hover);
    box-shadow: 0 5px 12px rgba(0, 0, 0, 0.14);
    transform: translateY(-1px);
 }
@@ -52,32 +60,24 @@
    opacity: 0.45;
 }
 
-.button--primary .button__surface {
-   border-color: rgba(var(--accent-rgb), 0.45);
-   background: rgba(var(--accent-rgb), 0.14);
+.button--primary {
+   --btn-line: rgba(var(--accent-rgb), 0.45);
+   --btn-bg: rgba(var(--accent-rgb), 0.14);
 }
 
-.button--danger .button__surface {
-   border-color: rgba(var(--danger-rgb), 0.58);
-   background: rgba(var(--danger-rgb), 0.14);
-   color: var(--danger-bright);
+.button--danger {
+   --btn-line: rgba(var(--danger-rgb), 0.58);
+   --btn-bg: rgba(var(--danger-rgb), 0.14);
+   --btn-text: var(--danger-bright);
+   --btn-line-hover: rgba(var(--danger-rgb), 0.76);
+   --btn-bg-hover: rgba(var(--danger-rgb), 0.22);
 }
 
-.button--danger:hover .button__control:not(:disabled) .button__surface,
-.button--danger .button__control:focus-visible .button__surface {
-   border-color: rgba(var(--danger-rgb), 0.76);
-   background: rgba(var(--danger-rgb), 0.22);
-}
-
-.button--warning .button__surface {
-   border-color: rgba(var(--warning-rgb), 0.5);
-   background: rgba(var(--warning-rgb), 0.14);
-}
-
-.button--warning:hover .button__control:not(:disabled) .button__surface,
-.button--warning .button__control:focus-visible .button__surface {
-   border-color: rgba(var(--warning-rgb), 0.75);
-   background: rgba(var(--warning-rgb), 0.22);
+.button--warning {
+   --btn-line: rgba(var(--warning-rgb), 0.5);
+   --btn-bg: rgba(var(--warning-rgb), 0.14);
+   --btn-line-hover: rgba(var(--warning-rgb), 0.75);
+   --btn-bg-hover: rgba(var(--warning-rgb), 0.22);
 }
 
 .button--compact .button__surface {

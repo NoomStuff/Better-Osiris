@@ -62,7 +62,7 @@
 }
 
 .grid-body[data-animate="true"] {
-   animation: grid-zoom-settle 360ms cubic-bezier(0.22, 1, 0.36, 1) both;
+   animation: grid-zoom-settle 360ms var(--ease-out) both;
 }
 
 .grid-scroll-content {
@@ -189,7 +189,7 @@
 .grid-class {
    position: absolute;
    z-index: 4;
-   padding: 7px 7px;
+   padding: 7px;
    border-radius: 8px;
    border: 2px solid var(--class-border);
    border-left: 3px solid rgba(var(--accent-rgb), 0.72);
@@ -227,7 +227,7 @@
    border-left-color: var(--warning);
 }
 
-.grid-class:is(.status-cancelled, .status-removed) {
+.grid-class.status-cancelled {
    border-color: rgba(var(--danger-rgb), 0.34);
    border-left-color: var(--danger);
    background: var(--class-surface-cancelled);
@@ -369,7 +369,6 @@
 
    .grid-class {
       padding: 4px;
-      border-radius: 8px;
    }
 
    .grid-class strong {

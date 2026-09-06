@@ -78,9 +78,7 @@ export function notifySuccess(message = "Success") {
    });
 }
 
-export function notifyWarning(message: string, log = false, ...args: unknown[]) {
-   if (log) console.warn(message, ...args);
-
+export function notifyWarning(message: string) {
    openToast({
       type: "warning",
       message: escapeHtml(message),

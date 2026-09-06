@@ -1,8 +1,8 @@
 import { useLayoutEffect, useRef } from "react";
 import { triggerShortcutActivation } from "./useShortcutActivation";
 
-export const HOLD_REPEAT_INITIAL_DELAY_MS = 500;
-export const HOLD_REPEAT_INTERVAL_MS = 150;
+const HOLD_REPEAT_INITIAL_DELAY_MS = 500;
+const HOLD_REPEAT_INTERVAL_MS = 150;
 
 export interface KeyboardShortcut {
    id: string;

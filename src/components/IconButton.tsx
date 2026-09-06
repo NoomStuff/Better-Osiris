@@ -44,8 +44,7 @@ export function IconButton({
 }: IconButtonProps) {
    const tooltipId = useId();
    const tooltipText = tooltip ?? label;
-   const hasTooltip = Boolean(tooltipText);
-   const { hideTooltip, isTooltipEnabled, isTooltipOpen, showTooltip, showTooltipForFocus } = useDelayedTooltip({ disabled, enabled: hasTooltip });
+   const { hideTooltip, isTooltipEnabled, isTooltipOpen, showTooltip, showTooltipForFocus } = useDelayedTooltip({ disabled });
    const isShortcutActive = useShortcutActivation(activationId);
    const anchorName = getTooltipAnchorName(tooltipId);
 

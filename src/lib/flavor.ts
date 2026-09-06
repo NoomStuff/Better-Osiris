@@ -1,10 +1,4 @@
-export interface EmptyDayMessage {
-   icon: string;
-   title: string;
-   detail: string;
-}
-
-export interface EmptyWeekMessage {
+interface EmptyMessage {
    icon: string;
    title: string;
    detail: string;
@@ -61,9 +55,7 @@ const EMPTY_TODAY_MESSAGES = [
       title: "All set for today.",
       detail: "You can clock out already. You have no classes scheduled right now.",
    },
-] as const satisfies readonly EmptyDayMessage[];
-
-const EMPTY_DAY_MESSAGE = "No classes scheduled.";
+] as const satisfies readonly EmptyMessage[];
 
 const EMPTY_WEEK_MESSAGES = [
    {
@@ -116,7 +108,7 @@ const EMPTY_WEEK_MESSAGES = [
       title: "A quiet week.",
       detail: "No classes are scheduled. Your schedule is taking it easy.",
    },
-] as const satisfies readonly EmptyWeekMessage[];
+] as const satisfies readonly EmptyMessage[];
 
 function getStableIndex(seed: string, length: number) {
    let hash = 0;
@@ -160,15 +152,11 @@ function getWeekMessageIndex(weekStart: string) {
    return indexes[weekPosition] ?? 0;
 }
 
-export function getEmptyTodayMessage(dayKey: string): EmptyDayMessage {
+export function getEmptyTodayMessage(dayKey: string): EmptyMessage {
    return EMPTY_TODAY_MESSAGES[getStableIndex(dayKey, EMPTY_TODAY_MESSAGES.length)] ?? EMPTY_TODAY_MESSAGES[0];
 }
 
-export function getEmptyDayMessage(): string {
-   return EMPTY_DAY_MESSAGE;
-}
-
-export function getEmptyWeekMessage(weekStart: string): EmptyWeekMessage {
+export function getEmptyWeekMessage(weekStart: string): EmptyMessage {
    return EMPTY_WEEK_MESSAGES[getWeekMessageIndex(weekStart)] ?? EMPTY_WEEK_MESSAGES[0];
 }
 
