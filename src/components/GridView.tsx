@@ -25,7 +25,7 @@ const zoomOptions = [
 const BASE_INTERVAL = zoomOptions[2].interval;
 /** Below this rendered height a schoolClass switches to the compact one-line layout. */
 const COMPACT_HEIGHT_PX = 85;
-/** Below this rendered height even the compact layout drops the room label. */
+/** Below this rendered height secondary subject text is hidden. */
 const TINY_HEIGHT_PX = 64;
 /** Per-second rate of the hover guide's chase toward the cursor; about 95% of the way in 170ms. */
 const GUIDE_CHASE_RATE = 18;
@@ -244,11 +244,10 @@ export function GridView({ days, zoom: zoomId, hours, now, onSelectClass }: Grid
                            const densityClass = isCompact ? "is-tight" : "is-roomy";
                            const timeRange = `${timeLabel.format(schoolClass.startDate)}-${timeLabel.format(schoolClass.endDate)}`;
                            const classLabel = schoolClass.title || schoolClass.subject;
-                           const subtitleLabel = schoolClass.subject;
+                           const subtitleLabel = schoolClass.subject !== classLabel ? schoolClass.subject : "";
                            const roomLocationLabel = getClassLocationLabel(schoolClass);
-                           const showLocation = !isCompact && Boolean(roomLocationLabel);
+                           const teacherLocationLabel = [schoolClass.teacher, roomLocationLabel].filter(Boolean).join(DETAILS_SEPARATOR);
                            const isTiny = visibleHeight > 0 && visibleHeight < TINY_HEIGHT_PX;
-                           const compactParts = [timeRange, roomLocationLabel].filter(Boolean);
 
                            const accessibleLabel = [
                               classLabel,
@@ -279,12 +278,15 @@ export function GridView({ days, zoom: zoomId, hours, now, onSelectClass }: Grid
                               >
                                  <ClassStatusMarker status={schoolClass.status} />
                                  <strong>{classLabel}</strong>
-                                 {subtitleLabel ? <span className="grid-class__title">{subtitleLabel}</span> : null}
                                  <span className="grid-class__meta">
-                                    {showLocation ? <small className="grid-class__meta-place">{roomLocationLabel}</small> : null}
-                                    <small className="grid-class__meta-time">{timeRange}</small>
-                                    <small className="grid-class__meta-compact">{compactParts.join(DETAILS_SEPARATOR)}</small>
+                                    <span className="grid-class__meta-time">{timeRange}</span>
+                                    {teacherLocationLabel ? (
+                                       <span className="grid-class__meta-teacher" title={teacherLocationLabel}>
+                                          {teacherLocationLabel}
+                                       </span>
+                                    ) : null}
                                  </span>
+                                 {subtitleLabel ? <small className="grid-class__title">{subtitleLabel}</small> : null}
                               </button>
                            );
                         })}

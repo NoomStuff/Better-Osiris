@@ -9,7 +9,7 @@ import type { AgendaFoldingMode } from "../hooks/useAgendaFoldingPreference";
 import { useOverlayScrollbar } from "../hooks/useOverlayScrollbar";
 import { notifyError, notifySuccess, notifyWarning } from "../lib/notyf";
 import { OSIRIS_BEARER_TOKEN_HELP_URL } from "../lib/osirisTokenHelp";
-import { getThemeMode, THEMES_BY_MODE, type ThemeId, type ThemeMode } from "../lib/theme";
+import { getDeviceThemeMode, THEMES_BY_MODE, type ThemeId, type ThemeMode } from "../lib/theme";
 import { DEFAULT_SHOWN_WEEKDAYS, ISO_WEEKDAYS } from "../lib/weekLayout";
 import { ActionButtons, ActionSelector, type ActionOption } from "./ActionGroup";
 import { Button } from "./Button";
@@ -105,9 +105,14 @@ export function SettingsDialog({ isOpen, onClose, notifications, preferences, ac
    const [token, setToken] = useState("");
    const contentRef = useOverlayScrollbar();
    const [isClosing, setIsClosing] = useState(false);
-   const [isResetConfirmOpen, setIsResetConfirmOpen] = useState(false);
-   const [themeMode, setThemeMode] = useState<ThemeMode>(() => getThemeMode(theme));
+   const [isRemoveConfirmOpen, setIsRemoveConfirmOpen] = useState(false);
+   const [themeMode, setThemeMode] = useState<ThemeMode>(getDeviceThemeMode);
    const [animateThemePicker, setAnimateThemePicker] = useState(false);
+   const [wasOpen, setWasOpen] = useState(isOpen);
+   if (wasOpen !== isOpen) {
+      setWasOpen(isOpen);
+      if (isOpen) setThemeMode(getDeviceThemeMode());
+   }
    const visibleThemes = THEMES_BY_MODE[themeMode];
    const closeTimerRef = useRef<number | null>(null);
    const hasCustomToken = tokenSettings?.hasCustomToken === true;
@@ -143,12 +148,11 @@ export function SettingsDialog({ isOpen, onClose, notifications, preferences, ac
       closeTimerRef.current = window.setTimeout(() => {
          setToken("");
          onTokenDraftChange();
-         setThemeMode(getThemeMode(theme));
          setAnimateThemePicker(false);
          setIsClosing(false);
          onClose();
       }, PANEL_CLOSE_MS);
-   }, [isClosing, onClose, onTokenDraftChange, theme]);
+   }, [isClosing, onClose, onTokenDraftChange]);
 
    useEffect(() => {
       return () => {
@@ -181,14 +185,14 @@ export function SettingsDialog({ isOpen, onClose, notifications, preferences, ac
    const handleClear = useCallback(async () => {
       try {
          await onClearToken();
-         setIsResetConfirmOpen(false);
+         setIsRemoveConfirmOpen(false);
          notifySuccess("Osiris token removed successfully.");
       } catch (requestError) {
          notifyError(requestError, "Failed to remove Osiris token.");
       }
    }, [onClearToken]);
 
-   const closeResetConfirm = useCallback(() => setIsResetConfirmOpen(false), []);
+   const closeRemoveConfirm = useCallback(() => setIsRemoveConfirmOpen(false), []);
    const confirmClear = useCallback(() => void handleClear(), [handleClear]);
    const changeThemeMode = useCallback(
       (nextMode: ThemeMode) => {
@@ -433,10 +437,10 @@ export function SettingsDialog({ isOpen, onClose, notifications, preferences, ac
                            disabled={isCheckingToken || !hasCustomToken}
                            onClick={(event) => {
                               event.currentTarget.focus({ preventScroll: true });
-                              setIsResetConfirmOpen(true);
+                              setIsRemoveConfirmOpen(true);
                            }}
                         >
-                           Reset
+                           Remove
                         </Button>
                      </div>
                   </form>
@@ -457,13 +461,13 @@ export function SettingsDialog({ isOpen, onClose, notifications, preferences, ac
          </OverlayPanel>
 
          <ConfirmDialog
-            isOpen={isResetConfirmOpen}
-            title="Reset bearer token?"
+            isOpen={isRemoveConfirmOpen}
+            title="Remove bearer token?"
             detail="This will remove the saved bearer token and reload the roster."
-            confirmLabel="Reset token"
+            confirmLabel="Remove token"
             variant="danger"
             isConfirming={isTokenLoading}
-            onCancel={closeResetConfirm}
+            onCancel={closeRemoveConfirm}
             onConfirm={confirmClear}
          />
       </>

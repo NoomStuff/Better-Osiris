@@ -41,7 +41,7 @@ export type ThemeId = (typeof THEMES_BY_MODE)[ThemeMode][number]["id"];
 
 const ALL_THEMES: readonly Theme[] = [...THEMES_BY_MODE.dark, ...THEMES_BY_MODE.light];
 
-export const DEFAULT_THEME: ThemeId = "dark";
+export const DEFAULT_THEME = "dark" satisfies ThemeId;
 export const THEME_STORAGE_KEY = "roster-theme";
 
 const THEME_FADE_CLASS = "theme-fade";
@@ -53,18 +53,14 @@ export function isThemeId(value: string | null): value is ThemeId {
    return ALL_THEMES.some((theme) => theme.id === value);
 }
 
-export function getThemeMode(theme: ThemeId): ThemeMode {
-   return THEMES_BY_MODE.light.some((option) => option.id === theme) ? "light" : "dark";
-}
-
 export function getStoredTheme(): ThemeId {
    const stored = readBrowserStorage("localStorage", THEME_STORAGE_KEY);
-   return isThemeId(stored) ? stored : getPreferredDefaultTheme();
+   return isThemeId(stored) ? stored : getDeviceThemeMode();
 }
 
 /* Without a saved preference, the mode primaries (Dark and Light) double as the defaults:
    follow the system color scheme, falling back to dark when it cannot be read. */
-function getPreferredDefaultTheme(): ThemeId {
+export function getDeviceThemeMode(): ThemeMode {
    if (typeof window === "undefined") {
       return DEFAULT_THEME;
    }

@@ -257,8 +257,8 @@
 
 .grid-class__title {
    min-height: 0;
-   color: var(--text-dim);
-   font-size: 0.74rem;
+   color: var(--text-muted);
+   font-size: 0.66rem;
    display: -webkit-box;
    line-clamp: 2;
    -webkit-line-clamp: 2;
@@ -267,12 +267,12 @@
 }
 
 .grid-class__meta {
-   margin-top: auto;
+   flex: 0 0 auto;
    display: grid;
    gap: 0;
 }
 
-.grid-class__meta small {
+.grid-class__meta > span {
    min-width: 0;
 }
 
@@ -295,19 +295,6 @@
    display: none;
 }
 
-.grid-class.is-tight .grid-class__meta-time,
-.grid-class.is-tight .grid-class__meta-place {
-   display: none;
-}
-
-.grid-class.is-tight .grid-class__meta-compact {
-   display: block;
-}
-
-.grid-class.is-roomy .grid-class__meta-compact {
-   display: none;
-}
-
 .grid-class span {
    color: var(--text-dim);
    font-size: 0.74rem;
@@ -316,6 +303,27 @@
 .grid-class small {
    color: var(--text-muted);
    font-size: 0.66rem;
+   margin-top: auto;
+}
+
+.grid-class.is-tiny {
+   display: grid;
+   grid-template-columns: minmax(0, 1fr) auto;
+   align-content: center;
+   gap: 2px 6px;
+   line-height: 1.15;
+}
+
+.grid-class.is-tiny strong {
+   font-size: 0.82rem;
+}
+
+.grid-class.is-tiny .grid-class__meta {
+   display: contents;
+}
+
+.grid-class.is-tiny .grid-class__meta-teacher {
+   grid-column: 1 / -1;
 }
 
 @media (max-width: 900px) {

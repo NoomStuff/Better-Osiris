@@ -264,6 +264,7 @@
 .agenda-class__body strong,
 .agenda-class__body p,
 .agenda-class__body small {
+   min-height: 1lh;
    margin: 0;
    max-width: 100%;
    overflow: hidden;

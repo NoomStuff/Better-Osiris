@@ -405,10 +405,10 @@ test("settings dialog opens, resets token state, and closes", async ({ page }) =
    await expect(page.getByRole("group", { name: "Shown weekdays" }).getByRole("button", { name: "Sun", exact: true })).toHaveAttribute("aria-pressed", "true");
 
    const rosterAccess = page.getByRole("region", { name: "Roster access" });
-   await rosterAccess.getByRole("button", { name: "Reset" }).click();
-   await expect(page.getByRole("alertdialog", { name: "Reset bearer token?" })).toBeVisible();
-   await page.getByRole("button", { name: "Reset token" }).click();
-   await expect(page.getByRole("alertdialog", { name: "Reset bearer token?" })).toBeHidden();
+   await rosterAccess.getByRole("button", { name: "Remove" }).click();
+   await expect(page.getByRole("alertdialog", { name: "Remove bearer token?" })).toBeVisible();
+   await page.getByRole("button", { name: "Remove token" }).click();
+   await expect(page.getByRole("alertdialog", { name: "Remove bearer token?" })).toBeHidden();
    await expect(page.getByRole("dialog", { name: "Preferences" })).toBeVisible();
    await expect(page.getByText("No bearer token is set.")).toBeVisible();
 
@@ -477,9 +477,9 @@ test("only the topmost dialog handles Escape and focus stays contained", async (
    await page.keyboard.press("Tab");
    await expect(closeSettingsButton).toBeFocused();
 
-   const resetTokenButton = settings.getByRole("region", { name: "Roster access" }).getByRole("button", { name: "Reset" });
+   const resetTokenButton = settings.getByRole("region", { name: "Roster access" }).getByRole("button", { name: "Remove" });
    await resetTokenButton.click();
-   const confirmation = page.getByRole("alertdialog", { name: "Reset bearer token?" });
+   const confirmation = page.getByRole("alertdialog", { name: "Remove bearer token?" });
    await expect(confirmation).toBeVisible();
    await page.keyboard.press("Escape");
 
@@ -503,10 +503,10 @@ test("a confirming dialog stays topmost while its parent updates", async ({ page
    await page.goto("/");
    await page.getByRole("button", { name: "Open settings" }).click();
    const settings = page.getByRole("dialog", { name: "Preferences" });
-   await settings.getByRole("region", { name: "Roster access" }).getByRole("button", { name: "Reset" }).click();
+   await settings.getByRole("region", { name: "Roster access" }).getByRole("button", { name: "Remove" }).click();
 
-   const confirmation = page.getByRole("alertdialog", { name: "Reset bearer token?" });
-   await confirmation.getByRole("button", { name: "Reset token" }).click();
+   const confirmation = page.getByRole("alertdialog", { name: "Remove bearer token?" });
+   await confirmation.getByRole("button", { name: "Remove token" }).click();
 
    await expect(page.locator(".confirm-dialog")).not.toHaveAttribute("inert", "");
    await expect(page.locator(".settings-dialog")).toHaveAttribute("inert", "");
@@ -658,8 +658,8 @@ test("an aborted credential request cannot restore stale roster data", async ({ 
 
    await page.goto("/");
    await page.getByRole("button", { name: "Open settings" }).click();
-   await page.getByRole("region", { name: "Roster access" }).getByRole("button", { name: "Reset" }).click();
-   await page.getByRole("button", { name: "Reset token" }).click();
+   await page.getByRole("region", { name: "Roster access" }).getByRole("button", { name: "Remove" }).click();
+   await page.getByRole("button", { name: "Remove token" }).click();
    await expect(page.getByText("No bearer token is set.")).toBeVisible();
 
    releaseInitialRequest();
@@ -961,7 +961,8 @@ test("a fresh theme follows the system color scheme", async ({ page }) => {
    await expect(page.locator('meta[name="theme-color"]')).toHaveAttribute("content", "#f9fbfe");
 });
 
-test("the theme picker returns to the active theme when reopened", async ({ page }) => {
+test("the theme picker follows the device category without changing a saved theme", async ({ page }) => {
+   await page.addInitScript(() => localStorage.setItem("roster-theme", "light"));
    await page.goto("/");
    await page.getByRole("button", { name: "Open settings" }).click();
    await page.getByRole("radio", { name: "Light", exact: true }).click();
@@ -971,7 +972,12 @@ test("the theme picker returns to the active theme when reopened", async ({ page
    await page.getByRole("button", { name: "Open settings" }).click();
 
    await expect(page.getByRole("radio", { name: "Dark", exact: true })).toHaveAttribute("aria-checked", "true");
-   await expect(page.getByRole("button", { name: "Dark", exact: true })).toHaveAttribute("aria-pressed", "true");
+   await expect(page.locator("html")).toHaveAttribute("data-theme", "light");
+   await page.locator(".settings-dialog__header").getByRole("button", { name: "Close settings" }).click();
+   await expect(page.getByRole("dialog", { name: "Preferences" })).toBeHidden();
+   await page.emulateMedia({ colorScheme: "light" });
+   await page.getByRole("button", { name: "Open settings" }).click();
+   await expect(page.getByRole("radio", { name: "Light", exact: true })).toHaveAttribute("aria-checked", "true");
 });
 
 test("time indicators are visible and positioned for the fixed current time", async ({ page }) => {

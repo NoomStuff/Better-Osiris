@@ -171,7 +171,8 @@ export function AgendaView({ days, expandedDays, animate, now, timeOverride, onT
                         ) : (
                            group.classes.map((schoolClass, classIndex) => {
                               const locationLabel = getClassLocationLabel(schoolClass);
-                              const teacherLocationLabel = locationLabel ? `${schoolClass.teacher}${DETAILS_SEPARATOR}${locationLabel}` : schoolClass.teacher;
+                              const teacherLocationLabel = [schoolClass.teacher, locationLabel].filter(Boolean).join(DETAILS_SEPARATOR);
+                              const classLabel = schoolClass.title || schoolClass.subject;
                               const breakSegment = timeline.breaksBefore.get(schoolClass.id);
                               const breaktimeLabel = breakSegment ? getBreaktimeLabel(breakSegment) : null;
                               const breakIcon = breakSegment ? getBreakIcon(breakSegment.startDate, breakSegment.endDate, classIndex) : "";
@@ -204,9 +205,9 @@ export function AgendaView({ days, expandedDays, animate, now, timeOverride, onT
                                        </div>
 
                                        <div className="agenda-class__body">
-                                          <strong title={schoolClass.title}>{schoolClass.title}</strong>
-                                          <p title={schoolClass.subject}>{schoolClass.subject}</p>
-                                          <small title={teacherLocationLabel}>{teacherLocationLabel}</small>
+                                          <strong title={classLabel}>{classLabel}</strong>
+                                          <p title={teacherLocationLabel}>{teacherLocationLabel}</p>
+                                          <small title={schoolClass.subject}>{schoolClass.subject}</small>
                                        </div>
 
                                        <i className="fa-solid fa-angle-right agenda-class__icon" />
