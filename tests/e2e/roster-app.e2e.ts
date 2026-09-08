@@ -1832,3 +1832,18 @@ test("an older overlapping batch cannot overwrite a newer week refresh", async (
       .toEqual({ fetchedAt: baseline + 2000, room: "FRESH_ROOM", olderFetchedAt: baseline + 1000 });
    await expect(page.locator(".weekbar__label")).toHaveText("In 5 weeks");
 });
+
+test("every theme picker icon has an SVG mask", async ({ page }) => {
+   await page.goto("/");
+   await page.getByRole("button", { name: "Open settings" }).click();
+   for (const [mode, themes] of [
+      ["Dark", THEMES_BY_MODE.dark],
+      ["Light", THEMES_BY_MODE.light],
+   ] as const) {
+      await page.getByRole("radio", { name: mode, exact: true }).click();
+      for (const theme of themes) {
+         const icon = page.getByRole("button", { name: theme.label, exact: true }).locator("i");
+         await expect(icon, `${theme.label} icon`).toHaveCSS("mask-image", /url\("data:image\/svg\+xml,/);
+      }
+   }
+});

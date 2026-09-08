@@ -183,6 +183,10 @@
    --theme-icon-animation: theme-icon-toss 760ms cubic-bezier(0.2, 0.8, 0.3, 1.12);
 }
 
+.theme-picker__option[data-theme-id="meadow"] {
+   --theme-icon-animation: theme-icon-unfold 620ms cubic-bezier(0.2, 0.8, 0.3, 1.12);
+}
+
 .theme-picker__option:is(:hover, :focus-visible) .theme-picker__swatch i {
    animation: var(--theme-icon-animation);
 }
@@ -573,6 +577,24 @@
 
    100% {
       transform: translate(0, 0) rotate(0deg) scale(1, 1);
+   }
+}
+
+@keyframes theme-icon-unfold {
+   0% {
+      transform: rotate(-7deg) scaleX(0.78);
+   }
+
+   38% {
+      transform: rotate(4deg) scaleX(1.14);
+   }
+
+   68% {
+      transform: rotate(-2deg) scaleX(0.97);
+   }
+
+   100% {
+      transform: rotate(0deg) scaleX(1);
    }
 }
 

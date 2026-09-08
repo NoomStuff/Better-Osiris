@@ -1,0 +1,35 @@
+/* Meadow: a sunlit campus map. Cream roster paper sits on grass, with olive routes and
+   ochre markers instead of the usual dark chrome framing a light interface. */
+html[data-theme="meadow"] {
+   color-scheme: light;
+
+   --page-canvas: #c6da82;
+   --page-background:
+      radial-gradient(ellipse at 14% -8%, rgba(255, 249, 213, 0.66), transparent 31%),
+      radial-gradient(ellipse at 91% 106%, rgba(94, 130, 58, 0.26), transparent 38%), linear-gradient(145deg, #dceba6 0%, #b9d174 54%, #87a755 100%);
+
+   --line: rgba(73, 92, 47, 0.23);
+   --line-strong: rgba(73, 92, 47, 0.46);
+   --text-strong: #263318;
+   --text-dim: #465637;
+   --text-muted: #65754d;
+   --accent: #496f2e;
+   --accent-rgb: 73, 111, 46;
+   --warning: #9d5c19;
+   --warning-rgb: 157, 92, 25;
+   --danger: #b43b32;
+   --danger-rgb: 180, 59, 50;
+   --danger-bright: #8e2923;
+   --surface-rgb: 248, 238, 201;
+   --highlight-rgb: 73, 111, 46;
+   --overlay-surface: rgba(255, 250, 227, 0.99);
+   --backdrop: rgba(36, 51, 22, 0.42);
+   --backdrop-strong: rgba(36, 51, 22, 0.5);
+   --frame-veil: 0.95;
+   --class-surface: rgba(255, 250, 224, 0.96);
+   --class-surface-raised: rgb(255, 253, 237);
+   --class-border: rgba(73, 92, 47, 0.24);
+   --class-border-raised: rgba(73, 111, 46, 0.48);
+   --class-surface-cancelled: rgba(180, 59, 50, 0.09);
+   --shadow: 0 22px 66px rgba(54, 77, 28, 0.26);
+}

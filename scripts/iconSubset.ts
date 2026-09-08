@@ -10,6 +10,14 @@ export function iconSubset(): Plugin {
       resolveId(source) {
          if (source === id) return "\0" + id;
       },
+      handleHotUpdate({ file, server, modules }) {
+         if (!/\.(ts|tsx)$/.test(file) || file.endsWith(".test.ts")) return;
+         // References can change without an import of this virtual stylesheet changing.
+         const icons = server.moduleGraph.getModuleById("\0" + id);
+         if (!icons) return;
+         server.moduleGraph.invalidateModule(icons);
+         return [...new Set([...modules, icons])];
+      },
       load(source) {
          if (source !== "\0" + id) return;
          const names = new Set<string>();

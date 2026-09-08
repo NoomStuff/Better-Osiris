@@ -34,6 +34,7 @@ export const THEMES_BY_MODE = {
       { id: "bloom", label: "Bloom", icon: "fa-solid fa-spa", swatchBackground: "#d5eadb", swatchIconColor: "#741763" },
       { id: "paper", label: "Paper", icon: "fa-solid fa-newspaper", swatchBackground: "#eadfc2", swatchIconColor: "#8a361f" },
       { id: "osiris", label: "Osiris", icon: "fa-solid fa-graduation-cap", swatchBackground: "#eef0f4", swatchIconColor: "#5e2170" },
+      { id: "meadow", label: "Meadow", icon: "fa-solid fa-map", swatchBackground: "#dceba6", swatchIconColor: "#496f2e" },
    ],
 } as const satisfies Record<ThemeMode, readonly Theme[]>;
 
