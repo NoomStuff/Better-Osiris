@@ -25,6 +25,7 @@ import "./styles/themes/flare.css";
 import "./styles/themes/bloom.css";
 import "./styles/themes/paper.css";
 import "./styles/themes/osiris.css";
+import "./styles/themes/meadow.css";
 
 window.addEventListener("error", (event) => {
    notifyError(event.error ?? event.message, "Unexpected app error.");
