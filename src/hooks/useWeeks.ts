@@ -54,6 +54,7 @@ export function useWeeks(offset: number, options: WeekRepositoryOptions) {
    const firstOffset = Math.max(0, sourceShift ?? 0);
    const previousWeekOffset = clearCache ? null : getAdjacentWeekOffset(offset, -1, entries, sourceShift);
    const nextWeekOffset = clearCache ? null : getAdjacentWeekOffset(offset, 1, entries, sourceShift);
+   const knownWeeks = useMemo(() => (clearCache ? [] : Object.values(entries).flatMap((entry) => (entry?.data ? [entry.data] : []))), [entries, clearCache]);
    const initialWeeks = useMemo(
       () => Array.from({ length: 5 }, (_, index) => entries[firstOffset + index]?.data).filter((week): week is Week => Boolean(week)),
       [entries, firstOffset]
@@ -62,6 +63,7 @@ export function useWeeks(offset: number, options: WeekRepositoryOptions) {
       data,
       error,
       initialWeeks,
+      knownWeeks,
       homeWeekOffset: home?.offset ?? null,
       homePendingOffset: home?.pendingOffset ?? null,
       previousWeekOffset,

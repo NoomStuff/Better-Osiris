@@ -13,7 +13,7 @@ import { SettingsDialog } from "./components/SettingsDialog";
 import { WeekNavigator } from "./components/WeekNavigator";
 import { useDevPreview } from "./hooks/useDevPreview";
 import { useAppKeyboardShortcuts } from "./hooks/useAppKeyboardShortcuts";
-import { useAgendaState } from "./hooks/useAgendaState";
+import { getNextClassDay, useAgendaState } from "./hooks/useAgendaState";
 import { useAgendaFoldingPreference } from "./hooks/useAgendaFoldingPreference";
 import { useClassNotificationsPreference } from "./hooks/useClassNotificationsPreference";
 import { useOsirisTokenSettings } from "./hooks/useOsirisTokenSettings";
@@ -83,6 +83,7 @@ export default function App() {
       data,
       error,
       initialWeeks,
+      knownWeeks,
       homeWeekOffset,
       homePendingOffset,
       previousWeekOffset,
@@ -104,6 +105,10 @@ export default function App() {
       timeZone: rosterTimeZone.declaredTimeZone,
    });
    const perceivedNow = devPreview.perceivedNow;
+   const nextClassDay = useMemo(
+      () => (rosterTimeZone.isKnown ? getNextClassDay(knownWeeks, perceivedNow) : null),
+      [knownWeeks, perceivedNow, rosterTimeZone.isKnown]
+   );
    const perceivedDayKey = rosterTimeZone.isKnown ? toDayKey(perceivedNow) : null;
    const perceivedDay = useMemo(() => (perceivedDayKey ? parseIsoDateToLocal(perceivedDayKey) : null), [perceivedDayKey]);
    const displayedData = useMemo(
@@ -146,13 +151,14 @@ export default function App() {
    const isEmptyWeek = displayedData?.classes.length === 0;
    const hasBlankWeekUnderlay = !displayedData || isEmptyWeek;
    const visibleWeekdays = hasBlankWeekUnderlay ? ALL_WEEKDAYS : shownWeekdays;
-   const visibleAgendaFoldingMode = hasBlankWeekUnderlay ? "all" : agendaFoldingMode;
+   const visibleAgendaFoldingMode = hasBlankWeekUnderlay && agendaFoldingMode !== "single" ? "all" : agendaFoldingMode;
    const { allDays, visibleDays } = useWeekDays(displayedData, weekOffset, perceivedDay, visibleWeekdays);
    const { animateAgenda, collapseAllDays, expandAllDays, resetAgenda, toggleDay, visibleExpandedDays } = useAgendaState(
       visibleDays,
-      weekOffset,
       perceivedDay,
-      visibleAgendaFoldingMode
+      visibleAgendaFoldingMode,
+      weekOffset === homeWeekOffset,
+      nextClassDay
    );
 
    const hiddenDays = useMemo(() => getHiddenDaysWithClasses(allDays, shownWeekdays), [allDays, shownWeekdays]);
@@ -428,11 +434,6 @@ export default function App() {
                   action={error.isAuthRelated ? { label: "Replace token", onClick: openSettings } : { label: "Try again", onClick: refresh }}
                >
                   Fetching your latest roster went wrong: {errorDetail}
-               </WarningBanner>
-            ) : null}
-            {weekNotReturned && displayedData && !error ? (
-               <WarningBanner icon="fa-solid fa-cloud-arrow-down" action={{ label: "Try again", onClick: refresh }}>
-                  OSIRIS did not include this week in its latest response. Showing your saved roster.
                </WarningBanner>
             ) : null}
             {hiddenDays.length > 0 ? <HiddenDaysWarning labels={hiddenDays.map((day) => dayLabel.format(day.date))} onShow={showHiddenDays} /> : null}

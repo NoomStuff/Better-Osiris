@@ -1712,7 +1712,7 @@ for (const view of ["grid", "agenda"] as const)
          .toBe(0);
       await expect(page.locator(".weekbar__label")).toHaveText("This week");
       await expect(page.getByRole("button", { name: "SOURCE_TITLE_0_1" })).toBeVisible();
-      await expect(page.getByText(/Showing your saved roster/)).toBeVisible();
+      await expect(page.getByText(/Showing your saved roster/)).toHaveCount(0);
       if (view === "grid") await expect(page.locator(".grid-now-line")).toBeVisible();
       else await expect(page.locator('.day-group[data-today="true"] .day-group__header')).toHaveAttribute("aria-expanded", "true");
       await expect(page.locator(".status-cancelled")).toHaveCount(0);
@@ -1722,8 +1722,9 @@ for (const view of ["grid", "agenda"] as const)
       await expect(page.getByRole("button", { name: "SOURCE_TITLE_0_1" })).toBeVisible();
       await page.reload();
       await expect(page.locator(".weekbar__label")).toHaveText("This week");
-      await expect(page.getByRole("button", { name: "SOURCE_TITLE_0_1" })).toBeVisible();
-      await expect(page.getByText(/Showing your saved roster/)).toBeVisible();
+      if (mode === "single") await expect(page.locator('.day-group__header[aria-expanded="true"]')).toHaveCount(0);
+      else await expect(page.getByRole("button", { name: "SOURCE_TITLE_0_1" })).toBeVisible();
+      await expect(page.getByText(/Showing your saved roster/)).toHaveCount(0);
    });
 
 test("a weekend source week becomes this week on Monday", async ({ page }) => {
@@ -1908,3 +1909,31 @@ test("class reminders deliver once independently of change alerts", async ({ pag
    await notifications.scrollIntoViewIfNeeded();
    await page.screenshot({ path: "test-results/devtools-notifications-mobile.png", animations: "disabled" });
 });
+
+for (const mode of ["smart", "single"] as const)
+   test(`Saturday navigation applies ${mode} folding to the cached calendar week`, async ({ page }) => {
+      await page.addInitScript((foldingMode) => {
+         localStorage.setItem("roster-view-mode", "agenda");
+         localStorage.setItem("roster-agenda-folding", foldingMode);
+      }, mode);
+      let shift = 0;
+      await page.route("**/api/roster/weeks?*", (route) => {
+         const url = new URL(route.request().url());
+         return route.fulfill({ json: createShiftedRosterBatch(Number(url.searchParams.get("offset")), Number(url.searchParams.get("limit")), shift) });
+      });
+      await page.goto("/");
+      await expect(page.getByRole("button", { name: "SOURCE_TITLE_0_1" })).toBeVisible();
+      shift = 1;
+      await page.evaluate(() => localStorage.setItem("test-clock", "2026-06-20T12:00:00+02:00"));
+      await page.reload();
+      await expect(page.locator(".weekbar__label")).toHaveText("Next week");
+      if (mode === "single") {
+         await expect(page.locator('.day-group__header[aria-expanded="true"]')).toHaveCount(1);
+         await expect(page.getByRole("button", { name: "SOURCE_TITLE_1_1" })).toBeVisible();
+      }
+      await page.getByRole("button", { name: "Previous week" }).click();
+      await expect(page.locator(".weekbar__label")).toHaveText("This week");
+      if (mode === "single") await expect(page.locator('.day-group__header[aria-expanded="true"]')).toHaveCount(0);
+      else await expect(page.getByRole("button", { name: "SOURCE_TITLE_0_1" })).toBeVisible();
+      await expect(page.getByText(/Showing your saved roster/)).toHaveCount(0);
+   });

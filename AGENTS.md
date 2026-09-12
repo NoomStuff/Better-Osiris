@@ -23,6 +23,7 @@ Logic is shared, presentation is not. Grouping, positioning, diff detection, and
 
 - **Roster**: the end result of everything the app does. This is what the user sees. The word survives in code only where it means the whole product: the OSIRIS upstream modules, the `/api/roster/weeks` route, and storage key values.
 - **Week**: one week of schedule data as the app stores it, a week plus its classes.
+- **Home week**: the week the app opens on and returns to when resetting. OSIRIS moves this to next week on Saturday, so it can differ from the current calendar week. Some features are scoped to the home week, others to the actual current week, that distinction is important.
 - **Day**: one day of the week. An ISO date key, the date, and that day's sorted classes.
 - **Class**: one class. Title, subject, start and end, teacher, room, location, description, and a status.
 - **Batch**: the unit of fetching. Five consecutive weeks per request; -1, then 0-4, 5-9, and so on. Fetching, prefetching, and refetching happen per batch.

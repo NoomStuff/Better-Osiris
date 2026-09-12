@@ -1,12 +1,15 @@
 import { useCallback, useMemo, useState } from "react";
-import { toDayKey } from "../lib/date";
+import { parseLocalDateTime, toDayKey } from "../lib/date";
 import type { AgendaFoldingMode } from "./useAgendaFoldingPreference";
-import type { Day } from "../types/weeks";
+import type { Day, Week } from "../types/weeks";
 
-export function useAgendaState(days: Day[], weekOffset: number, perceivedDay: Date | null, foldingMode: AgendaFoldingMode) {
+export function useAgendaState(days: Day[], perceivedDay: Date | null, foldingMode: AgendaFoldingMode, isHomeWeek: boolean, nextClassDay: string | null) {
    const [expandedOverrides, setExpandedOverrides] = useState<Set<string>>(new Set());
    const [animateAgenda, setAnimateAgenda] = useState(false);
-   const autoExpandedDays = useMemo(() => getDefaultExpandedDays(days, weekOffset, perceivedDay, foldingMode), [days, foldingMode, perceivedDay, weekOffset]);
+   const autoExpandedDays = useMemo(
+      () => getDefaultExpandedDays(days, perceivedDay, foldingMode, isHomeWeek, nextClassDay),
+      [days, foldingMode, perceivedDay, isHomeWeek, nextClassDay]
+   );
    const expandedDays = useMemo(() => {
       const merged = new Set(autoExpandedDays);
       expandedOverrides.forEach((key) => (merged.has(key) ? merged.delete(key) : merged.add(key)));
@@ -49,19 +52,30 @@ export function useAgendaState(days: Day[], weekOffset: number, perceivedDay: Da
    };
 }
 
-export function getDefaultExpandedDays(days: Day[], weekOffset: number, now: Date | null, foldingMode: AgendaFoldingMode) {
+export function getDefaultExpandedDays(days: Day[], now: Date | null, foldingMode: AgendaFoldingMode, isHomeWeek: boolean, nextClassDay: string | null) {
    const todayKey = now ? toDayKey(now) : null;
    if (foldingMode === "all") {
       return new Set(days.map((day) => day.key));
    }
-   if (foldingMode === "single") {
-      return new Set(weekOffset === 0 && todayKey ? [todayKey] : []);
-   }
+   return new Set(
+      days
+         .filter((day) => {
+            if (foldingMode === "single") return day.key === nextClassDay;
+            if (!isHomeWeek) return day.classes.length > 0;
+            return day.key === todayKey || (todayKey !== null && day.key > todayKey && day.classes.length > 0);
+         })
+         .map((day) => day.key)
+   );
+}
 
-   const nextExpanded = new Set<string>();
-   days.forEach((group) => {
-      const hasPassed = weekOffset === 0 && todayKey !== null && group.key < todayKey;
-      if (!hasPassed && (group.key === todayKey || group.classes.length > 0)) nextExpanded.add(group.key);
-   });
-   return nextExpanded;
+export function getNextClassDay(weeks: Week[], now: Date): string | null {
+   let nextStart: Date | null = null;
+   for (const week of weeks) {
+      for (const item of week.classes) {
+         if (item.status === "cancelled") continue;
+         const start = parseLocalDateTime(item.start);
+         if (start >= now && (nextStart === null || start < nextStart)) nextStart = start;
+      }
+   }
+   return nextStart ? toDayKey(nextStart) : null;
 }

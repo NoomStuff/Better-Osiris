@@ -74,8 +74,8 @@ const THEME_MODE_OPTIONS: readonly ActionOption<ThemeMode>[] = [
 ];
 
 const AGENDA_FOLDING_OPTIONS: readonly ActionOption<AgendaFoldingMode>[] = [
-   { id: "single", label: "Single", tooltip: "Only open today automatically" },
-   { id: "smart", label: "Smart", tooltip: "Open today and upcoming days with classes" },
+   { id: "single", label: "Single", tooltip: "Open only the day of your next class across all weeks" },
+   { id: "smart", label: "Smart", tooltip: "Open days with classes and today; close past days only in the home week" },
    { id: "all", label: "All", tooltip: "Open every day automatically" },
 ];
 
