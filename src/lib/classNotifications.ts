@@ -45,8 +45,8 @@ async function digest(value: unknown) {
 function stillCurrent(epoch: string | null) {
    return epoch === readBrowserStorage("localStorage", "roster-session-epoch-v1") && getClassNotificationsEnabled();
 }
-async function deliver(body: string, tag: string, epoch: string | null) {
-   if (!stillCurrent(epoch)) return false;
+export async function deliverClassNotification(body: string, tag: string, isCurrent: () => boolean) {
+   if (!isCurrent()) return false;
    try {
       new window.Notification("Better Osiris", { body, tag });
    } catch {
@@ -60,7 +60,7 @@ async function deliver(body: string, tag: string, epoch: string | null) {
                timeout = setTimeout(() => reject(new Error("Notification worker did not activate")), 10_000);
             }),
          ]);
-         if (!stillCurrent(epoch)) return false;
+         if (!isCurrent()) return false;
          await registration.showNotification("Better Osiris", { body, tag });
       } catch (error) {
          workerRegistration = undefined;
@@ -102,7 +102,7 @@ export async function notifyClassDiffs(diffs: SessionClassDiff[], contextId: str
          const body = getClassNotificationBodies(group.map((item) => item.diff))[0];
          if (!body || !stillCurrent(epoch)) return;
          const tag = await digest(group.map((item) => item.key).sort());
-         if (!(await deliver(body, tag, epoch))) return;
+         if (!(await deliverClassNotification(body, tag, () => stillCurrent(epoch)))) return;
          group.forEach((item) => {
             ledger[item.key] = Date.now();
          });

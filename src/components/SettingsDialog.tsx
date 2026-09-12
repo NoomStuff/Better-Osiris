@@ -1,3 +1,4 @@
+import { ClassReminderSettings } from "./ClassReminderSettings";
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { CSSProperties, SyntheticEvent } from "react";
 import type { OsirisTokenSettings } from "../api/settings";
@@ -135,9 +136,7 @@ export function SettingsDialog({ isOpen, onClose, notifications, preferences, ac
       ? "This browser does not support timetable notifications."
       : areNotificationsBlocked
         ? "Notifications are blocked in your browser settings."
-        : areNotificationsEnabled
-          ? "You'll get alerts when this week's classes change while the app is open."
-          : "Get an alert when this week's classes change while the app is open.";
+        : "Class alerts while the app is open and your device is awake.";
 
    const closeSettings = useCallback(() => {
       if (isClosing) {
@@ -253,19 +252,28 @@ export function SettingsDialog({ isOpen, onClose, notifications, preferences, ac
 
             <div ref={contentRef} className="settings-dialog__content">
                <section className="settings-section" aria-labelledby="notification-settings-title">
-                  <div className="settings-section__header settings-section__header--with-control">
+                  <div className="settings-section__header">
                      <div className="settings-section__copy">
                         <h3 id="notification-settings-title">Notifications</h3>
                         <p id="notification-settings-detail">{notificationDetail}</p>
                      </div>
-                     <ToggleSwitch
-                        checked={areNotificationsEnabled}
-                        label="Notify me about class changes"
-                        aria-describedby="notification-settings-detail"
-                        aria-busy={areNotificationsUpdating}
-                        disabled={!areNotificationsSupported || areNotificationsBlocked || areNotificationsUpdating}
-                        onCheckedChange={onChangeNotifications}
-                     />
+                  </div>
+                  <div className="notification-settings__rows">
+                     <div className="notification-setting">
+                        <div className="notification-setting__copy">
+                           <span className="notification-setting__label">Class changes</span>
+                           <p id="class-changes-detail">Updates and cancellations</p>
+                        </div>
+                        <ToggleSwitch
+                           checked={areNotificationsEnabled}
+                           label="Notify me about class changes"
+                           aria-describedby="notification-settings-detail class-changes-detail"
+                           aria-busy={areNotificationsUpdating}
+                           disabled={!areNotificationsSupported || areNotificationsBlocked || areNotificationsUpdating}
+                           onCheckedChange={onChangeNotifications}
+                        />
+                     </div>
+                     <ClassReminderSettings />
                   </div>
                </section>
 

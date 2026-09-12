@@ -14,4 +14,5 @@ export function clearWeekBrowserCache() {
    removeBrowserStorage("localStorage", WEEK_CACHE_KEY);
    removeBrowserStorage("sessionStorage", SESSION_CLASS_DIFFS_KEY);
    removeBrowserStorage("localStorage", "roster-notification-deliveries-v1");
+   removeBrowserStorage("localStorage", "roster-reminder-deliveries");
 }

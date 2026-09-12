@@ -17,6 +17,8 @@
    padding: 0;
    color: inherit;
    cursor: pointer;
+   /* Mirrors the surface radius so the keyboard focus outline rounds with the chip. */
+   border-radius: 10px;
 }
 
 .button__surface {
@@ -78,6 +80,10 @@
    --btn-bg: rgba(var(--warning-rgb), 0.14);
    --btn-line-hover: rgba(var(--warning-rgb), 0.75);
    --btn-bg-hover: rgba(var(--warning-rgb), 0.22);
+}
+
+.button--compact .button__control {
+   border-radius: 8px;
 }
 
 .button--compact .button__surface {

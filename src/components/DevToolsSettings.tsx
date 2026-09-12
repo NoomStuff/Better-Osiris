@@ -1,4 +1,5 @@
-import { getClassNotificationBodies, requestNotificationPermission } from "../lib/classNotifications";
+import { getClassReminderBody, getReminderMinutes } from "../lib/classReminders";
+import { deliverClassNotification, getClassNotificationBodies, requestNotificationPermission } from "../lib/classNotifications";
 import type { DevClassStatusPreviewMode } from "../lib/devStatusPreview";
 import { DEV_CLASS_STATUS_PREVIEW_MODES } from "../lib/devStatusPreview";
 import { formatClock } from "../lib/date";
@@ -58,7 +59,7 @@ export function DevToolsSettings({
       onChangeTimeOverride(nextDate);
    };
 
-   const testPushNotification = async () => {
+   const testPushNotification = async (type: "added" | "changed" | "cancelled" | "starting") => {
       const permission = await requestNotificationPermission();
       if (permission !== "granted") {
          notifyWarning(
@@ -71,9 +72,17 @@ export function DevToolsSettings({
          return;
       }
 
-      const [body] = getClassNotificationBodies([createSampleClassDiff(perceivedNow)]);
+      const sample = createSampleClassDiff(perceivedNow, type === "starting" ? "added" : type);
+      const body =
+         type === "starting"
+            ? getClassReminderBody(
+                 { ...sample.schoolClass, start: new Date(perceivedNow.getTime() + getReminderMinutes() * 60_000).toISOString() },
+                 perceivedNow.getTime()
+              )
+            : getClassNotificationBodies([sample])[0];
+      if (!body) return;
       try {
-         new Notification("Better Osiris", { body: body ?? "Test class-change notification" });
+         await deliverClassNotification(body, `devtools-${type}`, () => true);
       } catch {
          notifyWarning("This browser could not show the notification.");
       }
@@ -143,7 +152,28 @@ export function DevToolsSettings({
                   <ActionButtons
                      label="Notification tests"
                      actions={[
-                        { id: "push", label: "Push", tooltip: "Fire a real class-change notification", onPress: () => void testPushNotification() },
+                        { id: "added", label: "Added", tooltip: "Send a class-added notification", onPress: () => void testPushNotification("added") },
+                        { id: "changed", label: "Changed", tooltip: "Send a class-changed notification", onPress: () => void testPushNotification("changed") },
+                        {
+                           id: "cancelled",
+                           label: "Cancelled",
+                           tooltip: "Send a class-cancelled notification",
+                           onPress: () => void testPushNotification("cancelled"),
+                        },
+                        {
+                           id: "starting",
+                           label: "Starting",
+                           tooltip: "Send a class-starting notification",
+                           onPress: () => void testPushNotification("starting"),
+                        },
+                     ]}
+                  />
+               </div>
+               <div className="devtools-group">
+                  <span className="devtools-group__label">Toasts</span>
+                  <ActionButtons
+                     label="Toast tests"
+                     actions={[
                         { id: "success", label: "Success", tooltip: "Show a success toast", onPress: () => notifySuccess("Test success toast") },
                         { id: "warning", label: "Warning", tooltip: "Show a warning toast", onPress: () => notifyWarning("Test warning toast") },
                         {
@@ -161,7 +191,7 @@ export function DevToolsSettings({
    );
 }
 
-function createSampleClassDiff(perceivedNow: Date): SessionClassDiff {
+function createSampleClassDiff(perceivedNow: Date, status: "added" | "changed" | "cancelled"): SessionClassDiff {
    const dayKey = formatDateInputValue(perceivedNow);
    const schoolClass: ClassSnapshot = {
       id: "devtools-sample",
@@ -177,7 +207,8 @@ function createSampleClassDiff(perceivedNow: Date): SessionClassDiff {
    };
    const previousClass: ClassSnapshot = { ...schoolClass, room: "A101", status: "scheduled" };
 
-   return { schoolClass: { ...schoolClass, status: "changed", previous: previousClass }, previousClass, status: "changed" };
+   if (status === "changed") return { schoolClass: { ...schoolClass, status, previous: previousClass }, previousClass, status };
+   return { schoolClass: { ...schoolClass, status }, status };
 }
 
 function formatDateInputValue(date: Date) {

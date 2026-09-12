@@ -87,6 +87,17 @@
    transform: translateX(17px);
 }
 
+/* The focusable button is a 44px touch target around the pill, so the keyboard outline is
+   drawn on the visible track instead of the rectangular button box. */
+.toggle-switch:focus-visible {
+   outline: none;
+}
+
+.toggle-switch:focus-visible .toggle-switch__track {
+   outline: 3px solid rgba(var(--accent-rgb), 0.72);
+   outline-offset: 3px;
+}
+
 .toggle-switch:disabled {
    cursor: not-allowed;
    opacity: 0.48;

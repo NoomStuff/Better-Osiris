@@ -1,3 +1,4 @@
+import { notifyUpcomingClasses } from "../lib/classReminders";
 import { useCallback, useEffect, useMemo, useState, useSyncExternalStore } from "react";
 import { WeekRepository, type WeekRepositoryOptions } from "../lib/weekRepository";
 import { canNavigateToWeek, getDerivedWeekTitle, getHomeWeek, getAdjacentWeekOffset } from "../lib/weekPolicy";
@@ -14,6 +15,22 @@ export function useWeeks(offset: number, options: WeekRepositoryOptions) {
       () => repository.configure({ enabled, clearCache, contextId, resetKey, timeZone }, offset),
       [repository, enabled, clearCache, contextId, resetKey, timeZone, offset]
    );
+   useEffect(() => {
+      if (!enabled || !contextId || lastSuccessfulResetKey !== resetKey) return;
+      let active = true;
+      const classes = Object.values(entries).flatMap((entry) => entry?.data?.classes ?? []);
+      const check = () => void notifyUpcomingClasses(classes, contextId, () => active);
+      check();
+      const timer = window.setInterval(check, 15_000);
+      window.addEventListener("storage", check);
+      document.addEventListener("visibilitychange", check);
+      return () => {
+         active = false;
+         window.clearInterval(timer);
+         window.removeEventListener("storage", check);
+         document.removeEventListener("visibilitychange", check);
+      };
+   }, [entries, enabled, contextId, lastSuccessfulResetKey, resetKey]);
    const active = entries[offset];
    const clock = useClock(60_000);
    const home = useMemo(

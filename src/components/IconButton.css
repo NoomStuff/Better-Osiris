@@ -15,6 +15,8 @@
    justify-content: center;
    color: inherit;
    cursor: pointer;
+   /* Mirrors the surface radius so the keyboard focus outline rounds with the chip. */
+   border-radius: 10px;
 }
 
 /* Invisible hit-area extension: keeps the visual 36px chip but reaches the ~44px touch-target guideline. */

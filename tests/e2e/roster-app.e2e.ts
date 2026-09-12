@@ -1832,3 +1832,79 @@ test("an older overlapping batch cannot overwrite a newer week refresh", async (
       .toEqual({ fetchedAt: baseline + 2000, room: "FRESH_ROOM", olderFetchedAt: baseline + 1000 });
    await expect(page.locator(".weekbar__label")).toHaveText("In 5 weeks");
 });
+
+test("reminder number field supports editing, cancellation, bounds and persistence", async ({ page }) => {
+   await page.goto("/");
+   await page.getByRole("button", { name: "Open settings" }).click();
+   const field = page.getByRole("group", { name: "Minutes before class", exact: true });
+   await expect(field.getByRole("button", { name: "Minutes before class: 5 min", exact: true })).toBeVisible();
+   await field.getByRole("button", { name: "Increase Minutes before class", exact: true }).click();
+   await field.getByRole("button", { name: "Minutes before class: 6 min", exact: true }).click();
+   await field.getByRole("textbox").fill("99");
+   await field.getByRole("textbox").press("Enter");
+   await expect(field.getByRole("button", { name: "Minutes before class: 60 min", exact: true })).toBeFocused();
+   await expect(field.getByRole("button", { name: "Increase Minutes before class", exact: true })).toBeDisabled();
+   await field.getByRole("button", { name: "Minutes before class: 60 min", exact: true }).click();
+   await field.getByRole("textbox").fill("12");
+   await field.getByRole("textbox").press("Escape");
+   await expect(page.getByRole("dialog", { name: "Preferences" })).toBeVisible();
+   await expect(field.getByRole("button", { name: "Minutes before class: 60 min", exact: true })).toBeFocused();
+   await page.reload();
+   await page.getByRole("button", { name: "Open settings" }).click();
+   await expect(field.getByRole("button", { name: "Minutes before class: 60 min", exact: true })).toBeVisible();
+   await page.screenshot({ path: "test-results/reminder-settings.png", animations: "disabled" });
+   await page.setViewportSize({ width: 390, height: 844 });
+   await expect(field).toBeVisible();
+   const control = field.getByRole("button", { name: "Minutes before class: 60 min", exact: true });
+   await control.focus();
+   await expect(control).toHaveCSS("border-radius", "6px");
+   await page.screenshot({ path: "test-results/reminder-settings-mobile.png", animations: "disabled" });
+});
+
+test("class reminders deliver once independently of change alerts", async ({ page }) => {
+   await page.addInitScript(() => {
+      localStorage.setItem("test-clock", "2026-06-16T10:55:00+02:00");
+      localStorage.setItem("roster-class-reminders", "true");
+      class MockNotification {
+         readonly title: string;
+         static permission = "granted";
+         constructor(title: string, options: NotificationOptions) {
+            this.title = title;
+            const messages = JSON.parse(localStorage.getItem("test-reminder-messages") ?? "[]") as string[];
+            messages.push(options.body ?? "");
+            localStorage.setItem("test-reminder-messages", JSON.stringify(messages));
+         }
+      }
+      Object.defineProperty(window, "Notification", { configurable: true, value: MockNotification });
+   });
+   await page.goto("/");
+   const messages = () => page.evaluate(() => JSON.parse(localStorage.getItem("test-reminder-messages") ?? "[]") as string[]);
+   await expect.poll(messages).toEqual(["SOURCE_TITLE_0_2 is starting in 5 minutes in room SOURCE_ROOM"]);
+   await page.getByRole("button", { name: "Next week" }).click();
+   await page.getByRole("button", { name: "Open settings" }).click();
+   await expect(page.getByRole("switch", { name: "Notify me before class starts" })).toHaveAttribute("aria-checked", "true");
+   await expect(page.getByRole("switch", { name: "Notify me about class changes" })).toHaveAttribute("aria-checked", "false");
+   await page.reload();
+   await expect(page.locator(".grid-shell")).toBeVisible();
+   await page.evaluate(() => document.dispatchEvent(new Event("visibilitychange")));
+   await expect.poll(messages).toHaveLength(1);
+   await page.getByRole("button", { name: "Open settings" }).click();
+   await page.getByRole("switch", { name: "Enable devtools" }).click();
+   const notifications = page.getByRole("group", { name: "Notification tests", exact: true });
+   for (const name of ["Added", "Changed", "Cancelled", "Starting"]) {
+      await notifications.getByRole("button", { name, exact: true }).click();
+   }
+   await expect
+      .poll(messages)
+      .toEqual([
+         "SOURCE_TITLE_0_2 is starting in 5 minutes in room SOURCE_ROOM",
+         "Testles was added: Tuesday 09:00",
+         "Testles changed: A101 → B12",
+         "Testles was cancelled: Tuesday 09:00",
+         "Testles is starting in 5 minutes in room B12",
+      ]);
+   await expect(page.getByRole("group", { name: "Toast tests", exact: true }).getByRole("button")).toHaveCount(3);
+   await page.setViewportSize({ width: 390, height: 844 });
+   await notifications.scrollIntoViewIfNeeded();
+   await page.screenshot({ path: "test-results/devtools-notifications-mobile.png", animations: "disabled" });
+});

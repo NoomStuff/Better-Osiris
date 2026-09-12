@@ -83,6 +83,8 @@
    min-width: 0;
    padding: 0;
    cursor: pointer;
+   /* Mirrors the surface radius so the keyboard focus outline rounds with the tile. */
+   border-radius: 12px;
 }
 
 .theme-picker--animate .theme-picker__option {
@@ -729,4 +731,37 @@
       width: 100%;
       min-width: 0;
    }
+}
+
+.notification-setting {
+   display: flex;
+   align-items: center;
+   justify-content: space-between;
+   gap: 12px;
+   min-height: 44px;
+}
+.notification-setting__label {
+   color: var(--text-strong);
+   font-size: 0.8rem;
+   font-weight: 600;
+}
+.notification-setting__controls {
+   display: flex;
+   align-items: center;
+   gap: 10px;
+}
+
+.notification-settings__rows {
+   display: grid;
+   gap: 6px;
+}
+.notification-setting__copy {
+   display: grid;
+   gap: 3px;
+}
+.notification-setting__copy p {
+   margin: 0;
+   color: var(--text-muted);
+   font-size: 0.7rem;
+   line-height: 1.35;
 }
