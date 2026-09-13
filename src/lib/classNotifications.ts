@@ -2,6 +2,8 @@ import { dayLabel, parseLocalDateTime, timeLabel } from "./date";
 import type { SessionClassDiff } from "./classDiffs";
 import { notifyWarning } from "./notyf";
 import { readBrowserStorage, writeBrowserStorage } from "./browserStorage";
+import { deliverNotification, runNotificationQueue } from "./notificationDelivery";
+import { SESSION_EPOCH_KEY } from "./sessionStore";
 
 let permissionRequest: Promise<NotificationPermission> | null = null;
 export const CLASS_NOTIFICATIONS_STORAGE_KEY = "roster-class-notifications";
@@ -34,84 +36,36 @@ export async function requestNotificationPermission(): Promise<ClassNotification
    }
 }
 
-const DELIVERY_KEY = "roster-notification-deliveries-v1";
 let deliveryWarningShown = false;
-let workerRegistration: Promise<ServiceWorkerRegistration> | undefined;
 
 async function digest(value: unknown) {
    const bytes = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(JSON.stringify(value)));
    return Array.from(new Uint8Array(bytes), (byte) => byte.toString(16).padStart(2, "0")).join("");
 }
-function stillCurrent(epoch: string | null) {
-   return epoch === readBrowserStorage("localStorage", "roster-session-epoch-v1") && getClassNotificationsEnabled();
-}
-export async function deliverClassNotification(body: string, tag: string, isCurrent: () => boolean) {
-   if (!isCurrent()) return false;
-   try {
-      new window.Notification("Better Osiris", { body, tag });
-   } catch {
-      if (!("serviceWorker" in navigator)) throw new Error("Notification delivery unavailable");
-      workerRegistration ??= navigator.serviceWorker.register("/notifications-sw.js").then(async () => navigator.serviceWorker.ready);
-      let timeout: ReturnType<typeof setTimeout> | undefined;
-      try {
-         const registration = await Promise.race([
-            workerRegistration,
-            new Promise<never>((_, reject) => {
-               timeout = setTimeout(() => reject(new Error("Notification worker did not activate")), 10_000);
-            }),
-         ]);
-         if (!isCurrent()) return false;
-         await registration.showNotification("Better Osiris", { body, tag });
-      } catch (error) {
-         workerRegistration = undefined;
-         throw error;
-      } finally {
-         clearTimeout(timeout);
-      }
-   }
-   return true;
-}
-function readDeliveryLedger(): Record<string, number> {
-   try {
-      const parsed: unknown = JSON.parse(readBrowserStorage("localStorage", DELIVERY_KEY) ?? "{}");
-      if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
-         return Object.fromEntries(
-            Object.entries(parsed).filter((entry): entry is [string, number] => typeof entry[1] === "number" && entry[1] > Date.now() - 7 * 86400_000)
-         );
-      }
-   } catch {
-      /* Corrupt delivery history must not prevent alerts. */
-   }
-   return {};
-}
+
 /** The page detects changes. The worker only provides notification delivery on mobile. */
 export async function notifyClassDiffs(diffs: SessionClassDiff[], contextId: string) {
    if (!getClassNotificationsEnabled() || getClassNotificationPermission() !== "granted" || !diffs.length) return;
-   const epoch = readBrowserStorage("localStorage", "roster-session-epoch-v1");
-   const send = async () => {
-      const ledger = readDeliveryLedger();
-      const keyed = await Promise.all(
-         diffs.map(async (diff) => {
-            const { previous: _previous, ...current } = diff.schoolClass;
-            return { diff, key: await digest([contextId, current]) };
-         })
-      );
-      for (const status of ["added", "changed", "cancelled"] as const) {
-         const group = keyed.filter((item) => item.diff.status === status && !ledger[item.key]);
-         if (!group.length) continue;
-         const body = getClassNotificationBodies(group.map((item) => item.diff))[0];
-         if (!body || !stillCurrent(epoch)) return;
-         const tag = await digest(group.map((item) => item.key).sort());
-         if (!(await deliverClassNotification(body, tag, () => stillCurrent(epoch)))) return;
-         group.forEach((item) => {
-            ledger[item.key] = Date.now();
-         });
-         writeBrowserStorage("localStorage", DELIVERY_KEY, JSON.stringify(Object.fromEntries(Object.entries(ledger).slice(-200))));
-      }
-   };
+   const epoch = readBrowserStorage("localStorage", SESSION_EPOCH_KEY);
+   const isCurrent = () => epoch === readBrowserStorage("localStorage", SESSION_EPOCH_KEY) && getClassNotificationsEnabled();
    try {
-      if ("locks" in navigator) await navigator.locks.request("roster-notifications", send);
-      else await send();
+      await runNotificationQueue("class-changes", async (ledger) => {
+         const keyed = await Promise.all(
+            diffs.map(async (diff) => {
+               const { previous: _previous, ...current } = diff.schoolClass;
+               return { diff, key: await digest([contextId, current]) };
+            })
+         );
+         for (const status of ["added", "changed", "cancelled"] as const) {
+            const group = keyed.filter((item) => item.diff.status === status && !ledger.isDelivered(item.key));
+            if (!group.length) continue;
+            const body = getClassNotificationBodies(group.map((item) => item.diff))[0];
+            if (!body || !isCurrent()) return;
+            const tag = await digest(group.map((item) => item.key).sort());
+            if (!(await deliverNotification(body, tag, isCurrent))) return;
+            group.forEach((item) => ledger.markDelivered(item.key));
+         }
+      });
    } catch {
       if (!deliveryWarningShown) {
          deliveryWarningShown = true;

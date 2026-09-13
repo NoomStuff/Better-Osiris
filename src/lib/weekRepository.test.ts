@@ -80,6 +80,20 @@ void describe("concurrent week requests", () => {
       assert.equal(pending.has(0), false);
    });
 
+   void it("marks calendar weeks a truncated batch does not cover as omitted", async () => {
+      configure(0);
+      const truncated = batch(0, 0);
+      truncated.weeks = truncated.weeks.slice(0, 2);
+      respond(0, Response.json(truncated));
+      respond(5, Response.json(batch(5, 0)));
+      await until(() => Boolean(repository.getSnapshot().entries[1]?.data));
+      assert.ok(repository.getSnapshot().entries[0]?.data);
+      assert.equal(repository.getSnapshot().entries[3]?.isOmitted, true);
+      assert.equal(repository.getSnapshot().entries[4]?.isOmitted, true);
+      assert.equal(repository.getSnapshot().entries[3]?.data ?? null, null);
+      assert.equal(repository.getSnapshot().entries[3]?.isFetching ?? false, false);
+   });
+
    void it("does not stamp an overlapping failure on a week refreshed by another request", async () => {
       configure(0);
       respond(0, Response.json(batch(0, 1)));

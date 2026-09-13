@@ -3,7 +3,7 @@ import { isValidTimeZone } from "../../shared/timeZone";
 import { shiftCalendarDate } from "../../shared/calendar";
 import type { Week } from "../types/weeks";
 import { readBrowserStorage, removeBrowserStorage, writeBrowserStorage } from "./browserStorage";
-import { WEEK_CACHE_KEY, SESSION_CLASS_DIFFS_KEY, clearLegacyWeekCache } from "./weekCache";
+import { WEEK_CACHE_KEY, SESSION_CLASS_DIFFS_KEY } from "./weekCache";
 import type { SessionClassDiffsByWeek } from "./classDiffs";
 
 export interface StoredWeek {
@@ -48,7 +48,6 @@ export function getClassFetchTimes(old: StoredWeek | undefined, next: Week, fetc
 }
 
 export function readWeekCache(): WeekCache | null {
-   clearLegacyWeekCache();
    const text = readBrowserStorage("localStorage", WEEK_CACHE_KEY);
    if (!text) return null;
    try {

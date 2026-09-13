@@ -1,11 +1,12 @@
 import type { Class } from "../types/weeks";
 import { parseLocalDateTime } from "./date";
-import { readBrowserStorage, writeBrowserStorage } from "./browserStorage";
-import { deliverClassNotification, getClassNotificationPermission } from "./classNotifications";
+import { readBrowserStorage } from "./browserStorage";
+import { deliverNotification, runNotificationQueue } from "./notificationDelivery";
+import { getClassNotificationPermission } from "./classNotifications";
+import { SESSION_EPOCH_KEY } from "./sessionStore";
 import { notifyWarning } from "./notyf";
 export const CLASS_REMINDERS_KEY = "roster-class-reminders";
 export const REMINDER_MINUTES_KEY = "roster-reminder-minutes";
-const DELIVERY_KEY = "roster-reminder-deliveries";
 export function getReminderMinutes() {
    const value = Number(readBrowserStorage("localStorage", REMINDER_MINUTES_KEY) ?? 5);
    return Number.isInteger(value) && value >= 1 && value <= 60 ? value : 5;
@@ -21,38 +22,24 @@ export function getClassReminderBody(item: Pick<Class, "title" | "room" | "start
 }
 let warningShown = false;
 export async function notifyUpcomingClasses(classes: Class[], contextId: string, isActive: () => boolean) {
-   const epoch = readBrowserStorage("localStorage", "roster-session-epoch-v1");
+   const epoch = readBrowserStorage("localStorage", SESSION_EPOCH_KEY);
    const current = () =>
       isActive() &&
-      epoch === readBrowserStorage("localStorage", "roster-session-epoch-v1") &&
+      epoch === readBrowserStorage("localStorage", SESSION_EPOCH_KEY) &&
       readBrowserStorage("localStorage", CLASS_REMINDERS_KEY) === "true" &&
       getClassNotificationPermission() === "granted";
    if (!current()) return;
-   const send = async () => {
-      let ledger: Record<string, number> = {};
-      try {
-         const parsed: unknown = JSON.parse(readBrowserStorage("localStorage", DELIVERY_KEY) ?? "{}");
-         if (parsed && typeof parsed === "object" && !Array.isArray(parsed))
-            ledger = Object.fromEntries(
-               Object.entries(parsed).filter((entry): entry is [string, number] => typeof entry[1] === "number" && entry[1] > Date.now())
-            );
-      } catch {
-         /* Ignore corrupt delivery history. */
-      }
-      for (const item of classes) {
-         const key = JSON.stringify([contextId, item.id, item.start]);
-         const due = () => current() && isClassReminderDue(item, getReminderMinutes(), Date.now());
-         if (ledger[key] || !due()) continue;
-         const start = parseLocalDateTime(item.start);
-         const body = getClassReminderBody(item, Date.now());
-         if (!(await deliverClassNotification(body, `class-reminder:${key}`, due))) continue;
-         ledger[key] = start.getTime();
-         writeBrowserStorage("localStorage", DELIVERY_KEY, JSON.stringify(ledger));
-      }
-   };
    try {
-      if ("locks" in navigator) await navigator.locks.request("roster-class-reminders", send);
-      else await send();
+      await runNotificationQueue("class-reminders", async (ledger) => {
+         for (const item of classes) {
+            const key = JSON.stringify([contextId, item.id, item.start]);
+            const due = () => current() && isClassReminderDue(item, getReminderMinutes(), Date.now());
+            if (ledger.isDelivered(key) || !due()) continue;
+            const body = getClassReminderBody(item, Date.now());
+            if (!(await deliverNotification(body, `class-reminder:${key}`, due))) continue;
+            ledger.markDelivered(key);
+         }
+      });
    } catch {
       if (!warningShown) {
          warningShown = true;

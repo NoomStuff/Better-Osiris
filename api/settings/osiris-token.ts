@@ -3,7 +3,7 @@ import type { IncomingMessage, ServerResponse } from "node:http";
 import { readJsonBody, sendJson, sendMethodNotAllowed } from "../_lib/http.js";
 import { clearTokenSettingsRoute, getTokenSettingsRoute, saveTokenSettingsRoute, type ApiRouteResponse } from "../_lib/apiRoutes.js";
 import { toApiError, toApiErrorPayload, errorHeaders } from "../_lib/errors.js";
-import { enforceTokenRateLimit } from "../_lib/rateLimit.js";
+import { enforceRateLimit, enforceTokenRateLimit } from "../_lib/rateLimit.js";
 import { assertSameOrigin } from "../_lib/security.js";
 
 export default async function handler(req: IncomingMessage, res: ServerResponse) {
@@ -14,6 +14,7 @@ export default async function handler(req: IncomingMessage, res: ServerResponse)
    }
 
    if (req.method === "GET") {
+      enforceRateLimit(req, "token-settings-read", 120, 60_000);
       sendRouteResponse(res, getTokenSettingsRoute(req.headers.cookie));
       return;
    }

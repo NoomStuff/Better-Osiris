@@ -2,6 +2,7 @@ import React from "react";
 import ReactDOM from "react-dom/client";
 import App from "./App";
 import { ErrorBoundary } from "./components/ErrorBoundary";
+import { PreferencesProvider } from "./hooks/PreferencesProvider";
 import { notifyError } from "./lib/notyf";
 import { attachOverlayScrollbar } from "./lib/overlayScrollbar";
 import { applyTheme, getStoredTheme } from "./lib/theme";
@@ -46,7 +47,9 @@ attachOverlayScrollbar(document.body);
 ReactDOM.createRoot(rootElement).render(
    <React.StrictMode>
       <ErrorBoundary>
-         <App />
+         <PreferencesProvider>
+            <App />
+         </PreferencesProvider>
       </ErrorBoundary>
    </React.StrictMode>
 );

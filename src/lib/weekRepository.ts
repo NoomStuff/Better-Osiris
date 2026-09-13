@@ -300,6 +300,7 @@ export class WeekRepository {
             }
             const incomingWeeks = getFreshIncomingWeeks(payload.weeks, payload.fetchedAt, this.stored);
             const incomingDates = new Set(incomingWeeks.map((week) => week.week.start));
+            const returnedDates = new Set(payload.weeks.map((week) => week.week.start));
             const successRevision = ++this.successRevision;
             incomingDates.forEach((date) => this.weekSuccessRevisions.set(date, successRevision));
             // Clear request placeholders even when the source has moved beyond those dates.
@@ -309,7 +310,11 @@ export class WeekRepository {
                if (entry)
                   settledEntries[offset] = createWeekEntry(entry.data, {
                      updatedAt: entry.updatedAt,
-                     isOmitted: requestOffset === 0 && offset < (this.sourceShift ?? 0),
+                     isOmitted:
+                        (requestOffset === 0 && offset < (this.sourceShift ?? 0)) ||
+                        // A truncated batch ends the roster horizon: its missing weeks are omitted,
+                        // not missing data.
+                        (payload.weeks.length < requestLimit && !returnedDates.has(shiftCalendarDate(anchor, offset * 7))),
                   });
             });
             this.snapshot = { ...this.snapshot, entries: settledEntries };

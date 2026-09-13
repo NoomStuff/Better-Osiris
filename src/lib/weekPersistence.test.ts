@@ -131,14 +131,6 @@ void describe("date and account scoped persistence", () => {
    afterEach(() => {
       delete (globalThis as { window?: unknown }).window;
    });
-   void it("retires legacy caches that have no account namespace", () => {
-      const storage = installStorage();
-      storage.setItem("roster-current-week-cache-v2", "old account data");
-      storage.setItem("roster-last-week-cache-v1", "old account data");
-      assert.equal(readWeekCache(), null);
-      assert.equal(storage.getItem("roster-current-week-cache-v2"), null);
-      assert.equal(storage.getItem("roster-last-week-cache-v1"), null);
-   });
    void it("retains future weeks and all three timestamps across hydration", () => {
       installStorage();
       const cache = {

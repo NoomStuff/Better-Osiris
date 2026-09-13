@@ -1,5 +1,5 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
-import { ApiError } from "./errors.js";
+import { ApiError, toApiErrorPayload } from "./errors.js";
 import { applyPrivateResponseHeaders } from "./security.js";
 
 const DEFAULT_MAX_JSON_BODY_BYTES = 8 * 1024;
@@ -16,6 +16,11 @@ export function sendJson(res: ServerResponse, statusCode: number, payload: unkno
    });
    res.setHeader("Content-Type", "application/json");
    res.end(JSON.stringify(payload));
+}
+
+export function sendApiNotFound(res: ServerResponse) {
+   const error = new ApiError("API route not found.", { code: "INVALID_REQUEST", status: 404 });
+   sendJson(res, error.status, toApiErrorPayload(error));
 }
 
 export function sendMethodNotAllowed(res: ServerResponse, allowedMethods: readonly string[]) {

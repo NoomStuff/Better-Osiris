@@ -15,6 +15,7 @@ import { ApiError, toApiError, toApiErrorPayload, errorHeaders } from "./api/_li
 import { isProduction, validateServerConfiguration } from "./api/_lib/osirisConfig.js";
 import { enforceRateLimit, enforceRosterRateLimit, enforceTokenRateLimit } from "./api/_lib/rateLimit.js";
 import { applyPrivateResponseHeaders, assertSameOrigin, CONTENT_SECURITY_POLICY } from "./api/_lib/security.js";
+import { sendApiNotFound } from "./api/_lib/http.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -62,6 +63,7 @@ app.get("/api/roster/config", (req, res) => {
 app.all("/api/roster/config", (_req, res) => sendMethodNotAllowed(res, ["GET"]));
 
 app.get("/api/settings/osiris-token", (req, res) => {
+   enforceRateLimit(req, "token-settings-read", 120, 60_000);
    sendRouteResponse(res, getTokenSettingsRoute(req.headers.cookie));
 });
 
@@ -77,8 +79,7 @@ app.delete("/api/settings/osiris-token", (req, res) => {
 app.all("/api/settings/osiris-token", (_req, res) => sendMethodNotAllowed(res, ["GET", "PUT", "DELETE"]));
 
 app.use("/api", (_req, res) => {
-   const error = new ApiError("API route not found.", { code: "INVALID_REQUEST", status: 404 });
-   res.status(error.status).json(toApiErrorPayload(error));
+   sendApiNotFound(res);
 });
 
 const distPath = path.join(__dirname, "dist");

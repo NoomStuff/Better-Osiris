@@ -1,6 +1,6 @@
 import { Fragment, useCallback, useLayoutEffect, useRef, useState, type RefObject } from "react";
 import { dayLabel, monthDayLabel, timeLabel, toDayKey } from "../lib/date";
-import { DETAILS_SEPARATOR, getClassLocationLabel } from "../lib/classFormat";
+import { getClassDetailsLabel, getClassLabel } from "../lib/classFormat";
 import { getBreakIcon, getEmptyTodayMessage } from "../lib/flavor";
 import type { Day, Class } from "../types/weeks";
 import { getBreaktimeLabel, getCurrentAgendaSegment, getDayTimeline, getSegmentProgress, getTodayProgressAnchor, isActiveClass } from "../lib/dayTimeline";
@@ -170,9 +170,8 @@ export function AgendaView({ days, expandedDays, animate, now, timeOverride, onT
                            </div>
                         ) : (
                            group.classes.map((schoolClass, classIndex) => {
-                              const locationLabel = getClassLocationLabel(schoolClass);
-                              const teacherLocationLabel = [schoolClass.teacher, locationLabel].filter(Boolean).join(DETAILS_SEPARATOR);
-                              const classLabel = schoolClass.title || schoolClass.subject;
+                              const classLabel = getClassLabel(schoolClass);
+                              const teacherLocationLabel = getClassDetailsLabel(schoolClass);
                               const breakSegment = timeline.breaksBefore.get(schoolClass.id);
                               const breaktimeLabel = breakSegment ? getBreaktimeLabel(breakSegment) : null;
                               const breakIcon = breakSegment ? getBreakIcon(breakSegment.startDate, breakSegment.endDate, classIndex) : "";

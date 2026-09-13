@@ -43,10 +43,6 @@ export function readOsirisTokenFromCookie(cookieHeader: string | undefined, secr
    }
 }
 
-export function hasOsirisTokenCookie(cookieHeader: string | undefined): boolean {
-   return Boolean(parseCookie(cookieHeader, OSIRIS_TOKEN_COOKIE_NAME));
-}
-
 function getEncryptionKey(secret: string): Buffer {
    return crypto.createHash("sha256").update(secret).digest();
 }

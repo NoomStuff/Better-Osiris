@@ -123,7 +123,9 @@ function normalizeRosterWeekItem(week: OsirisWeek, requestedOffset: number): Wee
 }
 
 export function normalizeWeeksResponse(rawData: OsirisRosterResponse, requestedOffset: number, requestedLimit = rawData.items.length): Week[] {
-   if (rawData.offset !== requestedOffset || rawData.items.length !== requestedLimit) {
+   // Fewer items than requested is a valid truncated batch when the roster horizon ends inside
+   // the window; more, or none at all, means the response does not match the request.
+   if (rawData.offset !== requestedOffset || rawData.items.length < 1 || rawData.items.length > requestedLimit) {
       throw new ApiError("OSIRIS returned an incomplete or mismatched week batch.", {
          code: "UPSTREAM_INVALID_RESPONSE",
          status: 502,

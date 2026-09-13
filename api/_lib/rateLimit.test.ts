@@ -2,11 +2,12 @@ import assert from "node:assert/strict";
 import { afterEach, beforeEach, describe, it } from "node:test";
 import type { IncomingMessage } from "node:http";
 import { ApiError } from "./errors.js";
-import { clearRateLimitEntries, enforceRateLimit } from "./rateLimit.js";
+import { clearRateLimitEntries, enforceRateLimit, enforceTokenRateLimit } from "./rateLimit.js";
 
 const originalTrustProxy = process.env["TRUST_PROXY"];
 const originalVercel = process.env["VERCEL"];
 const originalVercelEnvironment = process.env["VERCEL_ENV"];
+const TEST_COOKIE_SECRET = "rate-limit-test-secret-that-is-long-enough";
 
 beforeEach(() => {
    clearRateLimitEntries();
@@ -51,6 +52,20 @@ void describe("rate limiting client identity", () => {
          () => enforceRateLimit(createRequest("127.0.0.1", "spoofed-two, 198.51.100.7"), "test", 1, 60_000),
          (error: unknown) => error instanceof ApiError && error.status === 429
       );
+   });
+});
+
+void describe("token mutation limits", () => {
+   void it("caps anonymous callers tightly because every mutation validates a token upstream", () => {
+      process.env["COOKIE_SECRET"] = TEST_COOKIE_SECRET;
+      process.env["BEARER_TOKEN"] = "";
+      for (let attempt = 0; attempt < 20; attempt += 1) enforceTokenRateLimit(createRequest("198.51.100.9", ""));
+
+      assert.throws(
+         () => enforceTokenRateLimit(createRequest("198.51.100.9", "")),
+         (error: unknown) => error instanceof ApiError && error.status === 429 && error.retryAfterMs > 0
+      );
+      assert.doesNotThrow(() => enforceTokenRateLimit(createRequest("198.51.100.10", "")));
    });
 });
 

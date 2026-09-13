@@ -1,5 +1,5 @@
 import { buildClearOsirisTokenCookieHeader, buildOsirisTokenCookieHeader } from "./auth.js";
-import { createEncryptedOsirisTokenCookieValue, hasOsirisTokenCookie, readOsirisTokenFromCookie } from "./osirisTokenCookie.js";
+import { readOsirisTokenFromCookie, createEncryptedOsirisTokenCookieValue } from "./osirisTokenCookie.js";
 import { ApiError } from "./errors.js";
 import { getCookieSecret, getDefaultOsirisToken, isProduction, normalizeBearerToken } from "./osirisConfig.js";
 import type { OsirisTokenSettings } from "../../shared/weeks.js";
@@ -11,12 +11,11 @@ export interface OsirisTokenSettingsResult {
 }
 
 export function getOsirisTokenSettings(cookieHeader: string | undefined): OsirisTokenSettingsResult {
-   const cookieSecret = getCookieSecret();
-   const hasCustomToken = hasValidOsirisTokenOverride(cookieHeader, cookieSecret);
+   const token = readOsirisTokenFromCookie(cookieHeader, getCookieSecret());
 
-   if (hasCustomToken) {
+   if (token) {
       return {
-         settings: { hasCustomToken: true, hasBearerToken: true, contextId: getCredentialContext(readOsirisTokenFromCookie(cookieHeader, cookieSecret)) },
+         settings: { hasCustomToken: true, hasBearerToken: true, contextId: getCredentialContext(token) },
          cookieHeader: null,
       };
    }
@@ -63,8 +62,4 @@ export function resolveOsirisBearerToken(cookieHeader: string | undefined): stri
    }
 
    return getDefaultOsirisToken();
-}
-
-function hasValidOsirisTokenOverride(cookieHeader: string | undefined, secret: string): boolean {
-   return hasOsirisTokenCookie(cookieHeader) && Boolean(readOsirisTokenFromCookie(cookieHeader, secret));
 }

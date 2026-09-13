@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
+import { MAX_WEEK_LIMIT } from "./weeks.js";
 import { parseRosterConfig, parseWeek, parseWeekBatch } from "./rosterValidation.js";
 
 const validRoster = {
@@ -77,10 +78,12 @@ void describe("roster batch validation", () => {
       assert.throws(() => parseWeekBatch({ ...validBatch, timeZone: "Mars/Olympus_Mons" }), /valid IANA time zone/);
    });
 
-   void it("rejects incomplete, duplicate, and mismatched week batches", () => {
-      assert.throws(() => parseWeekBatch({ ...validBatch, limit: 2 }), /exactly 2 weeks/);
+   void it("accepts a truncated final batch and rejects empty, mismatched, and oversized ones", () => {
+      assert.deepEqual(parseWeekBatch({ ...validBatch, limit: 2 }), { ...validBatch, limit: 2 });
+      assert.throws(() => parseWeekBatch({ ...validBatch, weeks: [] }), /between 1 and 1 weeks/);
       assert.throws(() => parseWeekBatch({ ...validBatch, offset: 1 }), /weeks\[0\]\.week\.offset/);
       assert.throws(() => parseWeekBatch({ ...validBatch, weeks: [validRoster, validRoster], limit: 2 }), /weeks\[1\]\.week\.offset/);
+      assert.throws(() => parseWeekBatch({ ...validBatch, limit: MAX_WEEK_LIMIT + 1 }), /between 1 and 5/);
    });
 
    void it("rejects date gaps even when offsets are consecutive", () => {

@@ -20,6 +20,16 @@ export function getClassLocationLabel(schoolClass: Class): string {
    return room || location;
 }
 
+/** The one-line label for a class: its title, or its subject when untitled. */
+export function getClassLabel(schoolClass: Class): string {
+   return schoolClass.title || schoolClass.subject;
+}
+
+/** "Teacher · Room · Location", the shared detail line under the class label in both views. */
+export function getClassDetailsLabel(schoolClass: Class): string {
+   return [schoolClass.teacher, getClassLocationLabel(schoolClass)].filter(Boolean).join(DETAILS_SEPARATOR);
+}
+
 export function normalizeClassField(value: string) {
    return value.trim().toLowerCase();
 }

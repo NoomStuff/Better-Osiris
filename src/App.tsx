@@ -11,20 +11,14 @@ import { Button } from "./components/Button";
 import { BearerTokenState, ErrorState, LoadingState, WeekOverlayState } from "./components/LoadingState";
 import { SettingsDialog } from "./components/SettingsDialog";
 import { WeekNavigator } from "./components/WeekNavigator";
-import { useDevPreview } from "./hooks/useDevPreview";
 import { useAppKeyboardShortcuts } from "./hooks/useAppKeyboardShortcuts";
 import { getNextClassDay, useAgendaState } from "./hooks/useAgendaState";
-import { useAgendaFoldingPreference } from "./hooks/useAgendaFoldingPreference";
-import { useClassNotificationsPreference } from "./hooks/useClassNotificationsPreference";
 import { useOsirisTokenSettings } from "./hooks/useOsirisTokenSettings";
+import { usePreferences } from "./hooks/preferences";
 import { useRosterTimeZone } from "./hooks/useRosterTimeZone";
 import { useDockedMobileBar } from "./hooks/useDockedMobileBar";
-import { useShownWeekdaysPreference } from "./hooks/useShownWeekdaysPreference";
-import { useGridHoursPreference } from "./hooks/useGridHoursPreference";
 import { useWeekDays } from "./hooks/useWeekDays";
-import { useThemePreference } from "./hooks/useThemePreference";
 import { useViewportMetrics } from "./hooks/useViewportMetrics";
-import { useViewModePreference } from "./hooks/useViewModePreference";
 import { useWeekSwipeNavigation } from "./hooks/useWeekSwipeNavigation";
 import { applyDevClassStatusPreview } from "./lib/devStatusPreview";
 import { useWeeks } from "./hooks/useWeeks";
@@ -49,11 +43,7 @@ function EmptyWeekState({ week }: { week: WeekMeta }) {
 export default function App() {
    const [weekOffset, setWeekOffset] = useState(0);
    const [weekTransitionDirection, setWeekTransitionDirection] = useState<WeekTransitionDirection>("default");
-   const [viewMode, setViewMode] = useViewModePreference();
-   const [theme, setTheme] = useThemePreference();
-   const [shownWeekdays, setShownWeekdays] = useShownWeekdaysPreference();
-   const [gridHours, setGridHours] = useGridHoursPreference();
-   const [agendaFoldingMode, setAgendaFoldingMode] = useAgendaFoldingPreference();
+   const { agendaFoldingMode, devPreview, gridHours, setGridHours, setShownWeekdays, setViewMode, shownWeekdays, viewMode } = usePreferences();
    const appContentRef = useRef<HTMLElement>(null);
    const weekOffsetRef = useRef(0);
    const [seekingHome, setSeekingHome] = useState(true);
@@ -62,17 +52,14 @@ export default function App() {
    const [selectedClassId, setSelectedClassId] = useState<string | null>(null);
    const [isSettingsOpen, setIsSettingsOpen] = useState(false);
    const [bearerTokenInput, setBearerTokenInput] = useState("");
-   const devPreview = useDevPreview();
-   const classNotifications = useClassNotificationsPreference();
+   const perceivedNow = devPreview.perceivedNow;
    const rosterTimeZone = useRosterTimeZone();
    const {
       settings: tokenSettings,
       hasBearerToken,
       isInitialLoading: isTokenSettingsLoading,
       initialLoadError: tokenSettingsLoadError,
-      isMutating: isTokenMutating,
       weeksResetKey,
-      clearToken,
       refreshAfterAuthError,
    } = useOsirisTokenSettings();
    useViewportMetrics();
@@ -104,7 +91,6 @@ export default function App() {
       resetKey: weeksResetKey,
       timeZone: rosterTimeZone.declaredTimeZone,
    });
-   const perceivedNow = devPreview.perceivedNow;
    const nextClassDay = useMemo(
       () => (rosterTimeZone.isKnown ? getNextClassDay(knownWeeks, perceivedNow) : null),
       [knownWeeks, perceivedNow, rosterTimeZone.isKnown]
@@ -160,6 +146,10 @@ export default function App() {
       weekOffset === homeWeekOffset,
       nextClassDay
    );
+   // Changing the folding preset re-applies it immediately instead of fighting old per-day toggles.
+   useEffect(() => {
+      resetAgenda(true);
+   }, [agendaFoldingMode, resetAgenda]);
 
    const hiddenDays = useMemo(() => getHiddenDaysWithClasses(allDays, shownWeekdays), [allDays, shownWeekdays]);
    const smartWeekdays = useMemo(() => getWeekdaysWithClasses(initialWeeks), [initialWeeks]);
@@ -177,14 +167,6 @@ export default function App() {
          setGridHours(expandedGridHours);
       }
    }, [expandedGridHours, setGridHours]);
-
-   const changeAgendaFoldingMode = useCallback(
-      (mode: Parameters<typeof setAgendaFoldingMode>[0]) => {
-         setAgendaFoldingMode(mode);
-         resetAgenda();
-      },
-      [resetAgenda, setAgendaFoldingMode]
-   );
 
    const updateWeekOffset = useCallback(
       (updater: number | ((current: number) => number), transitionDirection: WeekTransitionDirection = "default") => {
@@ -475,44 +457,13 @@ export default function App() {
          <SettingsDialog
             isOpen={isSettingsOpen}
             onClose={closeSettings}
-            notifications={{
-               areNotificationsBlocked: classNotifications.isBlocked,
-               areNotificationsEnabled: classNotifications.enabled,
-               areNotificationsSupported: classNotifications.isSupported,
-               areNotificationsUpdating: classNotifications.isUpdating,
-               onChangeNotifications: (enabled) => void classNotifications.setEnabled(enabled),
-            }}
-            preferences={{
-               theme: theme,
-               shownWeekdays: shownWeekdays,
-               smartWeekdays: smartWeekdays,
-               isSmartDaysReady: areInitialWeeksLoaded,
-               gridHours: gridHours,
-               smartGridHours: smartGridHours,
-               agendaFoldingMode: agendaFoldingMode,
-               tokenValidationStatus: tokenValidationStatus,
-               onChangeTheme: setTheme,
-               onChangeShownWeekdays: setShownWeekdays,
-               onChangeGridHours: setGridHours,
-               onChangeAgendaFoldingMode: changeAgendaFoldingMode,
-            }}
-            access={{
-               tokenSettings: tokenSettings,
-               isTokenLoading: isTokenMutating,
-               successfulTokenValidationKey: successfulTokenValidationKey,
-               onTokenDraftChange: () => clearTokenValidationFailure(),
-               onSaveToken: submitBearerToken,
-               onClearToken: clearToken,
-            }}
-            preview={{
-               isDevToolsEnabled: devPreview.isEnabled,
-               perceivedNow: perceivedNow,
-               timeOverride: devPreview.timeOverride,
-               statusPreviewMode: devPreview.statusPreviewMode,
-               onToggleDevTools: devPreview.toggle,
-               onChangeTimeOverride: devPreview.changeTimeOverride,
-               onChangeStatusPreviewMode: devPreview.setStatusPreviewMode,
-            }}
+            onTokenDraftChange={clearTokenValidationFailure}
+            onSaveToken={submitBearerToken}
+            isSmartDaysReady={areInitialWeeksLoaded}
+            smartWeekdays={smartWeekdays}
+            smartGridHours={smartGridHours}
+            successfulTokenValidationKey={successfulTokenValidationKey}
+            tokenValidationStatus={tokenValidationStatus}
          />
       </div>
    );

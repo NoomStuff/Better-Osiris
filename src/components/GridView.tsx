@@ -2,7 +2,7 @@ import { getGridCurrentTime } from "../lib/dayTimeline";
 import { useEffect, useMemo, useRef, useState, type CSSProperties, type MouseEvent } from "react";
 import { dayShortLabel, formatClock, fullDayLabel, timeLabel, getMinutesFromMidnight } from "../lib/date";
 import { clamp } from "../lib/clamp";
-import { DETAILS_SEPARATOR, getClassLocationLabel } from "../lib/classFormat";
+import { getClassDetailsLabel, getClassLabel, getClassLocationLabel } from "../lib/classFormat";
 import type { GridHourRange } from "../lib/gridHours";
 import type { Day, GridZoom, Class } from "../types/weeks";
 import "./GridView.css";
@@ -241,12 +241,10 @@ export function GridView({ days, zoom: zoomId, hours, now, onSelectClass }: Grid
                            const left = `calc(${(100 / schoolClass.overlapCount) * schoolClass.overlapIndex}% + 2.5px)`;
                            const visibleHeight = (duration / shownMinutes) * contentHeight;
                            const isCompact = visibleHeight > 0 && visibleHeight < COMPACT_HEIGHT_PX;
-                           const densityClass = isCompact ? "is-tight" : "is-roomy";
                            const timeRange = `${timeLabel.format(schoolClass.startDate)}-${timeLabel.format(schoolClass.endDate)}`;
-                           const classLabel = schoolClass.title || schoolClass.subject;
+                           const classLabel = getClassLabel(schoolClass);
                            const subtitleLabel = schoolClass.subject !== classLabel ? schoolClass.subject : "";
-                           const roomLocationLabel = getClassLocationLabel(schoolClass);
-                           const teacherLocationLabel = [schoolClass.teacher, roomLocationLabel].filter(Boolean).join(DETAILS_SEPARATOR);
+                           const teacherLocationLabel = getClassDetailsLabel(schoolClass);
                            const isTiny = visibleHeight > 0 && visibleHeight < TINY_HEIGHT_PX;
 
                            const accessibleLabel = [
@@ -255,7 +253,7 @@ export function GridView({ days, zoom: zoomId, hours, now, onSelectClass }: Grid
                               fullDayLabel.format(schoolClass.startDate),
                               timeRange,
                               schoolClass.teacher,
-                              roomLocationLabel,
+                              getClassLocationLabel(schoolClass),
                               schoolClass.status === "scheduled" ? "" : schoolClass.status,
                            ]
                               .filter(Boolean)
@@ -263,7 +261,7 @@ export function GridView({ days, zoom: zoomId, hours, now, onSelectClass }: Grid
 
                            return (
                               <button
-                                 className={`grid-class ${densityClass} ${isCompact ? "is-compact" : ""} ${isTiny ? "is-tiny" : ""} status-${schoolClass.status}`}
+                                 className={`grid-class ${isCompact ? "is-tight is-compact" : ""} ${isTiny ? "is-tiny" : ""} status-${schoolClass.status}`}
                                  type="button"
                                  key={schoolClass.id}
                                  onClick={() => onSelectClass(schoolClass)}

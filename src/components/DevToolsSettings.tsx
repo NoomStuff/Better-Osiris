@@ -1,11 +1,12 @@
 import { getClassReminderBody, getReminderMinutes } from "../lib/classReminders";
-import { deliverClassNotification, getClassNotificationBodies, requestNotificationPermission } from "../lib/classNotifications";
-import type { DevClassStatusPreviewMode } from "../lib/devStatusPreview";
+import { getClassNotificationBodies, requestNotificationPermission } from "../lib/classNotifications";
+import { deliverNotification } from "../lib/notificationDelivery";
 import { DEV_CLASS_STATUS_PREVIEW_MODES } from "../lib/devStatusPreview";
 import { formatClock } from "../lib/date";
 import { notifyError, notifySuccess, notifyWarning } from "../lib/notyf";
 import type { SessionClassDiff } from "../lib/classDiffs";
 import type { ClassSnapshot } from "../types/weeks";
+import { usePreferences } from "../hooks/preferences";
 import { ActionButtons, ActionSelector } from "./ActionGroup";
 import { Button } from "./Button";
 import { IconButton } from "./IconButton";
@@ -14,25 +15,9 @@ import { ToggleSwitch } from "./ToggleSwitch";
 
 const DAY_MINUTES = 24 * 60;
 
-interface DevToolsSettingsProps {
-   isEnabled: boolean;
-   perceivedNow: Date;
-   timeOverride: Date | null;
-   statusPreviewMode: DevClassStatusPreviewMode;
-   onToggle: (enabled: boolean) => void;
-   onChangeTimeOverride: (date: Date | null) => void;
-   onChangeStatusPreviewMode: (mode: DevClassStatusPreviewMode) => void;
-}
-
-export function DevToolsSettings({
-   isEnabled,
-   perceivedNow,
-   timeOverride,
-   statusPreviewMode,
-   onToggle,
-   onChangeTimeOverride,
-   onChangeStatusPreviewMode,
-}: DevToolsSettingsProps) {
+export function DevToolsSettings() {
+   const { devPreview } = usePreferences();
+   const { isEnabled, perceivedNow, statusPreviewMode, timeOverride } = devPreview;
    const isLive = timeOverride === null;
    const perceivedMinutes = perceivedNow.getHours() * 60 + perceivedNow.getMinutes();
 
@@ -44,19 +29,19 @@ export function DevToolsSettings({
 
       const nextDate = new Date(perceivedNow);
       nextDate.setFullYear(Number(yearText), Number(monthText) - 1, Number(dayText));
-      onChangeTimeOverride(nextDate);
+      devPreview.changeTimeOverride(nextDate);
    };
 
    const stepDay = (days: number) => {
       const nextDate = new Date(perceivedNow);
       nextDate.setDate(nextDate.getDate() + days);
-      onChangeTimeOverride(nextDate);
+      devPreview.changeTimeOverride(nextDate);
    };
 
    const changeTime = (minutes: number) => {
       const nextDate = new Date(perceivedNow);
       nextDate.setHours(Math.floor(minutes / 60), minutes % 60, 0, 0);
-      onChangeTimeOverride(nextDate);
+      devPreview.changeTimeOverride(nextDate);
    };
 
    const testPushNotification = async (type: "added" | "changed" | "cancelled" | "starting") => {
@@ -82,7 +67,7 @@ export function DevToolsSettings({
             : getClassNotificationBodies([sample])[0];
       if (!body) return;
       try {
-         await deliverClassNotification(body, `devtools-${type}`, () => true);
+         await deliverNotification(body, `devtools-${type}`, () => true);
       } catch {
          notifyWarning("This browser could not show the notification.");
       }
@@ -95,7 +80,7 @@ export function DevToolsSettings({
                <h3 id="devtools-settings-title">Devtools</h3>
                <p>Local-only test helpers. Fake the clock and class changes; these controls never ship.</p>
             </div>
-            <ToggleSwitch checked={isEnabled} label="Enable devtools" onCheckedChange={onToggle} />
+            <ToggleSwitch checked={isEnabled} label="Enable devtools" onCheckedChange={devPreview.toggle} />
          </div>
 
          {isEnabled ? (
@@ -132,7 +117,7 @@ export function DevToolsSettings({
                </div>
 
                <div className="devtools-footer">
-                  <Button size="compact" disabled={isLive} onClick={() => onChangeTimeOverride(null)}>
+                  <Button size="compact" disabled={isLive} onClick={() => devPreview.changeTimeOverride(null)}>
                      Back to now
                   </Button>
                </div>
@@ -143,7 +128,7 @@ export function DevToolsSettings({
                      label="Class changes"
                      options={DEV_CLASS_STATUS_PREVIEW_MODES}
                      value={statusPreviewMode}
-                     onChange={onChangeStatusPreviewMode}
+                     onChange={devPreview.setStatusPreviewMode}
                   />
                </div>
 

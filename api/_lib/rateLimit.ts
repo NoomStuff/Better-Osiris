@@ -89,5 +89,8 @@ export function enforceRosterRateLimit(req: IncomingMessage) {
 export function enforceTokenRateLimit(req: IncomingMessage) {
    enforceRateLimit(req, "token-mutation-ip", 1000, 15 * 60_000);
    const context = getCredentialContext(resolveOsirisBearerToken(req.headers.cookie));
+   // Anonymous callers have no per-credential bucket, and every mutation validates their token
+   // against live OSIRIS; without a tighter bucket the shared address cap is the only brake.
    if (context) enforceRateLimit(req, "token-mutation-session", 20, 15 * 60_000, context);
+   else enforceRateLimit(req, "token-mutation-anonymous", 20, 15 * 60_000);
 }

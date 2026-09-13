@@ -1,4 +1,5 @@
 import type { Class, ClassSnapshot, ClassStatus, OsirisTokenSettings, RosterConfig, WeekBatch, Week, WeekMeta } from "./weeks.js";
+import { MAX_WEEK_LIMIT } from "./weeks.js";
 import { isValidTimeZone, resolveCanonicalTimeZone } from "./timeZone.js";
 import { isoWeekNumber, shiftCalendarDate } from "./calendar.js";
 
@@ -45,8 +46,12 @@ export function parseWeekBatch(value: unknown): WeekBatch {
    const offset = readInteger(record["offset"], "offset");
    const limit = readInteger(record["limit"], "limit");
    const weeks = readArray(record["weeks"], "weeks").map((week, index) => parseWeek(week, `weeks[${index}]`));
-   if (limit < 1 || limit > 5 || weeks.length !== limit) {
-      throw invalid("weeks", `an array containing exactly ${limit} weeks`);
+   if (limit < 1 || limit > MAX_WEEK_LIMIT) {
+      throw invalid("limit", `between 1 and ${MAX_WEEK_LIMIT}`);
+   }
+   // A short final batch is valid when the roster horizon ends inside the requested window.
+   if (weeks.length < 1 || weeks.length > limit) {
+      throw invalid("weeks", `between 1 and ${limit} weeks`);
    }
    weeks.forEach((week, index) => {
       if (week.week.offset !== offset + index) {

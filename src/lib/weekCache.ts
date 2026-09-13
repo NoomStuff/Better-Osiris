@@ -1,18 +1,11 @@
 import { removeBrowserStorage } from "./browserStorage";
+import { NOTIFICATION_DELIVERY_LEDGER_KEY } from "./notificationDelivery";
 
 export const WEEK_CACHE_KEY = "roster-weeks-v3";
 export const SESSION_CLASS_DIFFS_KEY = "roster-session-class-diffs-v3";
 
-export function clearLegacyWeekCache() {
-   removeBrowserStorage("localStorage", "roster-current-week-cache-v2");
-   removeBrowserStorage("localStorage", "roster-last-week-cache-v1");
-   removeBrowserStorage("sessionStorage", "roster-session-class-diffs-v2");
-}
-
 export function clearWeekBrowserCache() {
-   clearLegacyWeekCache();
    removeBrowserStorage("localStorage", WEEK_CACHE_KEY);
    removeBrowserStorage("sessionStorage", SESSION_CLASS_DIFFS_KEY);
-   removeBrowserStorage("localStorage", "roster-notification-deliveries-v1");
-   removeBrowserStorage("localStorage", "roster-reminder-deliveries");
+   removeBrowserStorage("localStorage", NOTIFICATION_DELIVERY_LEDGER_KEY);
 }

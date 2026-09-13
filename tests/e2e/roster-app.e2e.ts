@@ -1722,8 +1722,7 @@ for (const view of ["grid", "agenda"] as const)
       await expect(page.getByRole("button", { name: "SOURCE_TITLE_0_1" })).toBeVisible();
       await page.reload();
       await expect(page.locator(".weekbar__label")).toHaveText("This week");
-      if (mode === "single") await expect(page.locator('.day-group__header[aria-expanded="true"]')).toHaveCount(0);
-      else await expect(page.getByRole("button", { name: "SOURCE_TITLE_0_1" })).toBeVisible();
+      await expect(page.getByRole("button", { name: "SOURCE_TITLE_0_1" })).toBeVisible();
       await expect(page.getByText(/Showing your saved roster/)).toHaveCount(0);
    });
 
