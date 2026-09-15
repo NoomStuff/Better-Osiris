@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { it } from "node:test";
-import { getClassReminderBody, isClassReminderDue } from "./classReminders";
+import { getClassReminderBody, getClassReminderExpiry, isClassReminderDue } from "./classReminders";
 import { setRosterTimeZone } from "./rosterTimeZone";
 import type { Class } from "../types/weeks";
 void it("reminds only within the lead window, using the roster time zone", () => {
@@ -32,4 +32,25 @@ void it("formats remaining minutes and omits an unavailable room", () => {
    assert.equal(getClassReminderBody(item, start - 300000), "Math is starting in 5 minutes in room B12");
    assert.equal(getClassReminderBody(item, start - 45000), "Math is starting in 1 minute in room B12");
    assert.equal(getClassReminderBody({ ...item, room: " " }, start - 120000), "Math is starting in 2 minutes");
+});
+
+void it("expires at the next later reminder or the class end, ignoring cancelled and simultaneous classes", () => {
+   const item: Class = {
+      id: "a",
+      title: "A",
+      subject: "",
+      start: "2026-06-16T10:00:00Z",
+      end: "2026-06-16T11:00:00Z",
+      teacher: "",
+      room: "",
+      location: "",
+      description: "",
+      status: "scheduled",
+   };
+   const next: Class = { ...item, id: "b", start: "2026-06-16T11:00:00Z", end: "2026-06-16T12:00:00Z" };
+   assert.equal(getClassReminderExpiry(item, [item, next], 5), Date.parse("2026-06-16T10:55:00Z"));
+   assert.equal(getClassReminderExpiry(item, [item, next], 10), Date.parse("2026-06-16T10:50:00Z"));
+   assert.equal(getClassReminderExpiry(item, [item, { ...next, status: "cancelled" }], 5), Date.parse(item.end));
+   assert.equal(getClassReminderExpiry(item, [item, { ...next, start: item.start }], 5), Date.parse(item.end));
+   assert.equal(getClassReminderExpiry(item, [item, { ...next, start: "2026-06-16T12:00:00Z" }], 5), Date.parse(item.end));
 });

@@ -1,0 +1,11 @@
+{
+   "id": "/",
+   "name": "Better Osiris",
+   "short_name": "Osiris",
+   "start_url": "/",
+   "scope": "/",
+   "display": "standalone",
+   "background_color": "#0e111f",
+   "theme_color": "#0e111f",
+   "icons": [{ "src": "/favicon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }]
+}

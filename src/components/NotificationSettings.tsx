@@ -6,10 +6,10 @@ import { ToggleSwitch } from "./ToggleSwitch";
 export function NotificationSettings() {
    const notifications = useClassNotificationsPreference();
    const notificationDetail = !notifications.isSupported
-      ? "This browser does not support timetable notifications."
+      ? "Notifications are unavailable here. On iPhone or iPad, add this app to your Home Screen and open it there."
       : notifications.isBlocked
         ? "Notifications are blocked in your browser settings."
-        : "Class alerts while the app is open and your device is awake.";
+        : "Keep the app open for class alerts. Background tabs and sleeping devices may delay or miss them.";
 
    return (
       <section className="settings-section" aria-labelledby="notification-settings-title">

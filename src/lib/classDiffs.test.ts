@@ -81,7 +81,8 @@ void describe("session roster diff states", () => {
       recordSessionClassDiffs(original, added, diffs);
       const recorded = recordSessionClassDiffs(added, original, diffs);
 
-      assert.deepEqual(recorded, []);
+      assert.equal(recorded[0]?.status, "cancelled");
+      assert.equal(recorded[0].previousClass?.id, "new-class");
       assert.equal(diffs.size, 0);
       assert.deepEqual(applySessionClassDiffs(original, diffs).classes, []);
    });
@@ -121,7 +122,9 @@ void describe("session roster diff states", () => {
 
       recordSessionClassDiffs(original, changed, diffs);
       assert.equal(diffs.get("2026-06-15")?.size, 1);
-      recordSessionClassDiffs(changed, original, diffs);
+      const reverted = recordSessionClassDiffs(changed, original, diffs);
+      assert.equal(reverted[0]?.status, "changed");
+      assert.equal(reverted[0].previousClass?.room, "B202");
       assert.equal(diffs.size, 0);
       assert.equal(applySessionClassDiffs(original, diffs).classes[0]?.status, "scheduled");
    });

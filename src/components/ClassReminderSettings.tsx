@@ -29,6 +29,7 @@ export function ClassReminderSettings() {
                onChange={(value) => {
                   writeBrowserStorage("localStorage", REMINDER_MINUTES_KEY, String(value));
                   setMinutes(value);
+                  window.dispatchEvent(new Event("notificationpreferenceschange"));
                }}
             />
             <ToggleSwitch

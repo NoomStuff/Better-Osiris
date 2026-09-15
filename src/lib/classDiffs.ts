@@ -67,7 +67,12 @@ export function reconcileWeeks(previous: ReadonlyMap<string, Week>, incoming: re
          const existing = oldDiffsById.get(item.id);
          const original = existing?.previousClass;
          forget(item.id);
-         if (original && same(original, toClassSnapshot(item))) return;
+         if (original && same(original, toClassSnapshot(item))) {
+            const last = old ?? existing.schoolClass;
+            if (!same(toClassSnapshot(last), toClassSnapshot(item)))
+               notifications.push({ schoolClass: item, previousClass: toClassSnapshot(last), status: "changed" });
+            return;
+         }
          if (!old) {
             if (original) remember(week.week.start, item, original, item.status === "cancelled" ? "cancelled" : "changed");
             else if (previous.has(week.week.start)) remember(week.week.start, item, undefined, item.status === "cancelled" ? "cancelled" : "added");
@@ -84,7 +89,10 @@ export function reconcileWeeks(previous: ReadonlyMap<string, Week>, incoming: re
          if (nextById.has(old.id)) return;
          const existing = oldDiffsById.get(old.id);
          forget(old.id);
-         if (existing?.status === "added") return;
+         if (existing?.status === "added") {
+            notifications.push({ schoolClass: { ...toClassSnapshot(old), status: "cancelled" }, previousClass: toClassSnapshot(old), status: "cancelled" });
+            return;
+         }
          // A row that vanished without an explicit upstream cancellation still presents as
          // cancelled; it is held back from notifications until concurrent batches settle.
          remember(week.week.start, old, toClassSnapshot(old), "cancelled", old.status !== "cancelled");

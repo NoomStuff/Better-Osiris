@@ -1,3 +1,5 @@
+import { toClassSnapshot } from "./classSnapshot";
+import type { ClassSnapshot } from "../types/weeks";
 import { dayLabel, parseLocalDateTime, timeLabel } from "./date";
 import type { SessionClassDiff } from "./classDiffs";
 import { notifyWarning } from "./notyf";
@@ -38,32 +40,60 @@ export async function requestNotificationPermission(): Promise<ClassNotification
 
 let deliveryWarningShown = false;
 
-async function digest(value: unknown) {
-   const bytes = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(JSON.stringify(value)));
-   return Array.from(new Uint8Array(bytes), (byte) => byte.toString(16).padStart(2, "0")).join("");
+interface PendingChange {
+   scope: string;
+   diff: SessionClassDiff;
+   before: ClassSnapshot | null;
 }
+const pendingChanges = new Map<string, PendingChange>();
+const notificationState = (item: ClassSnapshot | null) => JSON.stringify(item?.status === "cancelled" ? null : item);
 
-/** The page detects changes. The worker only provides notification delivery on mobile. */
+/** Compare with the last delivered state, and combine edits still waiting for delivery. */
 export async function notifyClassDiffs(diffs: SessionClassDiff[], contextId: string) {
    if (!getClassNotificationsEnabled() || getClassNotificationPermission() !== "granted" || !diffs.length) return;
    const epoch = readBrowserStorage("localStorage", SESSION_EPOCH_KEY);
    const isCurrent = () => epoch === readBrowserStorage("localStorage", SESSION_EPOCH_KEY) && getClassNotificationsEnabled();
+   const scope = JSON.stringify([epoch, contextId]);
+   diffs.forEach((diff) => {
+      const key = JSON.stringify(["class-change", epoch, contextId, diff.schoolClass.id]);
+      const previous = pendingChanges.get(key);
+      pendingChanges.set(key, { scope, diff, before: previous ? previous.before : diff.previousClass ? toClassSnapshot(diff.previousClass) : null });
+   });
    try {
-      await runNotificationQueue("class-changes", async (ledger) => {
-         const keyed = await Promise.all(
-            diffs.map(async (diff) => {
-               const { previous: _previous, ...current } = diff.schoolClass;
-               return { diff, key: await digest([contextId, current]) };
-            })
-         );
+      await runNotificationQueue(async (ledger) => {
+         const keys = [...pendingChanges].filter(([, pending]) => pending.scope === scope).map(([key]) => key);
+         if (!isCurrent()) {
+            keys.forEach((key) => pendingChanges.delete(key));
+            return;
+         }
+         const keyed = keys.flatMap((key) => {
+            const pending = pendingChanges.get(key);
+            if (!pending) return [];
+            const state = notificationState(toClassSnapshot(pending.diff.schoolClass));
+            if (state === (ledger.getState(key) ?? notificationState(pending.before))) {
+               pendingChanges.delete(key);
+               return [];
+            }
+            const diff: SessionClassDiff = {
+               ...pending.diff,
+               status: pending.diff.status === "added" && pending.before ? "changed" : pending.diff.status,
+               ...(pending.before ? { previousClass: pending.before } : {}),
+            };
+            return [{ key, pending, state, diff }];
+         });
          for (const status of ["added", "changed", "cancelled"] as const) {
-            const group = keyed.filter((item) => item.diff.status === status && !ledger.isDelivered(item.key));
+            const group = keyed.filter((item) => item.diff.status === status);
             if (!group.length) continue;
             const body = getClassNotificationBodies(group.map((item) => item.diff))[0];
-            if (!body || !isCurrent()) return;
-            const tag = await digest(group.map((item) => item.key).sort());
-            if (!(await deliverNotification(body, tag, isCurrent))) return;
-            group.forEach((item) => ledger.markDelivered(item.key));
+            const current = () => isCurrent() && group.every((item) => pendingChanges.get(item.key) === item.pending);
+            if (!body || !current()) continue;
+            if (!(await deliverNotification(body, `class-change:${crypto.randomUUID()}`, current))) continue;
+            group.forEach((item) => {
+               ledger.markDelivered(item.key, item.state);
+               const latest = pendingChanges.get(item.key);
+               if (latest === item.pending) pendingChanges.delete(item.key);
+               else if (latest) latest.before = toClassSnapshot(item.diff.schoolClass);
+            });
          }
       });
    } catch {

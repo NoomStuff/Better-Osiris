@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
-import { beforeEach, describe, it } from "node:test";
-import { getClassNotificationBodies } from "./classNotifications.js";
+import { afterEach, beforeEach, describe, it } from "node:test";
+import { getClassNotificationBodies, notifyClassDiffs } from "./classNotifications.js";
 import { setRosterTimeZone } from "./rosterTimeZone.js";
 import type { SessionClassDiff } from "./classDiffs.js";
 import type { Class, ClassSnapshot } from "../types/weeks";
@@ -76,3 +76,70 @@ function createClass(overrides: Partial<Class> = {}): Class {
    if (details.status === "cancelled") return { ...details, status: "cancelled", ...(previous ? { previous } : {}) };
    return { ...details, status: details.status };
 }
+
+void describe("class notification delivery history", () => {
+   let messages: string[];
+   const savedWindow = Object.getOwnPropertyDescriptor(globalThis, "window");
+   beforeEach(() => {
+      messages = [];
+      const storage = new Map<string, string>([["roster-class-notifications", "true"]]);
+      class TestNotification {
+         readonly tag: string;
+         close() {
+            /* Nothing is displayed by this test double. */
+         }
+         static permission = "granted";
+         constructor(_title: string, options: NotificationOptions) {
+            this.tag = options.tag ?? "";
+            messages.push(options.body ?? "");
+         }
+      }
+      Object.defineProperty(globalThis, "window", {
+         configurable: true,
+         value: {
+            Notification: TestNotification,
+            localStorage: {
+               getItem: (key: string) => storage.get(key) ?? null,
+               setItem: (key: string, value: string) => storage.set(key, value),
+            },
+         },
+      });
+   });
+   afterEach(() => {
+      if (savedWindow) Object.defineProperty(globalThis, "window", savedWindow);
+      else Reflect.deleteProperty(globalThis, "window");
+   });
+   void it("delivers A to B to A to B, but suppresses duplicate observations", async () => {
+      const context = crypto.randomUUID();
+      const forward = createDiff("changed", { room: "B" }, { room: "A" });
+      const back = createDiff("changed", { room: "A" }, { room: "B" });
+      await notifyClassDiffs([forward], context);
+      await notifyClassDiffs([forward], context);
+      await notifyClassDiffs([back], context);
+      await notifyClassDiffs([forward], context);
+      assert.deepEqual(messages, ["Web Development changed: A → B", "Web Development changed: B → A", "Web Development changed: A → B"]);
+   });
+   void it("suppresses a round trip before delivery and combines pending edits", async () => {
+      const context = crypto.randomUUID();
+      await Promise.all([
+         notifyClassDiffs([createDiff("changed", { room: "B" }, { room: "A" })], context),
+         notifyClassDiffs([createDiff("changed", { room: "A" }, { room: "B" })], context),
+      ]);
+      assert.deepEqual(messages, []);
+      await Promise.all([
+         notifyClassDiffs([createDiff("changed", { room: "B" }, { room: "A" })], context),
+         notifyClassDiffs([createDiff("changed", { room: "C" }, { room: "B" })], context),
+      ]);
+      assert.deepEqual(messages, ["Web Development changed: A → C"]);
+   });
+   void it("only cancels a pending addition after the addition has been delivered", async () => {
+      const context = crypto.randomUUID();
+      const addition: SessionClassDiff = { schoolClass: createClass({ status: "added" }), status: "added" };
+      const cancellation = createDiff("cancelled");
+      await Promise.all([notifyClassDiffs([addition], context), notifyClassDiffs([cancellation], context)]);
+      assert.deepEqual(messages, []);
+      await notifyClassDiffs([addition], context);
+      await notifyClassDiffs([cancellation], context);
+      assert.deepEqual(messages, ["Web Development was added: Tuesday 10:30", "Web Development was cancelled: Tuesday 10:30"]);
+   });
+});

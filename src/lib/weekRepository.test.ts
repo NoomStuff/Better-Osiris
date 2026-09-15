@@ -119,6 +119,45 @@ void describe("concurrent week requests", () => {
       assert.equal(repository.getSnapshot().entries[51], undefined);
    });
 
+   void it("scopes change alerts to the home week when the source opens on next week", async () => {
+      const messages: string[] = [];
+      function TestNotification(_title: string, options: { body: string }) {
+         messages.push(options.body);
+      }
+      Object.defineProperty(TestNotification, "permission", { value: "granted" });
+      Object.defineProperty(window, "Notification", { value: TestNotification });
+      window.localStorage.setItem("roster-class-notifications", "true");
+      const makeBatch = (room: string) => {
+         const result = batch(0, 1);
+         for (const week of result.weeks) {
+            week.classes = [
+               {
+                  id: week.week.start,
+                  title: `Week ${week.week.offset}`,
+                  subject: "",
+                  start: `${week.week.start}T09:00:00`,
+                  end: `${week.week.start}T10:00:00`,
+                  teacher: "",
+                  room,
+                  location: "",
+                  description: "",
+                  status: "scheduled",
+               },
+            ];
+         }
+         return result;
+      };
+      configure(0);
+      respond(0, Response.json(makeBatch("A")));
+      respond(5, Response.json(batch(5, 1)));
+      await until(() => Boolean(repository.getSnapshot().entries[1]?.data));
+      configure(1);
+      repository.refresh();
+      respond(0, Response.json(makeBatch("B")));
+      await until(() => messages.length > 0);
+      assert.deepEqual(messages, ["Week 0 changed: A → B"]);
+   });
+
    void it("waits for concurrent batches before notifying a removal and still notifies confirmed removals", async () => {
       const deliveries: string[] = [];
       function TestNotification(_title: string, options: { body: string }) {

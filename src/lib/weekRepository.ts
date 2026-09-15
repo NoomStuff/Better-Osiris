@@ -13,7 +13,7 @@ import {
    storeWeekCache,
    type StoredWeek,
 } from "./weekPersistence";
-import { createWeekEntry, getBatchOffsets, getBatchStart, isSameWeekData, type WeekEntries } from "./weekPolicy";
+import { getHomeWeek, createWeekEntry, getBatchOffsets, getBatchStart, isSameWeekData, type WeekEntries } from "./weekPolicy";
 import { getRosterTimeZone, isRosterTimeZoneKnown, setRosterTimeZone } from "./rosterTimeZone";
 import { getSessionEpoch, onSessionInvalidated, refreshSession } from "./sessionStore";
 import { clearWeekBrowserCache } from "./weekCache";
@@ -318,6 +318,9 @@ export class WeekRepository {
                   });
             });
             this.snapshot = { ...this.snapshot, entries: settledEntries };
+            // Use the home week the user had before this update. Cancelling its final class
+            // can advance Home, but must still notify about that cancellation.
+            const previousHome = getHomeWeek(this.snapshot.entries, this.sourceShift, new Date());
             const result = reconcileWeeks(this.raw, incomingWeeks, this.changes);
             const checkedAt = Date.now();
             result.rawWeeks.forEach((week, date) => {
@@ -343,8 +346,13 @@ export class WeekRepository {
                   : this.snapshot.lastSuccessfulResetKey,
                incomingDates
             );
+            const home = previousHome.offset === null ? getHomeWeek(this.snapshot.entries, this.sourceShift, new Date()) : previousHome;
+            const homeStart = home.offset === null ? null : shiftCalendarDate(this.anchor, home.offset * 7);
             const notifications = result.notifications.filter(
-               (diff) => diff.schoolClass.start.slice(0, 10) >= this.anchor && diff.schoolClass.start.slice(0, 10) <= shiftCalendarDate(this.anchor, 6)
+               (diff) =>
+                  homeStart !== null &&
+                  diff.schoolClass.start.slice(0, 10) >= homeStart &&
+                  diff.schoolClass.start.slice(0, 10) <= shiftCalendarDate(homeStart, 6)
             );
             // Cancellations wait until every in-flight batch has settled: a row that vanished in
             // one response may reappear via a concurrent one, and only the surviving diff notifies.
@@ -400,8 +408,8 @@ export class WeekRepository {
          .finally(() => {
             if (this.requests.get(start) === controller) this.requests.delete(start);
             if (generation === this.generation && this.requests.size === 0 && this.contextId) {
-               const cancellations = [...this.pendingCancellations.values()].filter((diff) =>
-                  [...this.changes.values()].some((changes) => changes.get(diff.schoolClass.id)?.status === "cancelled")
+               const cancellations = [...this.pendingCancellations.values()].filter(
+                  (diff) => ![...this.raw.values()].some((week) => week.classes.some((item) => item.id === diff.schoolClass.id && item.status !== "cancelled"))
                );
                this.pendingCancellations.clear();
                void notifyClassDiffs(cancellations, this.contextId);

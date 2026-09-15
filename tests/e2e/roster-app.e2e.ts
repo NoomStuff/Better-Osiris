@@ -1445,7 +1445,7 @@ test("Sunday changes remain in the previous week after a Monday reload", async (
    await expect(page.locator(".grid-class.status-cancelled")).toHaveCount(2);
 });
 
-test("notification delivery falls back to a worker and deduplicates a change across tabs", async ({ page, context }) => {
+test("notification delivery uses a worker and deduplicates a change across tabs", async ({ page, context }) => {
    const deliveries: string[] = [];
    await context.exposeBinding("recordDelivery", (_source, body: string) => {
       deliveries.push(body);
@@ -1867,9 +1867,16 @@ test("class reminders deliver once independently of change alerts", async ({ pag
       localStorage.setItem("roster-class-reminders", "true");
       class MockNotification {
          readonly title: string;
+         readonly tag: string;
+         readonly data: unknown;
+         close() {
+            localStorage.setItem("test-closed-notification", this.tag);
+         }
          static permission = "granted";
          constructor(title: string, options: NotificationOptions) {
             this.title = title;
+            this.tag = options.tag ?? "";
+            this.data = options.data as unknown;
             const messages = JSON.parse(localStorage.getItem("test-reminder-messages") ?? "[]") as string[];
             messages.push(options.body ?? "");
             localStorage.setItem("test-reminder-messages", JSON.stringify(messages));
@@ -1903,6 +1910,24 @@ test("class reminders deliver once independently of change alerts", async ({ pag
          "Testles was cancelled: Tuesday 09:00",
          "Testles is starting in 5 minutes in room B12",
       ]);
+   for (const [groupName, labels] of [
+      ["Grouped notification tests", ["Added group", "Changed group", "Cancelled group"]],
+      ["Notification timing tests", ["During class", "After class", "Expires in 5s"]],
+      ["Repeated notification tests", ["Changed twice", "Reverted"]],
+   ] as const) {
+      const group = page.getByRole("group", { name: groupName, exact: true });
+      for (const name of labels) await group.getByRole("button", { name, exact: true }).click();
+   }
+   await expect.poll(messages).toHaveLength(15);
+   const examples = await messages();
+   expect(examples.slice(5, 8)).toEqual(["3 classes were added", "3 classes were changed", "3 classes were cancelled"]);
+   expect(examples.slice(-4)).toEqual([
+      "Testles changed: A101 → B12",
+      "Testles changed: B12 → C04",
+      "Testles changed: A101 → B12",
+      "Testles changed: B12 → A101",
+   ]);
+   await expect.poll(() => page.evaluate(() => localStorage.getItem("test-closed-notification")), { timeout: 8_000 }).toContain("devtools-expires:");
    await expect(page.getByRole("group", { name: "Toast tests", exact: true }).getByRole("button")).toHaveCount(3);
    await page.setViewportSize({ width: 390, height: 844 });
    await notifications.scrollIntoViewIfNeeded();
@@ -1936,3 +1961,70 @@ for (const mode of ["smart", "single"] as const)
       else await expect(page.getByRole("button", { name: "SOURCE_TITLE_0_1" })).toBeVisible();
       await expect(page.getByText(/Showing your saved roster/)).toHaveCount(0);
    });
+
+test("worker reminders replace earlier reminders, expire on resume and clear when disabled", async ({ page }) => {
+   await page.route("**/api/roster/weeks?*", (route) => {
+      const url = new URL(route.request().url());
+      const batch = createRosterBatch(Number(url.searchParams.get("offset")), Number(url.searchParams.get("limit")));
+      for (const week of batch.weeks) {
+         const first = week.classes[0];
+         if (first) first.end = first.end.replace("10:30", "11:00");
+      }
+      return route.fulfill({ json: batch });
+   });
+   await page.addInitScript(() => {
+      localStorage.setItem("test-clock", "2026-06-16T08:55:00+02:00");
+      localStorage.setItem("roster-class-reminders", "true");
+      Object.defineProperty(window, "Notification", { value: { permission: "granted" } });
+      const active: { tag: string; data: unknown; close: () => void }[] = [];
+      const registration = {
+         showNotification: (_title: string, options: NotificationOptions) => {
+            const notification = {
+               tag: options.tag ?? "",
+               data: options.data as unknown,
+               close: () => {
+                  const index = active.indexOf(notification);
+                  if (index !== -1) active.splice(index, 1);
+                  localStorage.setItem("test-active-notifications", String(active.length));
+               },
+            };
+            localStorage.setItem("test-latest-reminder", options.body ?? "");
+            active.push(notification);
+            localStorage.setItem("test-active-notifications", String(active.length));
+            return Promise.resolve();
+         },
+         getNotifications: () => Promise.resolve([...active]),
+      };
+      Object.defineProperty(navigator, "serviceWorker", {
+         value: {
+            register: () => Promise.resolve(registration),
+            ready: Promise.resolve(registration),
+            getRegistration: () => Promise.resolve(registration),
+         },
+      });
+   });
+   await page.goto("/");
+   const count = () => page.evaluate(() => localStorage.getItem("test-active-notifications"));
+   await expect.poll(count).toBe("1");
+   await expect.poll(() => page.evaluate(() => localStorage.getItem("test-latest-reminder"))).toContain("SOURCE_TITLE_0_1");
+   await page.evaluate(() => {
+      Date.now = () => Date.parse("2026-06-16T10:55:00+02:00");
+      document.dispatchEvent(new Event("visibilitychange"));
+   });
+   await expect.poll(() => page.evaluate(() => localStorage.getItem("test-latest-reminder"))).toContain("SOURCE_TITLE_0_2");
+   await expect.poll(count).toBe("1");
+   await page.evaluate(() => {
+      Date.now = () => Date.parse("2026-06-16T18:00:00+02:00");
+      document.dispatchEvent(new Event("visibilitychange"));
+   });
+   await expect.poll(count).toBe("0");
+   await page.evaluate(() => {
+      localStorage.removeItem("roster-notification-deliveries-v1");
+      Date.now = () => Date.parse("2026-06-16T10:55:00+02:00");
+      document.dispatchEvent(new Event("visibilitychange"));
+   });
+   await expect.poll(count).toBe("1");
+   await page.getByRole("button", { name: "Open settings" }).click();
+   await page.getByRole("switch", { name: "Notify me before class starts" }).click();
+   await expect.poll(count).toBe("0");
+});
