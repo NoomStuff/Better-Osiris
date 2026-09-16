@@ -1,35 +1,30 @@
 /* Banked fire: coals glow from below, charred black above, heat rising between. */
-html[data-theme="ember"] {
+html[data-theme="ember"],
+.theme-picker__swatch[data-theme="ember"] {
    color-scheme: dark;
-
-   --page-canvas: #1c0806;
+   --page-canvas: hsl(5.5 64.7% 6.7%);
    --page-background:
-      radial-gradient(ellipse at 52% 114%, rgba(255, 122, 42, 0.4), transparent 46%),
-      radial-gradient(ellipse at 12% 106%, rgba(199, 44, 21, 0.32), transparent 42%),
-      radial-gradient(ellipse at 88% 102%, rgba(255, 84, 34, 0.16), transparent 36%),
-      radial-gradient(ellipse at 50% -18%, rgba(255, 130, 60, 0.1), transparent 38%), linear-gradient(180deg, #150506 0%, #25090a 46%, #3d1008 100%);
+      radial-gradient(ellipse at 52% 114%, hsl(22.5 100% 58.2% / 0.4), transparent 46%),
+      radial-gradient(ellipse at 12% 106%, hsl(7.8 80.9% 43.1% / 0.32), transparent 42%),
+      radial-gradient(ellipse at 88% 102%, hsl(13.6 100% 56.7% / 0.16), transparent 36%),
+      radial-gradient(ellipse at 50% -18%, hsl(21.5 100% 61.8% / 0.1), transparent 38%),
+      linear-gradient(180deg, hsl(356.2 61.5% 5.1%) 0%, hsl(357.9 60.9% 9%) 46%, hsl(9.1 76.8% 13.5%) 100%);
 
-   --line: rgba(235, 170, 132, 0.14);
-   --line-strong: rgba(255, 120, 66, 0.34);
-   --text-strong: #fff2e9;
-   --text-dim: #ddc3b5;
-   --text-muted: #ac8c7c;
-   --accent: #ff7547;
-   --accent-rgb: 255, 117, 71;
-   --warning: #c4a7ff;
-   --warning-rgb: 196, 167, 255;
-   --danger: #ff5361;
-   --danger-rgb: 255, 83, 97;
-   --danger-bright: #ffabb2;
-   --surface-rgb: 24, 14, 24;
-   --highlight-rgb: 255, 242, 233;
-   --overlay-surface: rgba(30, 17, 29, 0.97);
-   --backdrop: rgba(13, 3, 2, 0.58);
-   --backdrop-strong: rgba(13, 3, 2, 0.64);
-   --class-surface: rgba(46, 25, 35, 0.96);
-   --class-surface-raised: rgba(59, 31, 46, 0.98);
-   --class-border: rgba(255, 117, 71, 0.2);
-   --class-border-raised: rgba(255, 117, 71, 0.38);
-   --class-surface-cancelled: rgba(78, 22, 24, 0.97);
-   --shadow: 0 26px 84px rgba(7, 2, 12, 0.64);
+   --line: hsl(22.1 72% 72% / 0.14);
+   --line-strong: hsl(17.1 100% 62.9% / 0.34);
+   --text-strong: hsl(24.5 100% 95.7%);
+   --text-dim: hsl(21 37% 78.8%);
+   --text-muted: hsl(20 22.4% 58%);
+
+   --accent: hsl(15 100% 63.9%);
+   --warning: hsl(259.8 100% 82.7%);
+   --danger: hsl(355.1 100% 66.3%);
+   --danger-bright: hsl(355 100% 83.5%);
+
+   --surface: hsl(300 26.3% 7.5%);
+   --backdrop: hsl(5.5 73.3% 2.9% / 0.58);
+   --class-surface: hsl(331.4 29.6% 13.9% / 0.96);
+   --class-border-raised: hsl(from var(--class-border) h s l / 0.38);
+   --class-surface-cancelled: hsl(357.9 56% 19.6% / 0.97);
+   --shadow: 0 26px 84px hsl(270 71.4% 2.7% / 0.64);
 }

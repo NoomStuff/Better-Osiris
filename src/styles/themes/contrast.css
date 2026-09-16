@@ -1,32 +1,32 @@
 /* High contrast at night: hard black, white type, and unmistakable signal colors. */
-html[data-theme="contrast"] {
+html[data-theme="contrast"],
+.theme-picker__swatch[data-theme="contrast"] {
    color-scheme: dark;
-
-   --page-canvas: #000000;
+   --page-canvas: hsl(0 0% 0%);
    --page-background:
-      radial-gradient(ellipse at 50% -12%, rgba(215, 255, 63, 0.04), transparent 30%), linear-gradient(180deg, #080a04 0%, #000000 54%, #030303 100%);
+      radial-gradient(ellipse at 50% -12%, hsl(72.5 100% 62.4% / 0.04), transparent 30%),
+      linear-gradient(180deg, hsl(80 42.9% 2.7%) 0%, hsl(0 0% 0%) 54%, hsl(0 0% 1.2%) 100%);
 
-   --line: rgba(255, 255, 255, 0.34);
-   --line-strong: rgba(255, 255, 255, 0.68);
-   --text-strong: #ffffff;
-   --text-dim: #ededed;
-   --text-muted: #c5c5c5;
-   --accent: #5ad9ff;
-   --accent-rgb: 90, 217, 255;
-   --warning: #d7ff3f;
-   --warning-rgb: 215, 255, 63;
-   --danger: #ff4d8d;
-   --danger-rgb: 255, 77, 141;
-   --danger-bright: #ffb0cc;
-   --surface-rgb: 7, 7, 8;
-   --highlight-rgb: 255, 255, 255;
-   --overlay-surface: rgba(8, 8, 9, 0.99);
-   --backdrop: rgba(0, 0, 0, 0.72);
-   --backdrop-strong: rgba(0, 0, 0, 0.78);
-   --class-surface: rgba(20, 20, 21, 0.99);
-   --class-surface-raised: rgba(31, 31, 32, 1);
-   --class-border: rgba(255, 255, 255, 0.38);
-   --class-border-raised: rgba(215, 255, 63, 0.72);
-   --class-surface-cancelled: rgba(56, 8, 27, 0.99);
-   --shadow: 0 28px 90px rgba(0, 0, 0, 0.86);
+   --line: hsl(0 0% 100% / 0.34);
+   --text-strong: hsl(0 0% 100%);
+   --text-dim: hsl(0 0% 92.9%);
+   --text-muted: hsl(0 0% 77.3%);
+
+   --accent: hsl(193.8 100% 67.6%);
+   --warning: hsl(72.5 100% 62.4%);
+   --danger: hsl(338.4 100% 65.1%);
+   --danger-bright: hsl(338.7 100% 84.5%);
+
+   --surface: hsl(240 6.7% 2.9%);
+   --overlay-surface: hsl(240 5.9% 3.3% / 0.99);
+   --backdrop: hsl(0 0% 0% / 0.72);
+   --class-surface: hsl(240 2.4% 8% / 0.99);
+   --class-surface-raised: hsl(240 1.6% 12.4%);
+   --class-border: hsl(from var(--line) h s l / 0.38);
+   --class-border-raised: hsl(72.5 100% 62.4% / 0.72);
+   --class-surface-cancelled: hsl(336.2 75% 12.5% / 0.99);
+   --shadow: 0 28px 90px hsl(0 0% 0% / 0.86);
+
+   --swatch-background: hsl(0 0% 2%);
+   --swatch-icon: var(--warning);
 }

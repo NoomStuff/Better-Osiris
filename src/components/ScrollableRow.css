@@ -31,10 +31,10 @@
    scrollbar-width: none;
    mask-image: linear-gradient(
       90deg,
-      rgba(0, 0, 0, var(--scroll-fade-start-opacity)) 0,
-      #000 var(--scroll-fade-width),
-      #000 calc(100% - var(--scroll-fade-width)),
-      rgba(0, 0, 0, var(--scroll-fade-end-opacity)) 100%
+      hsl(0 0% 0% / var(--scroll-fade-start-opacity)) 0,
+      hsl(0 0% 0%) var(--scroll-fade-width),
+      hsl(0 0% 0%) calc(100% - var(--scroll-fade-width)),
+      hsl(0 0% 0% / var(--scroll-fade-end-opacity)) 100%
    );
    transition:
       --scroll-fade-start-opacity 180ms ease-out,
@@ -66,11 +66,11 @@
    height: 2.5rem;
    border: 1px solid var(--line-strong);
    border-radius: 999px;
-   background: rgba(var(--surface-rgb), 0.92);
+   background: hsl(from var(--surface) h s l / 0.92);
    color: var(--text-dim);
    font-size: 0.75rem;
    cursor: pointer;
-   box-shadow: 0 3px 10px rgba(0, 0, 0, 0.28);
+   box-shadow: 0 3px 10px hsl(0 0% 0% / 0.28);
    transition:
       color 160ms ease-out,
       border-color 160ms ease-out,

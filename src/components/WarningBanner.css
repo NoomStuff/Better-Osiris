@@ -4,9 +4,9 @@
    gap: 12px;
    margin-bottom: 10px;
    padding: 10px 16px;
-   border: 2px solid rgba(var(--chrome-warning-rgb), 0.38);
+   border: 2px solid hsl(from var(--chrome-warning) h s l / 0.38);
    border-radius: 14px;
-   background: rgba(var(--chrome-warning-rgb), 0.1);
+   background: hsl(from var(--chrome-warning) h s l / 0.1);
    color: var(--chrome-strong);
    animation: warning-banner-enter 300ms var(--ease-out) both;
 }
@@ -32,10 +32,10 @@
 }
 
 .warning-banner .button {
-   --btn-line: rgba(var(--chrome-warning-rgb), 0.5);
-   --btn-line-hover: rgba(var(--chrome-warning-rgb), 0.75);
-   --btn-bg: rgba(var(--chrome-warning-rgb), 0.14);
-   --btn-bg-hover: rgba(var(--chrome-warning-rgb), 0.22);
+   --btn-line: hsl(from var(--chrome-warning) h s l / 0.5);
+   --btn-line-hover: hsl(from var(--chrome-warning) h s l / 0.75);
+   --btn-bg: hsl(from var(--chrome-warning) h s l / 0.14);
+   --btn-bg-hover: hsl(from var(--chrome-warning) h s l / 0.22);
    --btn-text: var(--chrome-strong);
 }
 

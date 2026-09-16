@@ -90,12 +90,12 @@
 .class-panel__status--added,
 .class-panel__status--changed {
    color: var(--warning);
-   background: rgba(var(--warning-rgb), 0.08);
+   background: hsl(from var(--warning) h s l / 0.08);
 }
 
 .class-panel__status--cancelled {
    color: var(--danger);
-   background: rgba(var(--danger-rgb), 0.08);
+   background: hsl(from var(--danger) h s l / 0.08);
 }
 
 .class-panel__identity-history {
@@ -232,7 +232,7 @@
 }
 
 .class-panel__teacher[data-changed="true"] {
-   border-top-color: rgba(var(--warning-rgb), 0.45);
+   border-top-color: hsl(from var(--warning) h s l / 0.45);
 }
 
 .class-panel__notes-value {

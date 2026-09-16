@@ -1,46 +1,46 @@
 /* Mild snowfall: warm nacre roster panels set inside a quiet, storm-blue chilly frame. */
-html[data-theme="thaw"] {
+html[data-theme="thaw"],
+.theme-picker__swatch[data-theme="thaw"] {
    color-scheme: light;
-
-   --page-canvas: #40545f;
+   --page-canvas: hsl(201.3 19.5% 31.2%);
    --page-background:
-      radial-gradient(ellipse at 16% -8%, rgba(238, 218, 199, 0.22), transparent 30%),
-      radial-gradient(ellipse at 90% 96%, rgba(77, 131, 139, 0.22), transparent 38%), linear-gradient(150deg, #586c75 0%, #354a55 48%, #253841 100%);
+      radial-gradient(ellipse at 16% -8%, hsl(29.2 53.4% 85.7% / 0.22), transparent 30%),
+      radial-gradient(ellipse at 90% 96%, hsl(187.7 28.7% 42.4% / 0.22), transparent 38%),
+      linear-gradient(150deg, hsl(198.6 14.1% 40.2%) 0%, hsl(200.6 23.2% 27.1%) 48%, hsl(199.3 27.5% 20%) 100%);
 
-   --line: rgba(64, 69, 68, 0.2);
-   --line-strong: rgba(0, 108, 120, 0.4);
-   --text-strong: #262a29;
-   --text-dim: #555d5b;
-   --text-muted: #707875;
-   --accent: #006c78;
-   --accent-rgb: 0, 108, 120;
-   --warning: #9d466d;
-   --warning-rgb: 157, 70, 109;
-   --danger: #b7334d;
-   --danger-rgb: 183, 51, 77;
-   --danger-bright: #912239;
-   --surface-rgb: 235, 230, 220;
-   --highlight-rgb: 0, 108, 120;
-   --overlay-surface: rgba(246, 242, 234, 0.99);
-   --backdrop: rgba(25, 39, 44, 0.46);
-   --backdrop-strong: rgba(25, 39, 44, 0.52);
+   --line: hsl(168 3.8% 26.1% / 0.2);
+   --line-strong: hsl(from var(--accent) h s l / 0.4);
+   --text-strong: hsl(165 5% 15.7%);
+   --text-dim: hsl(165 4.5% 34.9%);
+   --text-muted: hsl(157.5 3.4% 45.5%);
+
+   --accent: hsl(186 100% 23.5%);
+   --warning: hsl(333.1 38.3% 44.5%);
+   --danger: hsl(348.2 56.4% 45.9%);
+   --danger-bright: hsl(347.6 62% 35.1%);
+
+   --surface: hsl(40 27.3% 89.2%);
+   --highlight: var(--accent);
+   --overlay-surface: hsl(40 40% 94.1% / 0.99);
+   --backdrop: hsl(195.8 27.5% 13.5% / 0.46);
    --frame-veil: 0.95;
-   --class-surface: rgba(255, 250, 240, 0.97);
-   --class-surface-raised: rgba(255, 254, 249, 1);
-   --class-border: rgba(64, 69, 68, 0.2);
-   --class-border-raised: rgba(0, 108, 120, 0.4);
-   --class-surface-cancelled: rgba(183, 51, 77, 0.08);
-   --shadow: 0 26px 82px rgba(27, 41, 46, 0.34);
+   --class-surface: hsl(40 100% 97.1% / 0.97);
+   --class-surface-raised: hsl(50 100% 98.8%);
+   --class-border: var(--line);
+   --class-border-raised: hsl(from var(--accent) h s l / 0.4);
+   --class-surface-cancelled: hsl(from var(--danger) h s l / 0.08);
+   --shadow: 0 26px 82px hsl(195.8 26% 14.3% / 0.34);
 
-   --chrome-strong: #fff9f1;
-   --chrome-dim: #ded8cd;
-   --chrome-muted: #b7b3aa;
-   --chrome-accent: #9ee7e2;
-   --chrome-accent-rgb: 158, 231, 226;
-   --chrome-warning: #f0b4ce;
-   --chrome-warning-rgb: 240, 180, 206;
-   --chrome-highlight-rgb: 255, 249, 241;
-   --chrome-line: rgba(246, 239, 228, 0.18);
-   --chrome-line-strong: rgba(246, 239, 228, 0.36);
-   --chrome-surface: rgba(55, 74, 84, 0.94);
+   --chrome-highlight: var(--chrome-strong);
+   --chrome-strong: hsl(34.3 100% 97.3%);
+   --chrome-dim: hsl(38.8 20.5% 83.7%);
+   --chrome-muted: hsl(41.5 8.3% 69.2%);
+   --chrome-accent: hsl(175.9 60.3% 76.3%);
+   --chrome-warning: hsl(334 66.7% 82.4%);
+   --chrome-line: hsl(36.7 50% 92.9% / 0.18);
+   --chrome-line-strong: hsl(from var(--chrome-line) h s l / 0.36);
+   --chrome-surface: hsl(200.7 20.9% 27.3% / 0.94);
+
+   --swatch-background: hsl(32.7 50% 91.4%);
+   --swatch-icon: hsl(185.3 87.7% 25.5%);
 }

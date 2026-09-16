@@ -5,7 +5,7 @@
    padding: 2px;
    border: 2px solid var(--line);
    border-radius: 10px;
-   background: rgba(var(--highlight-rgb), 0.026);
+   background: hsl(from var(--highlight) h s l / 0.026);
    transition:
       border-color 220ms ease-out,
       background-color 220ms ease-out;
@@ -61,7 +61,7 @@
    font-weight: 500;
 }
 .number-field button:is(:hover, :focus-visible):not(:disabled) {
-   background: rgba(var(--accent-rgb), 0.1);
+   background: hsl(from var(--accent) h s l / 0.1);
    color: var(--text-strong);
 }
 .number-field__step:active:not(:disabled) {
@@ -75,7 +75,7 @@
    --number-enter-y: -3px;
 }
 .number-field__input {
-   background: rgba(var(--accent-rgb), 0.08);
+   background: hsl(from var(--accent) h s l / 0.08);
 }
 .number-field :disabled {
    opacity: 0.35;

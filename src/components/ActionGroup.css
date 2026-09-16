@@ -1,10 +1,10 @@
 .action-group {
    /* Palette overridable by context: the chrome layer rethemes the mobile bar's groups. */
    --ag-border: var(--line);
-   --ag-bg: rgba(var(--highlight-rgb), 0.026);
-   --ag-thumb: rgba(var(--accent-rgb), 0.12);
+   --ag-bg: hsl(from var(--highlight) h s l / 0.026);
+   --ag-thumb: hsl(from var(--accent) h s l / 0.12);
    --ag-item: var(--text-dim);
-   --ag-item-hover-bg: rgba(var(--accent-rgb), 0.08);
+   --ag-item-hover-bg: hsl(from var(--accent) h s l / 0.08);
    --ag-item-strong: var(--text-strong);
 
    position: relative;

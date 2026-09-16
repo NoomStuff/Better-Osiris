@@ -1,48 +1,46 @@
 /* The original OSIRIS Student, remembered fondly: teal roster accents on crisp white
    panels, and the purple banner where the header lives. Chrome and content split:
    the banner (chrome) is purple, the roster surfaces (content) are white and teal. */
-html[data-theme="osiris"] {
+html[data-theme="osiris"],
+.theme-picker__swatch[data-theme="osiris"] {
    color-scheme: light;
-
-   --page-canvas: #f5f3f8;
+   --page-canvas: hsl(264 26.3% 96.3%);
    --page-background:
-      radial-gradient(circle at 50% 0, rgba(94, 33, 112, 0.07), transparent 32%), linear-gradient(180deg, #f5f3f8 0%, #eae8ef 52%, #efeef3 100%);
+      radial-gradient(circle at 50% 0, hsl(286.3 54.5% 28.4% / 0.07), transparent 32%),
+      linear-gradient(180deg, hsl(264 26.3% 96.3%) 0%, hsl(257.1 17.9% 92.4%) 52%, hsl(252 17.2% 94.3%) 100%);
 
-   --line: rgba(35, 45, 60, 0.16);
-   --line-strong: rgba(35, 45, 60, 0.32);
-   --text-strong: #212429;
-   --text-dim: #4d545e;
-   --text-muted: #666e7a;
-   --accent: #15808d;
-   --accent-rgb: 21, 128, 141;
-   --warning: #c8a704;
-   --warning-rgb: 200, 167, 4;
-   --danger: #cf3f56;
-   --danger-rgb: 207, 63, 86;
-   --danger-bright: #a02538;
-   --surface-rgb: 255, 255, 255;
-   --highlight-rgb: 26, 106, 116;
-   --overlay-surface: rgba(255, 255, 255, 0.97);
-   --backdrop: rgba(40, 32, 50, 0.42);
-   --backdrop-strong: rgba(40, 32, 50, 0.46);
-   --class-surface: rgba(255, 255, 255, 0.96);
-   --class-surface-raised: rgba(255, 255, 255, 1);
-   --class-border: rgba(35, 45, 60, 0.16);
-   --class-border-raised: rgba(35, 45, 60, 0.32);
-   --class-surface-cancelled: rgba(207, 63, 86, 0.07);
-   --shadow: 0 24px 80px rgba(50, 40, 60, 0.16);
+   --line: hsl(216 26.3% 18.6% / 0.16);
+   --text-strong: hsl(217.5 10.8% 14.5%);
+   --text-dim: hsl(215.3 9.9% 33.5%);
+   --text-muted: hsl(216 8.9% 43.9%);
 
-   --chrome-strong: #ffffff;
-   --chrome-dim: #ecdff2;
-   --chrome-muted: #cbb3d6;
-   --chrome-accent: #7fd8d8;
-   --chrome-accent-rgb: 127, 216, 216;
-   --chrome-warning: #f0c56a;
-   --chrome-warning-rgb: 240, 197, 106;
-   --chrome-highlight-rgb: 255, 255, 255;
-   --chrome-line: rgba(255, 255, 255, 0.18);
-   --chrome-line-strong: rgba(255, 255, 255, 0.36);
-   --chrome-surface: rgba(94, 33, 112, 0.96);
+   --accent: hsl(186.5 74.1% 31.8%);
+   --warning: hsl(49.9 96.1% 40%);
+   --danger: hsl(350.4 60% 52.9%);
+   --danger-bright: hsl(350.7 62.4% 38.6%);
+
+   --surface: hsl(0 0% 100%);
+   --highlight: hsl(186.7 63.4% 27.8%);
+   --backdrop: hsl(266.7 22% 16.1% / 0.42);
+   --backdrop-strong: hsl(from var(--backdrop) h s l / calc(alpha + 0.04));
+   --class-surface: hsl(from var(--surface) h s l / 0.96);
+   --class-surface-raised: hsl(from var(--class-surface) h s l / 1);
+   --class-border: var(--line);
+   --class-surface-cancelled: hsl(from var(--danger) h s l / 0.07);
+   --shadow: 0 24px 80px hsl(270 20% 19.6% / 0.16);
+
+   --chrome-highlight: var(--chrome-strong);
+   --chrome-strong: hsl(0 0% 100%);
+   --chrome-dim: hsl(281.1 42.2% 91.2%);
+   --chrome-muted: hsl(281.1 29.9% 77.1%);
+   --chrome-accent: hsl(180 53.3% 67.3%);
+   --chrome-warning: hsl(40.7 81.7% 67.8%);
+   --chrome-line: hsl(from var(--chrome-strong) h s l / 0.18);
+   --chrome-line-strong: hsl(from var(--chrome-line) h s l / 0.36);
+   --chrome-surface: hsl(286.3 54.5% 28.4% / 0.96);
+
+   --swatch-background: hsl(220 21.4% 94.5%);
+   --swatch-icon: hsl(286.3 54.5% 28.4%);
 }
 
 /* On desktop the header is bare against the page, so this theme paints the banner itself.
@@ -78,5 +76,5 @@ html[data-theme="osiris"] .fatal-error-boundary i {
 
 html[data-theme="osiris"] .fatal-error-boundary .button__surface {
    border-color: var(--line-strong);
-   background: rgba(var(--accent-rgb), 0.14);
+   background: hsl(from var(--accent) h s l / 0.14);
 }

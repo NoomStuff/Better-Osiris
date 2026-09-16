@@ -1,32 +1,27 @@
 /* Frosted steel: cold blue-gray slabs with crisp cyan edges and a fogged backdrop. */
-html[data-theme="frost"] {
+html[data-theme="frost"],
+.theme-picker__swatch[data-theme="frost"] {
    color-scheme: dark;
-
-   --page-canvas: #1f2b3a;
+   --page-canvas: hsl(213.3 30.3% 17.5%);
    --page-background:
-      radial-gradient(ellipse at 20% -5%, rgba(177, 221, 231, 0.16), transparent 34%), linear-gradient(145deg, #35485b 0%, #1c2634 46%, #111923 100%);
+      radial-gradient(ellipse at 20% -5%, hsl(191.1 52.9% 80% / 0.16), transparent 34%),
+      linear-gradient(145deg, hsl(210 26.4% 28.2%) 0%, hsl(215 30% 15.7%) 46%, hsl(213.3 34.6% 10.2%) 100%);
 
-   --line: rgba(150, 165, 190, 0.16);
-   --line-strong: rgba(150, 165, 190, 0.32);
-   --text-dim: #c3ccd9;
-   --text-muted: #9aa5b8;
-   --text-strong: #e5eaf2;
-   --accent: #88c0d0;
-   --accent-rgb: 136, 192, 208;
-   --warning: #edcb85;
-   --warning-rgb: 237, 203, 133;
-   --danger: #d87c87;
-   --danger-rgb: 216, 124, 135;
-   --danger-bright: #ecc2c7;
-   --surface-rgb: 27, 36, 50;
-   --highlight-rgb: 229, 234, 242;
-   --overlay-surface: rgba(31, 42, 57, 0.97);
-   --backdrop: rgba(17, 20, 28, 0.55);
-   --backdrop-strong: rgba(17, 20, 28, 0.6);
-   --class-surface: rgba(43, 56, 74, 0.96);
-   --class-surface-raised: rgba(54, 69, 88, 0.98);
-   --class-border: rgba(136, 192, 208, 0.2);
-   --class-border-raised: rgba(136, 192, 208, 0.34);
-   --class-surface-cancelled: rgba(60, 42, 48, 0.96);
-   --shadow: 0 20px 64px rgba(7, 13, 20, 0.5);
+   --line: hsl(217.5 23.5% 66.7% / 0.16);
+   --text-dim: hsl(215.5 22.4% 80.8%);
+   --text-muted: hsl(218 17.4% 66.3%);
+   --text-strong: hsl(216.9 33.3% 92.4%);
+
+   --accent: hsl(193.3 43.4% 67.5%);
+   --warning: hsl(40.4 74.3% 72.5%);
+   --danger: hsl(352.8 54.1% 66.7%);
+   --danger-bright: hsl(352.9 52.5% 84.3%);
+
+   --surface: hsl(216.5 29.9% 15.1%);
+   --backdrop: hsl(223.6 24.4% 8.8% / 0.55);
+   --backdrop-strong: hsl(from var(--backdrop) h s l / calc(alpha + 0.05));
+   --class-surface: hsl(214.8 26.5% 22.9% / 0.96);
+   --class-border-raised: hsl(from var(--class-border) h s l / 0.34);
+   --class-surface-cancelled: hsl(340 17.6% 20% / 0.96);
+   --shadow: 0 20px 64px hsl(212.3 48.1% 5.3% / 0.5);
 }

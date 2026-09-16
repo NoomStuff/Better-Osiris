@@ -48,7 +48,7 @@
    height: 13px;
    font-size: 13px;
    /* The glyph shares its hue with the cancelled card surface; the halo keeps it legible there. */
-   filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.4));
+   filter: drop-shadow(0 1px 2px hsl(0 0% 0% / 0.4));
 }
 
 .grid-class.is-tight .class-status-marker {

@@ -1,146 +1,3 @@
-/* Theme variables. Dark is the default theme: its values are the @property initial-values below.
-   Extra themes live in styles/themes/<id>.css and override them under html[data-theme="<id>"].
-   Every color variable is registered so that switching themes can fade it (see .theme-fade).
-   --page-background is deliberately unregistered: it takes any value the background property
-   accepts, so it swaps instantly on a switch while the registered colors fade around it. */
-@property --line {
-   syntax: "<color>";
-   inherits: true;
-   initial-value: rgba(169, 184, 255, 0.14);
-}
-
-@property --line-strong {
-   syntax: "<color>";
-   inherits: true;
-   initial-value: rgba(169, 184, 255, 0.28);
-}
-
-@property --text-dim {
-   syntax: "<color>";
-   inherits: true;
-   initial-value: #97a5c6;
-}
-
-@property --text-muted {
-   syntax: "<color>";
-   inherits: true;
-   initial-value: #7482a6;
-}
-
-@property --text-strong {
-   syntax: "<color>";
-   inherits: true;
-   initial-value: #f3f7ff;
-}
-
-@property --accent {
-   syntax: "<color>";
-   inherits: true;
-   initial-value: #7cc7ff;
-}
-
-@property --accent-rgb {
-   syntax: "<number>#";
-   inherits: true;
-   initial-value: 124, 199, 255;
-}
-
-@property --warning {
-   syntax: "<color>";
-   inherits: true;
-   initial-value: #ffbf69;
-}
-
-@property --warning-rgb {
-   syntax: "<number>#";
-   inherits: true;
-   initial-value: 255, 191, 105;
-}
-
-@property --danger {
-   syntax: "<color>";
-   inherits: true;
-   initial-value: #ff6b81;
-}
-
-@property --danger-rgb {
-   syntax: "<number>#";
-   inherits: true;
-   initial-value: 255, 107, 129;
-}
-
-@property --danger-bright {
-   syntax: "<color>";
-   inherits: true;
-   initial-value: #ffb3be;
-}
-
-@property --surface-rgb {
-   syntax: "<number>#";
-   inherits: true;
-   initial-value: 10, 13, 20;
-}
-
-@property --highlight-rgb {
-   syntax: "<number>#";
-   inherits: true;
-   initial-value: 255, 255, 255;
-}
-
-@property --overlay-surface {
-   syntax: "<color>";
-   inherits: true;
-   initial-value: rgba(8, 11, 18, 0.96);
-}
-
-@property --backdrop {
-   syntax: "<color>";
-   inherits: true;
-   initial-value: rgba(2, 4, 8, 0.54);
-}
-
-@property --backdrop-strong {
-   syntax: "<color>";
-   inherits: true;
-   initial-value: rgba(3, 5, 11, 0.58);
-}
-
-@property --frame-veil {
-   syntax: "<number>";
-   inherits: true;
-   initial-value: 0.82;
-}
-
-@property --class-surface {
-   syntax: "<color>";
-   inherits: true;
-   initial-value: rgba(17, 22, 34, 0.96);
-}
-
-@property --class-surface-raised {
-   syntax: "<color>";
-   inherits: true;
-   initial-value: rgba(24, 31, 46, 0.98);
-}
-
-@property --class-border {
-   syntax: "<color>";
-   inherits: true;
-   initial-value: rgba(178, 196, 255, 0.16);
-}
-
-@property --class-border-raised {
-   syntax: "<color>";
-   inherits: true;
-   initial-value: rgba(178, 196, 255, 0.28);
-}
-
-@property --class-surface-cancelled {
-   syntax: "<color>";
-   inherits: true;
-   initial-value: rgba(30, 16, 22, 0.96);
-}
-
 :root {
    color-scheme: dark;
    font-family:
@@ -167,30 +24,10 @@
 
    /* Combined height of the app toolbar and week bar; the grid frame height math in App.css depends on it. */
    --chrome-height: 127px;
-   --shadow: 0 24px 80px rgba(0, 0, 0, 0.35);
+
    --bounce-overshoot: cubic-bezier(0.2, 3.2, 0.2, 1);
    --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
    --spring: cubic-bezier(0.22, 1.7, 0.36, 1);
-
-   /* Chrome layer: the page backdrop and the header that sits on it, decoupled from the
-      content surfaces inside the app frame. Cohesive themes inherit the content values;
-      themes that split the two (espresso) override these to keep the header readable
-      against the backdrop and the mobile bar card. */
-   --chrome-strong: var(--text-strong);
-   --chrome-dim: var(--text-dim);
-   --chrome-muted: var(--text-muted);
-   --chrome-accent: var(--accent);
-   --chrome-accent-rgb: var(--accent-rgb);
-   --chrome-warning: var(--warning);
-   --chrome-warning-rgb: var(--warning-rgb);
-   --chrome-highlight-rgb: var(--highlight-rgb);
-   --chrome-line: var(--line);
-   --chrome-line-strong: var(--line-strong);
-   --chrome-surface: rgba(var(--surface-rgb), 0.92);
-
-   --page-canvas: #0e111f;
-   --page-background:
-      radial-gradient(circle at 50% 0, rgba(44, 68, 173, 0.16), transparent 30%), linear-gradient(180deg, #0e111f 0%, #000000 52%, #0e121d 100%);
 }
 
 *,
@@ -248,7 +85,7 @@ button {
 }
 
 ::selection {
-   background: rgba(var(--accent-rgb), 0.32);
+   background: hsl(from var(--accent) h s l / 0.32);
 }
 
 /* Overlay scrollbars (lib/overlayScrollbar.ts): the native bar is hidden and a slim thumb
@@ -293,7 +130,7 @@ button {
    right: 3px;
    width: 5px;
    border-radius: 999px;
-   background: rgba(var(--highlight-rgb), 0.28);
+   background: hsl(from var(--highlight) h s l / 0.28);
    user-select: none;
    transition:
       background-color 160ms ease-out,
@@ -309,7 +146,7 @@ button {
 .overlay-scrollbar[data-dragging="true"] .overlay-scrollbar__thumb {
    right: 2px;
    width: 7px;
-   background: rgba(var(--highlight-rgb), 0.45);
+   background: hsl(from var(--highlight) h s l / 0.45);
 }
 
 /* Touch scrollers flick directly; the thumb stays a pure indicator there. */
@@ -320,7 +157,7 @@ button {
 }
 
 :where(button, a, input, select, textarea, [tabindex]):focus-visible {
-   outline: 3px solid rgba(var(--accent-rgb), 0.72);
+   outline: 3px solid hsl(from var(--accent) h s l / 0.72);
    outline-offset: 3px;
 }
 
@@ -345,7 +182,7 @@ button {
 
 .notyf__toast {
    border-radius: 12px;
-   box-shadow: 0 18px 48px rgba(0, 0, 0, 0.34);
+   box-shadow: 0 18px 48px hsl(0 0% 0% / 0.34);
    animation-duration: 260ms;
    animation-timing-function: var(--ease-out);
 }
@@ -397,7 +234,7 @@ button {
 
 .fatal-error-boundary .button {
    --btn-line: var(--chrome-line-strong);
-   --btn-bg: rgba(var(--chrome-accent-rgb), 0.14);
+   --btn-bg: hsl(from var(--chrome-accent) h s l / 0.14);
 }
 
 .fatal-error-boundary .button__surface {
@@ -415,7 +252,7 @@ button {
    gap: 10px;
    padding: 24px;
    text-align: center;
-   background: rgba(var(--surface-rgb), 0.82);
+   background: hsl(from var(--surface) h s l / 0.82);
    color: var(--text-dim);
 }
 
@@ -437,41 +274,12 @@ button {
 
 .view-error-boundary .button {
    --btn-line: var(--line-strong);
-   --btn-bg: rgba(var(--accent-rgb), 0.14);
+   --btn-bg: hsl(from var(--accent) h s l / 0.14);
 }
 
 .view-error-boundary .button__surface {
    min-height: 42px;
    padding: 0 16px;
-}
-
-/* Set while switching themes so the registered variables interpolate instead of snapping.
-   --page-background is unregistered and swaps immediately; everything else eases in. */
-html.theme-fade {
-   transition:
-      --line 400ms ease,
-      --line-strong 400ms ease,
-      --text-dim 400ms ease,
-      --text-muted 400ms ease,
-      --text-strong 400ms ease,
-      --accent 400ms ease,
-      --accent-rgb 400ms ease,
-      --warning 400ms ease,
-      --warning-rgb 400ms ease,
-      --danger 400ms ease,
-      --danger-rgb 400ms ease,
-      --danger-bright 400ms ease,
-      --surface-rgb 400ms ease,
-      --highlight-rgb 400ms ease,
-      --overlay-surface 400ms ease,
-      --backdrop 400ms ease,
-      --backdrop-strong 400ms ease,
-      --frame-veil 400ms ease,
-      --class-surface 400ms ease,
-      --class-surface-raised 400ms ease,
-      --class-border 400ms ease,
-      --class-border-raised 400ms ease,
-      --class-surface-cancelled 400ms ease;
 }
 
 @media (prefers-reduced-motion: reduce) {

@@ -22,7 +22,7 @@ function getNotyf() {
       types: [
          {
             type: "success",
-            background: "#0da14a",
+            background: "hsl(144.73 85.057% 34.118%)",
             duration: 2000,
             dismissible: false,
             icon: {
@@ -33,7 +33,7 @@ function getNotyf() {
          },
          {
             type: "warning",
-            background: "#eb9321",
+            background: "hsl(33.861 83.471% 52.549%)",
             icon: {
                className: "fa-solid fa-exclamation-triangle",
                tagName: "i",
@@ -42,7 +42,7 @@ function getNotyf() {
          },
          {
             type: "error",
-            background: "#c33e31",
+            background: "hsl(5.342 59.836% 47.843%)",
             icon: {
                className: "fa-solid fa-xmark",
                tagName: "i",

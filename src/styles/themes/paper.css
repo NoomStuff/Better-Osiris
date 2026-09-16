@@ -1,32 +1,34 @@
 /* Paper: warm newsprint, dark editorial rules, and a restrained vermilion accent. */
-html[data-theme="paper"] {
+html[data-theme="paper"],
+.theme-picker__swatch[data-theme="paper"] {
    color-scheme: light;
-
-   --page-canvas: #d8c9a8;
+   --page-canvas: hsl(41.2 38.1% 75.3%);
    --page-background:
-      radial-gradient(ellipse at 18% -8%, rgba(255, 250, 230, 0.72), transparent 30%), linear-gradient(145deg, #e7dabd 0%, #d5c4a0 52%, #c6b38f 100%);
+      radial-gradient(ellipse at 18% -8%, hsl(48 100% 95.1% / 0.72), transparent 30%),
+      linear-gradient(145deg, hsl(41.4 46.7% 82.4%) 0%, hsl(40.8 38.7% 73.1%) 52%, hsl(39.3 32.5% 66.9%) 100%);
 
-   --line: rgba(29, 25, 19, 0.28);
-   --line-strong: rgba(29, 25, 19, 0.58);
-   --text-strong: #1b1813;
-   --text-dim: #403a30;
-   --text-muted: #625a4c;
-   --accent: #a3261e;
-   --accent-rgb: 163, 38, 30;
-   --warning: #315d87;
-   --warning-rgb: 49, 93, 135;
-   --danger: #b6002c;
-   --danger-rgb: 182, 0, 44;
-   --danger-bright: #8e0021;
-   --surface-rgb: 239, 230, 207;
-   --highlight-rgb: 29, 25, 19;
-   --overlay-surface: rgba(250, 243, 224, 0.99);
-   --backdrop: rgba(40, 33, 24, 0.48);
-   --backdrop-strong: rgba(40, 33, 24, 0.54);
-   --class-surface: rgba(255, 249, 232, 0.98);
-   --class-surface-raised: rgba(255, 253, 243, 1);
-   --class-border: rgba(29, 25, 19, 0.3);
-   --class-border-raised: rgba(163, 38, 30, 0.56);
-   --class-surface-cancelled: rgba(182, 0, 44, 0.08);
-   --shadow: 0 20px 62px rgba(64, 49, 29, 0.24);
+   --line: hsl(36 20.8% 9.4% / 0.28);
+   --line-strong: hsl(from var(--line) h s l / 0.58);
+   --text-strong: hsl(37.5 17.4% 9%);
+   --text-dim: hsl(37.5 14.3% 22%);
+   --text-muted: hsl(38.2 12.6% 34.1%);
+
+   --accent: hsl(3.6 68.9% 37.8%);
+   --warning: hsl(209.3 46.7% 36.1%);
+   --danger: hsl(345.5 100% 35.7%);
+   --danger-bright: hsl(346.1 100% 27.8%);
+
+   --surface: hsl(43.1 50% 87.5%);
+   --highlight: hsl(36 20.8% 9.4%);
+   --overlay-surface: hsl(43.8 72.2% 92.9% / 0.99);
+   --backdrop: hsl(33.8 25% 12.5% / 0.48);
+   --class-surface: hsl(44.3 100% 95.5% / 0.98);
+   --class-surface-raised: hsl(50 100% 97.6%);
+   --class-border: hsl(from var(--line) h s l / 0.3);
+   --class-border-raised: hsl(from var(--accent) h s l / 0.56);
+   --class-surface-cancelled: hsl(from var(--danger) h s l / 0.08);
+   --shadow: 0 20px 62px hsl(34.3 37.6% 18.2% / 0.24);
+
+   --swatch-background: hsl(43.5 48.8% 83.9%);
+   --swatch-icon: hsl(12.9 63.3% 33.1%);
 }

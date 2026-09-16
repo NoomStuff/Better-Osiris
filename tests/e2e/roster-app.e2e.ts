@@ -1,5 +1,5 @@
 import { isoWeekNumber } from "../../shared/calendar";
-import { THEMES_BY_MODE } from "../../src/lib/theme";
+import { THEMES_BY_MODE } from "../../src/styles/themes/registry";
 import { expect, test, type Page } from "@playwright/test";
 import AxeBuilder from "@axe-core/playwright";
 
@@ -73,7 +73,7 @@ test("selected view buttons keep the chrome palette at rest and on hover", async
    await page.evaluate(() => document.documentElement.setAttribute("data-theme", "espresso"));
    const background = await page.evaluate(() => {
       const probe = document.createElement("span");
-      probe.style.backgroundColor = "rgba(var(--chrome-accent-rgb), 0.12)";
+      probe.style.backgroundColor = "hsl(from var(--chrome-accent) h s l / 0.12)";
       document.body.append(probe);
       const color = getComputedStyle(probe).backgroundColor;
       probe.remove();
@@ -958,7 +958,7 @@ test("a fresh theme follows the system color scheme", async ({ page }) => {
    await page.goto("/");
 
    await expect(page.locator("html")).toHaveAttribute("data-theme", "light");
-   await expect(page.locator('meta[name="theme-color"]')).toHaveAttribute("content", "#f9fbfe");
+   await expect(page.locator('meta[name="theme-color"]')).toHaveAttribute("content", "hsl(216 71.4% 98.6%)");
 });
 
 test("the theme picker follows the device category without changing a saved theme", async ({ page }) => {
@@ -978,6 +978,76 @@ test("the theme picker follows the device category without changing a saved them
    await page.emulateMedia({ colorScheme: "light" });
    await page.getByRole("button", { name: "Open settings" }).click();
    await expect(page.getByRole("radio", { name: "Light", exact: true })).toHaveAttribute("aria-checked", "true");
+});
+
+test("theme swatches stay independent of the active palette and expose their motions", async ({ page }) => {
+   await page.emulateMedia({ reducedMotion: "reduce" });
+   await page.goto("/");
+   await page.getByRole("button", { name: "Open settings" }).click();
+
+   for (const [mode, themes] of Object.entries(THEMES_BY_MODE)) {
+      await page.getByRole("radio", { name: mode === "dark" ? "Dark" : "Light", exact: true }).click();
+      const swatches = page.locator(".theme-picker__swatch");
+      const readColors = () =>
+         swatches.evaluateAll((elements) =>
+            elements.map((element) => {
+               const style = getComputedStyle(element);
+               return [style.backgroundColor, style.color];
+            })
+         );
+      const initialColors = await readColors();
+      // Check the whole cascade synchronously, without waiting for 18 native repaints.
+      // The contrast test separately clicks every theme through the picker.
+      const palettes = await swatches.evaluateAll((elements, themes) => {
+         const root = document.documentElement;
+         const selected = root.dataset.theme;
+         const palettes = themes.map((theme) => {
+            root.dataset.theme = theme.id;
+            return elements.map((element) => {
+               const style = getComputedStyle(element);
+               return [style.backgroundColor, style.color];
+            });
+         });
+         root.dataset.theme = selected;
+         return palettes;
+      }, themes);
+      for (const colors of palettes) expect(colors).toEqual(initialColors);
+
+      const motions = await page
+         .locator(".theme-picker__option")
+         .evaluateAll((elements) => elements.map((element) => getComputedStyle(element).getPropertyValue("--theme-icon-animation")));
+      for (const [index, theme] of themes.entries()) {
+         expect(motions[index]).toContain(`theme-icon-${theme.motion}`);
+      }
+
+      const selectedTheme = themes[1];
+      await page.getByRole("button", { name: selectedTheme.label, exact: true }).click();
+      await expect(page.locator("html")).toHaveAttribute("data-theme", selectedTheme.id);
+      expect(await readColors()).toEqual(initialColors);
+   }
+});
+
+test("derived theme colors follow their source and the default palette survives a round trip", async ({ page }) => {
+   await page.goto("/");
+   const result = await page.evaluate(() => {
+      const root = document.documentElement;
+      const color = (name: string) => getComputedStyle(root).getPropertyValue(name);
+      const original = color("--class-surface-raised");
+      root.dataset.theme = "frost";
+      const border = color("--class-border");
+      root.style.setProperty("--accent", "hsl(120 100% 50%)");
+      const changedBorder = color("--class-border");
+      root.style.removeProperty("--accent");
+      const restoredBorder = color("--class-border");
+      root.removeAttribute("data-theme");
+      const fallback = color("--class-surface-raised");
+      root.dataset.theme = "dark";
+      return { original, border, changedBorder, restoredBorder, fallback, restored: color("--class-surface-raised") };
+   });
+   expect(result.changedBorder).not.toEqual(result.border);
+   expect(result.restoredBorder).toEqual(result.border);
+   expect(result.fallback).toEqual(result.original);
+   expect(result.restored).toEqual(result.original);
 });
 
 test("time indicators are visible and positioned for the fixed current time", async ({ page }) => {

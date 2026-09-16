@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { writeBrowserStorage } from "../lib/browserStorage";
-import { applyTheme, getStoredTheme, THEME_STORAGE_KEY, type ThemeId } from "../lib/theme";
+import type { ThemeId } from "../styles/themes/registry";
+import { applyTheme, getStoredTheme, THEME_STORAGE_KEY } from "../lib/theme";
 
 export function useThemePreference() {
    const [theme, setTheme] = useState<ThemeId>(getStoredTheme);

@@ -3,7 +3,7 @@ import type { AgendaFoldingMode } from "./useAgendaFoldingPreference";
 import type { useDevPreview } from "./useDevPreview";
 import type { IsoWeekday } from "../lib/date";
 import type { GridHourRange } from "../lib/gridHours";
-import type { ThemeId } from "../lib/theme";
+import type { ThemeId } from "../styles/themes/registry";
 import type { ViewMode } from "../types/weeks";
 
 export interface Preferences {

@@ -1,32 +1,29 @@
 /* Blue-hour twilight: an indigo horizon with dusty rose light left in the clouds. */
-html[data-theme="dusk"] {
+html[data-theme="dusk"],
+.theme-picker__swatch[data-theme="dusk"] {
    color-scheme: dark;
-
-   --page-canvas: #24233f;
+   --page-canvas: hsl(242.1 28.6% 19.2%);
    --page-background:
-      radial-gradient(ellipse at 75% 8%, rgba(231, 139, 162, 0.18), transparent 34%), linear-gradient(180deg, #343653 0%, #17172b 52%, #10101d 100%);
+      radial-gradient(ellipse at 75% 8%, hsl(345 65.7% 72.5% / 0.18), transparent 34%),
+      linear-gradient(180deg, hsl(236.1 23% 26.5%) 0%, hsl(240 30.3% 12.9%) 52%, hsl(240 28.9% 8.8%) 100%);
 
-   --line: rgba(148, 156, 224, 0.14);
-   --line-strong: rgba(148, 156, 224, 0.3);
-   --text-strong: #f4f1fb;
-   --text-dim: #c6bfdc;
-   --text-muted: #9a93b2;
-   --accent: #e08a9b;
-   --accent-rgb: 224, 138, 155;
-   --warning: #e5ba63;
-   --warning-rgb: 229, 186, 99;
-   --danger: #ff5c6c;
-   --danger-rgb: 255, 92, 108;
-   --danger-bright: #ffa3ad;
-   --surface-rgb: 22, 21, 40;
-   --highlight-rgb: 244, 241, 251;
-   --overlay-surface: rgba(27, 25, 47, 0.97);
-   --backdrop: rgba(8, 6, 13, 0.55);
-   --backdrop-strong: rgba(8, 6, 13, 0.6);
-   --class-surface: rgba(38, 36, 64, 0.96);
-   --class-surface-raised: rgba(49, 46, 78, 0.98);
-   --class-border: rgba(148, 156, 224, 0.2);
-   --class-border-raised: rgba(148, 156, 224, 0.36);
-   --class-surface-cancelled: rgba(62, 30, 44, 0.96);
-   --shadow: 0 24px 76px rgba(5, 5, 15, 0.56);
+   --line: hsl(233.7 55.1% 72.9% / 0.14);
+   --line-strong: hsl(from var(--line) h s l / 0.3);
+   --text-strong: hsl(258 55.6% 96.5%);
+   --text-dim: hsl(254.5 29.3% 80.6%);
+   --text-muted: hsl(253.5 16.8% 63.7%);
+
+   --accent: hsl(348.1 58.1% 71%);
+   --warning: hsl(40.2 71.4% 64.3%);
+   --danger: hsl(354.1 100% 68%);
+   --danger-bright: hsl(353.5 100% 82%);
+
+   --surface: hsl(243.2 31.1% 12%);
+   --backdrop: hsl(257.1 36.8% 3.7% / 0.55);
+   --backdrop-strong: hsl(from var(--backdrop) h s l / calc(alpha + 0.05));
+   --class-surface: hsl(244.3 28% 19.6% / 0.96);
+   --class-border: hsl(from var(--line) h s l / 0.2);
+   --class-border-raised: hsl(from var(--class-border) h s l / 0.36);
+   --class-surface-cancelled: hsl(333.8 34.8% 18% / 0.96);
+   --shadow: 0 24px 76px hsl(240 50% 3.9% / 0.56);
 }

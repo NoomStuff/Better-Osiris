@@ -1,14 +1,12 @@
 import { NotificationSettings } from "./NotificationSettings";
 import { RosterAccessSettings } from "./RosterAccessSettings";
 import { useCallback, useEffect, useRef, useState } from "react";
-import type { CSSProperties } from "react";
 import type { OsirisTokenValidationStatus } from "../types/osirisToken";
 import type { IsoWeekday } from "../lib/date";
 import { DEFAULT_GRID_HOURS, formatGridHour, GRID_HOUR_MAX, GRID_HOUR_MIN, type GridHourRange } from "../lib/gridHours";
 import type { AgendaFoldingMode } from "../hooks/useAgendaFoldingPreference";
 import { usePreferences } from "../hooks/preferences";
 import { useOverlayScrollbar } from "../hooks/useOverlayScrollbar";
-import { getDeviceThemeMode, THEMES_BY_MODE, type ThemeMode } from "../lib/theme";
 import { DEFAULT_SHOWN_WEEKDAYS, ISO_WEEKDAYS } from "../lib/weekLayout";
 import { ActionButtons, ActionSelector, type ActionOption } from "./ActionGroup";
 import { Button } from "./Button";
@@ -16,7 +14,7 @@ import { DevToolsSettings } from "./DevToolsSettings";
 import { IconButton } from "./IconButton";
 import { OverlayPanel, PANEL_CLOSE_MS } from "./OverlayPanel";
 import { RangeSlider } from "./RangeSlider";
-import { ScrollableRow } from "./ScrollableRow";
+import { ThemePicker } from "./ThemePicker";
 import "./SettingsDialog.css";
 
 interface SettingsDialogProps {
@@ -33,11 +31,6 @@ interface SettingsDialogProps {
 }
 
 const IS_DEV_SERVER = import.meta.env.DEV;
-
-const THEME_MODE_OPTIONS: readonly ActionOption<ThemeMode>[] = [
-   { id: "dark", label: "Dark", tooltip: "Browse dark themes" },
-   { id: "light", label: "Light", tooltip: "Browse light themes" },
-];
 
 const AGENDA_FOLDING_OPTIONS: readonly ActionOption<AgendaFoldingMode>[] = [
    { id: "single", label: "Single", tooltip: "Open only the day of your next class across all weeks" },
@@ -62,17 +55,9 @@ export function SettingsDialog({
    successfulTokenValidationKey,
    tokenValidationStatus,
 }: SettingsDialogProps) {
-   const { agendaFoldingMode, gridHours, setAgendaFoldingMode, setGridHours, setShownWeekdays, setTheme, shownWeekdays, theme } = usePreferences();
+   const { agendaFoldingMode, gridHours, setAgendaFoldingMode, setGridHours, setShownWeekdays, shownWeekdays } = usePreferences();
    const contentRef = useOverlayScrollbar();
    const [isClosing, setIsClosing] = useState(false);
-   const [themeMode, setThemeMode] = useState<ThemeMode>(getDeviceThemeMode);
-   const [animateThemePicker, setAnimateThemePicker] = useState(false);
-   const [wasOpen, setWasOpen] = useState(isOpen);
-   if (wasOpen !== isOpen) {
-      setWasOpen(isOpen);
-      if (isOpen) setThemeMode(getDeviceThemeMode());
-   }
-   const visibleThemes = THEMES_BY_MODE[themeMode];
    const closeTimerRef = useRef<number | null>(null);
 
    const closeSettings = useCallback(() => {
@@ -83,7 +68,6 @@ export function SettingsDialog({
       setIsClosing(true);
       closeTimerRef.current = window.setTimeout(() => {
          onTokenDraftChange();
-         setAnimateThemePicker(false);
          setIsClosing(false);
          onClose();
       }, PANEL_CLOSE_MS);
@@ -96,18 +80,6 @@ export function SettingsDialog({
          }
       };
    }, []);
-
-   const changeThemeMode = useCallback(
-      (nextMode: ThemeMode) => {
-         if (nextMode === themeMode) {
-            return;
-         }
-
-         setAnimateThemePicker(true);
-         setThemeMode(nextMode);
-      },
-      [themeMode]
-   );
 
    const toggleWeekday = useCallback(
       (weekday: IsoWeekday) => {
@@ -156,47 +128,7 @@ export function SettingsDialog({
          <div ref={contentRef} className="settings-dialog__content">
             <NotificationSettings />
 
-            <section className="settings-section" aria-labelledby="theme-settings-title">
-               <div className="settings-section__header settings-section__header--with-actions">
-                  <div className="settings-section__copy">
-                     <h3 id="theme-settings-title">Theme</h3>
-                     <p>Colors for the whole app.</p>
-                  </div>
-                  <ActionSelector label="Theme modes" options={THEME_MODE_OPTIONS} value={themeMode} onChange={changeThemeMode} />
-               </div>
-
-               <ScrollableRow>
-                  <div key={themeMode} className={`theme-picker${animateThemePicker ? " theme-picker--animate" : ""}`} role="group" aria-label="Color theme">
-                     {visibleThemes.map((themeOption, index) => {
-                        const isActive = theme === themeOption.id;
-
-                        return (
-                           <button
-                              type="button"
-                              key={themeOption.id}
-                              className="theme-picker__option"
-                              title={themeOption.label}
-                              aria-pressed={isActive}
-                              data-active={isActive}
-                              data-theme-id={themeOption.id}
-                              style={{ "--theme-index": index } as CSSProperties}
-                              onClick={() => setTheme(themeOption.id)}
-                           >
-                              <span className="theme-picker__surface">
-                                 <span
-                                    className="theme-picker__swatch"
-                                    style={{ background: themeOption.swatchBackground, color: themeOption.swatchIconColor }}
-                                 >
-                                    <i className={themeOption.icon} aria-hidden="true" />
-                                 </span>
-                                 <span className="theme-picker__label">{themeOption.label}</span>
-                              </span>
-                           </button>
-                        );
-                     })}
-                  </div>
-               </ScrollableRow>
-            </section>
+            <ThemePicker />
 
             <section className="settings-section" aria-labelledby="days-settings-title">
                <div className="settings-section__header settings-section__header--with-actions">

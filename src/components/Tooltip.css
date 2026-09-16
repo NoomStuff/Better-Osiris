@@ -7,7 +7,7 @@
    border: 1px solid var(--line-strong);
    border-radius: 8px;
    background: var(--overlay-surface);
-   box-shadow: 0 18px 48px rgba(0, 0, 0, 0.34);
+   box-shadow: 0 18px 48px hsl(0 0% 0% / 0.34);
    color: var(--text-strong);
    font-size: 0.72rem;
    line-height: 1.2;

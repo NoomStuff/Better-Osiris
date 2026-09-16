@@ -2,8 +2,8 @@
    /* Palette overridable by context: the chrome layer rethemes the mobile bar's buttons. */
    --ib-line: var(--line);
    --ib-line-hover: var(--line-strong);
-   --ib-bg: rgba(var(--highlight-rgb), 0.035);
-   --ib-bg-hover: rgba(var(--accent-rgb), 0.14);
+   --ib-bg: hsl(from var(--highlight) h s l / 0.035);
+   --ib-bg-hover: hsl(from var(--accent) h s l / 0.14);
    --ib-text: var(--text-strong);
 
    position: relative;
@@ -65,10 +65,10 @@
 }
 
 .icon-button.is-selected {
-   --ib-line: rgba(var(--accent-rgb), 0.28);
-   --ib-line-hover: rgba(var(--accent-rgb), 0.45);
-   --ib-bg: rgba(var(--accent-rgb), 0.12);
-   --ib-bg-hover: rgba(var(--accent-rgb), 0.12);
+   --ib-line: hsl(from var(--accent) h s l / 0.28);
+   --ib-line-hover: hsl(from var(--accent) h s l / 0.45);
+   --ib-bg: hsl(from var(--accent) h s l / 0.12);
+   --ib-bg-hover: hsl(from var(--accent) h s l / 0.12);
 }
 
 .icon-button.is-selected .icon-button__surface {

@@ -26,7 +26,7 @@
    width: 18px;
    height: 18px;
    flex: 0 0 auto;
-   border: 2.5px solid rgba(var(--chrome-accent-rgb), 0.18);
+   border: 2.5px solid hsl(from var(--chrome-accent) h s l / 0.18);
    border-top-color: var(--chrome-accent);
    border-radius: 50%;
    animation: app-toolbar-spinner 720ms linear infinite;
@@ -69,8 +69,8 @@
 }
 
 .view-toggle__button.is-selected {
-   --ib-line: rgba(var(--chrome-accent-rgb), 0.28);
-   --ib-bg: rgba(var(--chrome-accent-rgb), 0.12);
+   --ib-line: hsl(from var(--chrome-accent) h s l / 0.28);
+   --ib-bg: hsl(from var(--chrome-accent) h s l / 0.12);
    --ib-text: var(--chrome-strong);
 }
 

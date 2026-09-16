@@ -9,7 +9,7 @@
    display: grid;
    grid-template-columns: 60px repeat(var(--grid-day-count, 5), minmax(0, 1fr));
    border-bottom: 1px solid var(--line);
-   background: rgba(var(--surface-rgb), 0.96);
+   background: hsl(from var(--surface) h s l / 0.96);
 }
 
 .grid-header__day,
@@ -37,9 +37,9 @@
 }
 
 .grid-header__day[data-today="true"] .grid-header__day-pill {
-   background: rgba(var(--accent-rgb), 0.15);
+   background: hsl(from var(--accent) h s l / 0.15);
    color: var(--accent);
-   box-shadow: inset 0 0 0 1px rgba(var(--accent-rgb), 0.18);
+   box-shadow: inset 0 0 0 1px hsl(from var(--accent) h s l / 0.18);
 }
 
 .grid-header__day[data-empty="true"][data-today="false"] .grid-header__day-pill {
@@ -81,7 +81,7 @@
 
 .grid-time-column {
    border-right: 1px solid var(--line);
-   background: rgba(var(--highlight-rgb), 0.015);
+   background: hsl(from var(--highlight) h s l / 0.015);
 }
 
 .grid-time-slot {
@@ -143,7 +143,7 @@
    z-index: 12;
    height: 1px;
    pointer-events: none;
-   background: rgba(var(--accent-rgb), 0.14);
+   background: hsl(from var(--accent) h s l / 0.14);
    opacity: 0;
    transition: opacity 160ms ease;
 }
@@ -168,7 +168,7 @@
    left: 0;
    right: 0;
    height: 2px;
-   background: rgba(var(--danger-rgb), 0.42);
+   background: hsl(from var(--danger) h s l / 0.42);
    z-index: 2;
    pointer-events: none;
 }
@@ -182,8 +182,8 @@
    height: 7px;
    transform: translateY(-50%) translateX(-50%);
    border-radius: 50%;
-   background: rgba(var(--danger-rgb), 0.82);
-   box-shadow: 0 0 0 3px rgba(var(--danger-rgb), 0.08);
+   background: hsl(from var(--danger) h s l / 0.82);
+   box-shadow: 0 0 0 3px hsl(from var(--danger) h s l / 0.08);
 }
 
 .grid-class {
@@ -192,7 +192,7 @@
    padding: 7px;
    border-radius: 8px;
    border: 2px solid var(--class-border);
-   border-left: 3px solid rgba(var(--accent-rgb), 0.72);
+   border-left: 3px solid hsl(from var(--accent) h s l / 0.72);
    text-align: left;
    cursor: pointer;
    overflow: hidden;
@@ -202,7 +202,7 @@
    min-height: 28px;
    background: var(--class-surface);
    background-clip: padding-box;
-   box-shadow: inset 0 1px 0 rgba(var(--highlight-rgb), 0.035);
+   box-shadow: inset 0 1px 0 hsl(from var(--highlight) h s l / 0.035);
    transition:
       scale 220ms var(--bounce-overshoot),
       background 220ms ease-out;
@@ -228,7 +228,7 @@
 }
 
 .grid-class.status-cancelled {
-   border-color: rgba(var(--danger-rgb), 0.34);
+   border-color: hsl(from var(--danger) h s l / 0.34);
    border-left-color: var(--danger);
    background: var(--class-surface-cancelled);
 }

@@ -31,4 +31,4 @@ Logic is shared, presentation is not. Grouping, positioning, diff detection, and
 - **Agenda view**: the vertical reading list of collapsible day groups.
 - **Grid view**: the weekly timetable. Weekdays as columns, time as rows.
 - **(Bearer) Token**: the user's OSIRIS bearer credential used to fetch the roster from the official API.
-- **Theme**: a color scheme for the whole app. One CSS file in `src/styles/themes` overriding the theme variables, plus one entry in the theme registry (`src/lib/theme.ts`).
+- **Theme**: a color scheme for the whole app. Palette, CSS imports, and registry live in `src/styles/themes`. See its README for the shared color defaults and authoring steps. `ThemePicker` owns picker behavior and animations, `src/lib/theme.ts` owns persistence and application.

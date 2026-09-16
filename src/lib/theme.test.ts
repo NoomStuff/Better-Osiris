@@ -1,6 +1,8 @@
 import assert from "node:assert/strict";
 import { afterEach, describe, it } from "node:test";
-import { DEFAULT_THEME, getStoredTheme, THEMES_BY_MODE } from "./theme.js";
+import { DEFAULT_THEME, getStoredTheme } from "./theme.js";
+
+import { THEMES_BY_MODE } from "../styles/themes/registry";
 
 const ALL_THEMES = [...THEMES_BY_MODE.dark, ...THEMES_BY_MODE.light];
 

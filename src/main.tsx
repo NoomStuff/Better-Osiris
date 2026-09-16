@@ -9,23 +9,7 @@ import { applyTheme, getStoredTheme } from "./lib/theme";
 import "@fontsource-variable/quicksand/index.css";
 import "virtual:app-icons.css";
 import "./styles/global.css";
-import "./styles/themes/frost.css";
-import "./styles/themes/espresso.css";
-import "./styles/themes/moss.css";
-import "./styles/themes/dusk.css";
-import "./styles/themes/ember.css";
-import "./styles/themes/abyss.css";
-import "./styles/themes/contrast.css";
-import "./styles/themes/noir.css";
-import "./styles/themes/light.css";
-import "./styles/themes/thaw.css";
-import "./styles/themes/latte.css";
-import "./styles/themes/ivy.css";
-import "./styles/themes/dawn.css";
-import "./styles/themes/flare.css";
-import "./styles/themes/bloom.css";
-import "./styles/themes/paper.css";
-import "./styles/themes/osiris.css";
+import "./styles/themes/index.css";
 
 window.addEventListener("error", (event) => {
    notifyError(event.error ?? event.message, "Unexpected app error.");

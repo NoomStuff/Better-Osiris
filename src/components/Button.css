@@ -3,8 +3,8 @@
       retheme buttons by overriding them on an ancestor instead of restyling .button__surface. */
    --btn-line: var(--line);
    --btn-line-hover: var(--line-strong);
-   --btn-bg: rgba(var(--highlight-rgb), 0.035);
-   --btn-bg-hover: rgba(var(--highlight-rgb), 0.06);
+   --btn-bg: hsl(from var(--highlight) h s l / 0.035);
+   --btn-bg-hover: hsl(from var(--highlight) h s l / 0.06);
    --btn-text: var(--text-strong);
 
    position: relative;
@@ -46,7 +46,7 @@
 .button__control:focus-visible .button__surface {
    border-color: var(--btn-line-hover);
    background: var(--btn-bg-hover);
-   box-shadow: 0 5px 12px rgba(0, 0, 0, 0.14);
+   box-shadow: 0 5px 12px hsl(0 0% 0% / 0.14);
    transform: translateY(-1px);
 }
 
@@ -63,23 +63,23 @@
 }
 
 .button--primary {
-   --btn-line: rgba(var(--accent-rgb), 0.45);
-   --btn-bg: rgba(var(--accent-rgb), 0.14);
+   --btn-line: hsl(from var(--accent) h s l / 0.45);
+   --btn-bg: hsl(from var(--accent) h s l / 0.14);
 }
 
 .button--danger {
-   --btn-line: rgba(var(--danger-rgb), 0.58);
-   --btn-bg: rgba(var(--danger-rgb), 0.14);
+   --btn-line: hsl(from var(--danger) h s l / 0.58);
+   --btn-bg: hsl(from var(--danger) h s l / 0.14);
    --btn-text: var(--danger-bright);
-   --btn-line-hover: rgba(var(--danger-rgb), 0.76);
-   --btn-bg-hover: rgba(var(--danger-rgb), 0.22);
+   --btn-line-hover: hsl(from var(--danger) h s l / 0.76);
+   --btn-bg-hover: hsl(from var(--danger) h s l / 0.22);
 }
 
 .button--warning {
-   --btn-line: rgba(var(--warning-rgb), 0.5);
-   --btn-bg: rgba(var(--warning-rgb), 0.14);
-   --btn-line-hover: rgba(var(--warning-rgb), 0.75);
-   --btn-bg-hover: rgba(var(--warning-rgb), 0.22);
+   --btn-line: hsl(from var(--warning) h s l / 0.5);
+   --btn-bg: hsl(from var(--warning) h s l / 0.14);
+   --btn-line-hover: hsl(from var(--warning) h s l / 0.75);
+   --btn-bg-hover: hsl(from var(--warning) h s l / 0.22);
 }
 
 .button--compact .button__control {

@@ -1,35 +1,33 @@
 /* Film noir: strict monochrome, silver on black, no tint anywhere. Only the status
    colors keep their hues so cancelled and changed lessons stay readable at a glance. */
-html[data-theme="noir"] {
+html[data-theme="noir"],
+.theme-picker__swatch[data-theme="noir"] {
    color-scheme: dark;
-
-   --page-canvas: #000000;
+   --page-canvas: hsl(0 0% 0%);
    --page-background:
-      radial-gradient(ellipse at 22% -8%, rgba(255, 255, 255, 0.08), transparent 24%),
-      radial-gradient(ellipse at 78% -12%, rgba(255, 255, 255, 0.045), transparent 28%),
-      linear-gradient(180deg, #151515 0%, #070707 34%, #000000 62%, #000000 100%);
+      radial-gradient(ellipse at 22% -8%, hsl(0 0% 100% / 0.08), transparent 24%),
+      radial-gradient(ellipse at 78% -12%, hsl(0 0% 100% / 0.045), transparent 28%),
+      linear-gradient(180deg, hsl(0 0% 8.2%) 0%, hsl(0 0% 2.7%) 34%, hsl(0 0% 0%) 62%, hsl(0 0% 0%) 100%);
 
-   --line: rgba(255, 255, 255, 0.13);
-   --line-strong: rgba(255, 255, 255, 0.28);
-   --text-strong: #f0f0f0;
-   --text-dim: #c7c7c7;
-   --text-muted: #949494;
-   --accent: #ebebeb;
-   --accent-rgb: 235, 235, 235;
-   --warning: #d9b264;
-   --warning-rgb: 217, 178, 100;
-   --danger: #e06066;
-   --danger-rgb: 224, 96, 102;
-   --danger-bright: #ffa5ab;
-   --surface-rgb: 4, 4, 4;
-   --highlight-rgb: 240, 240, 240;
-   --overlay-surface: rgba(8, 8, 8, 0.98);
-   --backdrop: rgba(0, 0, 0, 0.56);
-   --backdrop-strong: rgba(0, 0, 0, 0.6);
-   --class-surface: rgba(16, 16, 16, 0.98);
-   --class-surface-raised: rgba(27, 27, 27, 0.99);
-   --class-border: rgba(255, 255, 255, 0.15);
-   --class-border-raised: rgba(255, 255, 255, 0.3);
-   --class-surface-cancelled: rgba(58, 28, 30, 0.96);
-   --shadow: 0 28px 90px rgba(0, 0, 0, 0.8);
+   --line: hsl(0 0% 100% / 0.13);
+   --line-strong: hsl(from var(--line) h s l / 0.28);
+   --text-strong: hsl(0 0% 94.1%);
+   --text-dim: hsl(0 0% 78%);
+   --text-muted: hsl(0 0% 58%);
+
+   --accent: hsl(0 0% 92.2%);
+   --warning: hsl(40 60.6% 62.2%);
+   --danger: hsl(357.2 67.4% 62.7%);
+   --danger-bright: hsl(356 100% 82.4%);
+
+   --surface: hsl(0 0% 1.6%);
+   --overlay-surface: hsl(0 0% 3.1% / 0.98);
+   --backdrop: hsl(0 0% 0% / 0.56);
+   --backdrop-strong: hsl(from var(--backdrop) h s l / calc(alpha + 0.04));
+   --class-surface: hsl(0 0% 6.3% / 0.98);
+   --class-surface-raised: hsl(0 0% 10.6% / 0.99);
+   --class-border: hsl(from var(--line) h s l / 0.15);
+   --class-surface-cancelled: hsl(356 34.9% 16.9% / 0.96);
+   --shadow: 0 28px 90px hsl(0 0% 0% / 0.8);
+   --swatch-icon: var(--text-strong);
 }

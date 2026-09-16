@@ -1,33 +1,32 @@
 /* Forest floor at night: wet pine shadows, olive panels, and young-leaf highlights. */
-html[data-theme="moss"] {
+html[data-theme="moss"],
+.theme-picker__swatch[data-theme="moss"] {
    color-scheme: dark;
-
-   --page-canvas: #1d2719;
+   --page-canvas: hsl(102.9 21.9% 12.5%);
    --page-background:
-      radial-gradient(ellipse at 15% -8%, rgba(180, 211, 116, 0.14), transparent 32%),
-      radial-gradient(ellipse at 88% 100%, rgba(91, 66, 34, 0.18), transparent 38%), linear-gradient(155deg, #1d2b18 0%, #0a1008 54%, #17140c 100%);
+      radial-gradient(ellipse at 15% -8%, hsl(79.6 51.9% 64.1% / 0.14), transparent 32%),
+      radial-gradient(ellipse at 88% 100%, hsl(33.7 45.6% 24.5% / 0.18), transparent 38%),
+      linear-gradient(155deg, hsl(104.2 28.4% 13.1%) 0%, hsl(105 33.3% 4.7%) 54%, hsl(43.6 31.4% 6.9%) 100%);
 
-   --line: rgba(170, 200, 150, 0.14);
-   --line-strong: rgba(170, 200, 150, 0.3);
-   --text-strong: #edf3e2;
-   --text-dim: #c0ceb0;
-   --text-muted: #91a383;
-   --accent: #94c96e;
-   --accent-rgb: 148, 201, 110;
-   --warning: #d4b04e;
-   --warning-rgb: 212, 176, 78;
-   --danger: #dd6a55;
-   --danger-rgb: 221, 106, 85;
-   --danger-bright: #ffa690;
-   --surface-rgb: 8, 23, 17;
-   --highlight-rgb: 237, 243, 226;
-   --overlay-surface: rgba(22, 29, 18, 0.96);
-   --backdrop: rgba(5, 9, 5, 0.55);
-   --backdrop-strong: rgba(5, 9, 5, 0.6);
-   --class-surface: rgba(39, 47, 29, 0.96);
-   --class-surface-raised: rgba(51, 56, 37, 0.98);
-   --class-border: rgba(148, 201, 110, 0.18);
-   --class-border-raised: rgba(148, 201, 110, 0.32);
-   --class-surface-cancelled: rgba(64, 34, 28, 0.96);
-   --shadow: 0 24px 80px rgba(4, 9, 3, 0.5);
+   --line: hsl(96 31.2% 68.6% / 0.14);
+   --line-strong: hsl(from var(--line) h s l / 0.3);
+   --text-strong: hsl(81.2 41.5% 92%);
+   --text-dim: hsl(88 23.4% 74.9%);
+   --text-muted: hsl(93.8 14.8% 57.6%);
+
+   --accent: hsl(94.9 45.7% 61%);
+   --warning: hsl(43.9 60.9% 56.9%);
+   --danger: hsl(9.3 66.7% 60%);
+   --danger-bright: hsl(11.9 100% 78.2%);
+
+   --surface: hsl(156 48.4% 6.1%);
+   --overlay-surface: hsl(98.2 23.4% 9.2% / 0.96);
+   --backdrop: hsl(120 28.6% 2.7% / 0.55);
+   --backdrop-strong: hsl(from var(--backdrop) h s l / calc(alpha + 0.05));
+   --class-surface: hsl(86.7 23.7% 14.9% / 0.96);
+   --class-surface-raised: hsl(75.8 20.4% 18.2% / 0.98);
+   --class-border: hsl(from var(--accent) h s l / 0.18);
+   --class-border-raised: hsl(from var(--class-border) h s l / 0.32);
+   --class-surface-cancelled: hsl(10 39.1% 18% / 0.96);
+   --shadow: 0 24px 80px hsl(110 50% 2.4% / 0.5);
 }

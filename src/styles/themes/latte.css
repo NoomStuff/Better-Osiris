@@ -1,47 +1,47 @@
 /* Latte: warm paper content that sits on a dark espresso desk. The theme splits chrome
    from content: content colors style the roster surfaces; chrome colors keep the header
    readable against the dark backdrop and the mobile bar. */
-html[data-theme="latte"] {
+html[data-theme="latte"],
+.theme-picker__swatch[data-theme="latte"] {
    color-scheme: light;
-
-   --page-canvas: #2a1c10;
+   --page-canvas: hsl(27.7 44.8% 11.4%);
    --page-background:
-      radial-gradient(circle at 50% 0, rgba(255, 170, 90, 0.08), transparent 32%), linear-gradient(180deg, #2a1c10 0%, #120b06 52%, #221509 100%);
+      radial-gradient(circle at 50% 0, hsl(29.1 100% 67.6% / 0.08), transparent 32%),
+      linear-gradient(180deg, hsl(27.7 44.8% 11.4%) 0%, hsl(25 50% 4.7%) 52%, hsl(28.8 58.1% 8.4%) 100%);
 
-   --line: rgba(80, 55, 30, 0.2);
-   --line-strong: rgba(152, 78, 25, 0.38);
-   --text-strong: #26190d;
-   --text-dim: #5f4b36;
-   --text-muted: #6d5b44;
-   --accent: #913b00;
-   --accent-rgb: 145, 59, 0;
-   --warning: #764dab;
-   --warning-rgb: 118, 77, 171;
-   --danger: #bf3f2c;
-   --danger-rgb: 191, 63, 44;
-   --danger-bright: #9c2b1b;
-   --surface-rgb: 242, 237, 229;
-   --highlight-rgb: 138, 88, 80;
-   --overlay-surface: rgba(246, 241, 233, 0.98);
-   --backdrop: rgba(26, 16, 8, 0.44);
-   --backdrop-strong: rgba(26, 16, 8, 0.5);
+   --line: hsl(30 45.5% 21.6% / 0.2);
+   --line-strong: hsl(25 71.8% 34.7% / 0.38);
+   --text-strong: hsl(28.8 49% 10%);
+   --text-dim: hsl(30.7 27.5% 29.2%);
+   --text-muted: hsl(33.7 23.2% 34.7%);
+
+   --accent: hsl(24.4 100% 28.4%);
+   --warning: hsl(266.2 37.9% 48.6%);
+   --danger: hsl(7.8 62.6% 46.1%);
+   --danger-bright: hsl(7.4 70.5% 35.9%);
+
+   --surface: hsl(36.9 33.3% 92.4%);
+   --highlight: hsl(8.3 26.6% 42.7%);
+   --overlay-surface: hsl(36.9 41.9% 93.9% / 0.98);
+   --backdrop: hsl(26.7 52.9% 6.7% / 0.44);
    --frame-veil: 0.94;
-   --class-surface: rgba(250, 247, 241, 0.92);
-   --class-surface-raised: rgb(255, 251, 245);
-   --class-border: rgba(80, 55, 30, 0.22);
-   --class-border-raised: rgba(145, 59, 0, 0.4);
-   --class-surface-cancelled: rgba(191, 63, 44, 0.08);
-   --shadow: 0 24px 80px rgba(30, 18, 8, 0.3);
+   --class-surface: hsl(40 47.4% 96.3% / 0.92);
+   --class-surface-raised: hsl(36 100% 98%);
+   --class-border: hsl(from var(--line) h s l / 0.22);
+   --class-border-raised: hsl(from var(--accent) h s l / 0.4);
+   --class-surface-cancelled: hsl(from var(--danger) h s l / 0.08);
+   --shadow: 0 24px 80px hsl(27.3 57.9% 7.5% / 0.3);
 
-   --chrome-strong: #f4ecdf;
-   --chrome-dim: #d3c5b2;
-   --chrome-muted: #ab9a84;
-   --chrome-accent: #e8a15c;
-   --chrome-accent-rgb: 232, 161, 92;
-   --chrome-warning: #cbb7f0;
-   --chrome-warning-rgb: 203, 183, 240;
-   --chrome-highlight-rgb: 244, 236, 223;
-   --chrome-line: rgba(240, 220, 190, 0.14);
-   --chrome-line-strong: rgba(240, 220, 190, 0.28);
-   --chrome-surface: rgba(26, 17, 10, 0.92);
+   --chrome-highlight: var(--chrome-strong);
+   --chrome-strong: hsl(37.1 48.8% 91.6%);
+   --chrome-dim: hsl(34.5 27.3% 76.3%);
+   --chrome-muted: hsl(33.8 18.8% 59.4%);
+   --chrome-accent: hsl(29.6 75.3% 63.5%);
+   --chrome-warning: hsl(261.1 65.5% 82.9%);
+   --chrome-line: hsl(36 62.5% 84.3% / 0.14);
+   --chrome-line-strong: hsl(from var(--chrome-line) h s l / 0.28);
+   --chrome-surface: hsl(26.2 44.4% 7.1% / 0.92);
+
+   --swatch-background: var(--surface);
+   --swatch-icon: hsl(16 100% 34.5%);
 }

@@ -1,0 +1,170 @@
+/* Registered output colors preserve theme-switch interpolation. Palettes and derived
+   defaults are declared separately so registrations never contain a hidden dark palette. */
+@property --line {
+   syntax: "<color>";
+   inherits: true;
+   initial-value: transparent;
+}
+
+@property --line-strong {
+   syntax: "<color>";
+   inherits: true;
+   initial-value: transparent;
+}
+
+@property --text-dim {
+   syntax: "<color>";
+   inherits: true;
+   initial-value: transparent;
+}
+
+@property --text-muted {
+   syntax: "<color>";
+   inherits: true;
+   initial-value: transparent;
+}
+
+@property --text-strong {
+   syntax: "<color>";
+   inherits: true;
+   initial-value: transparent;
+}
+
+@property --accent {
+   syntax: "<color>";
+   inherits: true;
+   initial-value: transparent;
+}
+
+@property --warning {
+   syntax: "<color>";
+   inherits: true;
+   initial-value: transparent;
+}
+
+@property --danger {
+   syntax: "<color>";
+   inherits: true;
+   initial-value: transparent;
+}
+
+@property --danger-bright {
+   syntax: "<color>";
+   inherits: true;
+   initial-value: transparent;
+}
+
+@property --surface {
+   syntax: "<color>";
+   inherits: true;
+   initial-value: transparent;
+}
+
+@property --highlight {
+   syntax: "<color>";
+   inherits: true;
+   initial-value: transparent;
+}
+
+@property --overlay-surface {
+   syntax: "<color>";
+   inherits: true;
+   initial-value: transparent;
+}
+
+@property --backdrop {
+   syntax: "<color>";
+   inherits: true;
+   initial-value: transparent;
+}
+
+@property --backdrop-strong {
+   syntax: "<color>";
+   inherits: true;
+   initial-value: transparent;
+}
+
+@property --frame-veil {
+   syntax: "<number>";
+   inherits: true;
+   initial-value: 0.82;
+}
+
+@property --class-surface {
+   syntax: "<color>";
+   inherits: true;
+   initial-value: transparent;
+}
+
+@property --class-surface-raised {
+   syntax: "<color>";
+   inherits: true;
+   initial-value: transparent;
+}
+
+@property --class-border {
+   syntax: "<color>";
+   inherits: true;
+   initial-value: transparent;
+}
+
+@property --class-border-raised {
+   syntax: "<color>";
+   inherits: true;
+   initial-value: transparent;
+}
+
+@property --class-surface-cancelled {
+   syntax: "<color>";
+   inherits: true;
+   initial-value: transparent;
+}
+
+:root,
+.theme-picker__swatch {
+   --highlight: var(--text-strong);
+   --line-strong: hsl(from var(--line) h s l / calc(alpha * 2));
+   --class-border: hsl(from var(--accent) h s l / 0.2);
+   --class-border-raised: hsl(from var(--class-border) h s l / calc(alpha * 2));
+   --backdrop-strong: hsl(from var(--backdrop) h s l / calc(alpha + 0.06));
+   --overlay-surface: hsl(from var(--surface) h s calc(l + 2) / 0.97);
+   --class-surface-raised: hsl(from var(--class-surface) h s calc(l + 4.3) / 0.98);
+   --frame-veil: 0.82;
+   --swatch-background: var(--page-canvas);
+   --swatch-icon: var(--accent);
+   --chrome-strong: var(--text-strong);
+   --chrome-dim: var(--text-dim);
+   --chrome-muted: var(--text-muted);
+   --chrome-accent: var(--accent);
+   --chrome-warning: var(--warning);
+   --chrome-highlight: var(--highlight);
+   --chrome-line: var(--line);
+   --chrome-line-strong: var(--line-strong);
+   --chrome-surface: hsl(from var(--surface) h s l / 0.92);
+}
+
+/* Set while switching themes so registered colors interpolate instead of snapping.
+   The page gradient and unregistered chrome overrides still swap immediately. */
+html.theme-fade {
+   transition:
+      --line 400ms ease,
+      --line-strong 400ms ease,
+      --text-dim 400ms ease,
+      --text-muted 400ms ease,
+      --text-strong 400ms ease,
+      --accent 400ms ease,
+      --warning 400ms ease,
+      --danger 400ms ease,
+      --danger-bright 400ms ease,
+      --surface 400ms ease,
+      --highlight 400ms ease,
+      --overlay-surface 400ms ease,
+      --backdrop 400ms ease,
+      --backdrop-strong 400ms ease,
+      --frame-veil 400ms ease,
+      --class-surface 400ms ease,
+      --class-surface-raised 400ms ease,
+      --class-border 400ms ease,
+      --class-border-raised 400ms ease,
+      --class-surface-cancelled 400ms ease;
+}

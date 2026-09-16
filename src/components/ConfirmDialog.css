@@ -11,7 +11,7 @@
    width: min(420px, calc(100vw - 32px));
    border: 2px solid var(--line);
    border-radius: 18px;
-   background: rgba(var(--surface-rgb), 0.96);
+   background: hsl(from var(--surface) h s l / 0.96);
    box-shadow: var(--shadow);
 }
 
