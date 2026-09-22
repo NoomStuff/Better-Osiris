@@ -75,6 +75,10 @@
 
 .app-content-frame--grid {
    height: max(var(--grid-min-height, 520px), calc(100svh - var(--chrome-height) - (var(--app-padding) * 2)));
+   transition: none;
+}
+
+.app-content-frame--grid[data-zoom-animate="true"] {
    transition: height 420ms var(--ease-out);
 }
 
@@ -150,7 +154,8 @@
 
 @media (prefers-reduced-motion: reduce) {
    .view-enter,
-   .app-content-frame--grid {
+   .app-content-frame--grid,
+   .app-content-frame--grid[data-zoom-animate="true"] {
       animation: none;
       transition: none;
    }

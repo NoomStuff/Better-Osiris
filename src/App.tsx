@@ -1,5 +1,5 @@
 import { onSessionInvalidated } from "./lib/sessionStore";
-import { useCallback, useEffect, useMemo, useRef, useState, type AnimationEvent, type CSSProperties } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type AnimationEvent, type CSSProperties, type TransitionEvent } from "react";
 import { AgendaView } from "./components/AgendaView";
 import { AppToolbar } from "./components/AppToolbar";
 import { GridView } from "./components/GridView";
@@ -49,6 +49,7 @@ export default function App() {
    const [seekingHome, setSeekingHome] = useState(true);
    const isBarDocked = useDockedMobileBar(appContentRef);
    const [gridZoom, setGridZoom] = useState<GridZoom>("hour");
+   const [animateGridHeight, setAnimateGridHeight] = useState(false);
    const [selectedClassId, setSelectedClassId] = useState<string | null>(null);
    const [isSettingsOpen, setIsSettingsOpen] = useState(false);
    const [bearerTokenInput, setBearerTokenInput] = useState("");
@@ -283,6 +284,37 @@ export default function App() {
 
    const closeSettings = useCallback(() => setIsSettingsOpen(false), []);
 
+   const changeGridZoom = useCallback(
+      (nextZoom: GridZoom) => {
+         // Batched with the zoom update so the height transition is present
+         // on the same render that changes the height. Setting the flag in
+         // an effect would run after paint, after the height already snapped.
+         if (nextZoom !== gridZoom && viewMode === "grid") {
+            setAnimateGridHeight(true);
+         }
+         setGridZoom(nextZoom);
+      },
+      [gridZoom, viewMode]
+   );
+
+   useEffect(() => {
+      if (!animateGridHeight) {
+         return;
+      }
+      const timer = window.setTimeout(() => setAnimateGridHeight(false), 480);
+      return () => window.clearTimeout(timer);
+   }, [animateGridHeight]);
+
+   const handleGridHeightTransitionEnd = useCallback((event: TransitionEvent<HTMLElement>) => {
+      if (event.currentTarget !== event.target) {
+         return;
+      }
+      if (event.propertyName && event.propertyName !== "height") {
+         return;
+      }
+      setAnimateGridHeight(false);
+   }, []);
+
    useAppKeyboardShortcuts({
       enabled: !isSettingsOpen && selectedClass === null,
       viewMode,
@@ -295,7 +327,7 @@ export default function App() {
       goNextWeek,
       goCurrentWeek: handleCurrentWeek,
       changeViewMode,
-      changeGridZoom: setGridZoom,
+      changeGridZoom,
       expandAllAgenda: expandAllDays,
       collapseAllAgenda: collapseAllDays,
       openSettings,
@@ -391,7 +423,7 @@ export default function App() {
                gridZoom={gridZoom}
                isRefreshing={refreshing || retrying || (isTokenSettingsLoading && hasDisplayedData)}
                onChangeView={changeViewMode}
-               onChangeGridZoom={setGridZoom}
+               onChangeGridZoom={changeGridZoom}
                onExpandAllAgenda={expandAllDays}
                onCollapseAllAgenda={collapseAllDays}
                onOpenSettings={openSettings}
@@ -428,7 +460,9 @@ export default function App() {
                data-blank-week-underlay={hasBlankWeekUnderlay}
                data-roster-underlay={hasOverlayUnderlay ? "overlay" : "live"}
                data-week-transition={weekTransitionDirection}
+               data-zoom-animate={animateGridHeight}
                onAnimationEnd={handleWeekTransitionEnd}
+               onTransitionEnd={handleGridHeightTransitionEnd}
                style={frameStyle}
                key={`${viewMode}-${weekOffset}`}
             >
