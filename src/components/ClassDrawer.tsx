@@ -86,15 +86,19 @@ export function ClassDrawer({ schoolClass, onClose }: ClassDrawerProps) {
    const place = getPlaceDisplay(room, location);
    const previousPlace = previous ? getPlaceDisplay(previousRoom, previousLocation) : null;
    const locationChanged = Boolean(previous && (room || previousRoom) && previousLocation !== location);
-   const placeContext = locationChanged ? location || "Not set" : place.context;
-   const previousPlaceContext = locationChanged ? previousLocation || "Not set" : null;
    const previousPlaceValue = previousPlace && previousPlace.value !== place.value ? previousPlace.value : null;
    const placeChanged = Boolean(previous && (previousRoom !== room || previousLocation !== location));
    const teacherValue = teacher || "Not set";
    const previousTeacherValue = previous && previousTeacher !== teacher ? previousTeacher || "Not set" : null;
    const isCancelled = activeClass.status === "cancelled";
    const isAdded = activeClass.status === "added";
-
+   const isPlaceEmpty = place.value === "Not set";
+   const isTeacherEmpty = teacherValue === "Not set";
+   const isDetailsEmpty = details === "";
+   const distinctLocation = Boolean(room && location && normalizeClassField(location) !== normalizeClassField(room));
+   const roomLabelCurrent = locationChanged ? location || "Not set" : distinctLocation ? location : "Room";
+   const roomLabelPrevious = locationChanged ? previousLocation || "Not set" : null;
+   const timeChanged = (previousDateValue !== null && previousDateValue !== dateValue) || (previousTimeValue !== null && previousTimeValue !== timeValue);
    return (
       <OverlayPanel
          className="class-panel"
@@ -122,53 +126,61 @@ export function ClassDrawer({ schoolClass, onClose }: ClassDrawerProps) {
          </header>
 
          <div ref={detailsRef} className="class-panel__content">
-            <section className="class-panel__glance" aria-label="Where and when">
-               <div className="class-panel__glance-item class-panel__place" data-changed={placeChanged ? "true" : undefined}>
-                  <div className="class-panel__glance-context">
-                     <i className="fa-solid fa-location-dot" aria-hidden="true" />
-                     <ChangeValue current={placeContext} previous={previousPlaceContext} cancelled={isCancelled} />
+            <section className="class-panel__facts" aria-label="Where and when">
+               <div className="class-panel__stats">
+                  <div className="class-panel__stat class-panel__time" data-changed={timeChanged ? "true" : undefined}>
+                     <div className="class-panel__stat-label">
+                        <i className="fa-regular fa-calendar" aria-hidden="true" />
+                        <ChangeValue current={dateValue} previous={previousDateValue !== dateValue ? previousDateValue : null} cancelled={isCancelled} />
+                     </div>
+                     <ChangeValue
+                        className="class-panel__time-value"
+                        current={timeValue}
+                        previous={previousTimeValue !== timeValue ? previousTimeValue : null}
+                        cancelled={isCancelled}
+                        added={isAdded}
+                     />
                   </div>
-                  <ChangeValue
-                     className="class-panel__glance-value"
-                     current={place.value}
-                     previous={previousPlaceValue}
-                     cancelled={isCancelled}
-                     added={isAdded}
-                  />
+
+                  <div className="class-panel__stat class-panel__place" data-changed={placeChanged ? "true" : undefined}>
+                     <div className="class-panel__glance-context class-panel__stat-label">
+                        <i className="fa-solid fa-location-dot" aria-hidden="true" />
+                        <ChangeValue current={roomLabelCurrent} previous={roomLabelPrevious} cancelled={isCancelled} />
+                     </div>
+                     <ChangeValue
+                        className={`class-panel__stat-value${isPlaceEmpty ? " class-panel__value--empty" : ""}`}
+                        current={place.value}
+                        previous={previousPlaceValue}
+                        cancelled={isCancelled}
+                        added={isAdded}
+                     />
+                  </div>
                </div>
 
-               <div
-                  className="class-panel__glance-item class-panel__time"
-                  data-changed={
-                     (previousDateValue !== null && previousDateValue !== dateValue) || (previousTimeValue !== null && previousTimeValue !== timeValue)
-                        ? "true"
-                        : undefined
-                  }
+               <section
+                  className="class-panel__fact class-panel__teacher"
+                  aria-label="Teacher"
+                  data-changed={previousTeacherValue === null ? undefined : "true"}
                >
-                  <div className="class-panel__glance-context">
-                     <i className="fa-regular fa-calendar" aria-hidden="true" />
-                     <ChangeValue current={dateValue} previous={previousDateValue !== dateValue ? previousDateValue : null} cancelled={isCancelled} />
+                  <div className="class-panel__fact-label">
+                     <i className="fa-solid fa-user" aria-hidden="true" />
+                     <span>Teacher</span>
                   </div>
                   <ChangeValue
-                     className="class-panel__glance-value class-panel__time-value"
-                     current={timeValue}
-                     previous={previousTimeValue !== timeValue ? previousTimeValue : null}
-                     cancelled={isCancelled}
-                     added={isAdded}
+                     className={`class-panel__fact-value${isTeacherEmpty ? " class-panel__value--empty" : ""}`}
+                     current={teacherValue}
+                     previous={previousTeacherValue}
                   />
-               </div>
-
-               <section className="class-panel__teacher" aria-label="Teacher" data-changed={previousTeacherValue === null ? undefined : "true"}>
-                  <i className="fa-solid fa-user" aria-hidden="true" />
-                  <ChangeValue className="class-panel__support-value" current={teacherValue} previous={previousTeacherValue} />
-                  <span className="class-panel__support-label">is teaching</span>
                </section>
 
                {showDetails || showPreviousDetails ? (
                   <section className="class-panel__notes" aria-label="Details">
-                     <i className="fa-solid fa-align-left" aria-hidden="true" />
+                     <div className="class-panel__fact-label">
+                        <i className="fa-solid fa-align-left" aria-hidden="true" />
+                        <span>Details</span>
+                     </div>
                      <ChangeValue
-                        className="class-panel__notes-value"
+                        className={`class-panel__notes-value${isDetailsEmpty ? " class-panel__value--empty" : ""}`}
                         current={details || "Not set"}
                         previous={previous && previousDetails !== details ? previousDetails || "Not set" : null}
                      />

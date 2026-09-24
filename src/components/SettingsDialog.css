@@ -30,7 +30,17 @@
 
 .settings-section__header {
    display: grid;
-   gap: 12px;
+   grid-template-columns: 20px minmax(0, 1fr);
+   gap: 12px 10px;
+   align-items: start;
+}
+
+.settings-section__icon {
+   width: 20px;
+   margin-top: 2px;
+   color: var(--accent);
+   font-size: 0.85rem;
+   text-align: center;
 }
 
 .settings-section__copy {
@@ -40,7 +50,7 @@
 
 .settings-section__header--with-actions,
 .settings-section__header--with-control {
-   grid-template-columns: minmax(0, 1fr) auto;
+   grid-template-columns: 20px minmax(0, 1fr) auto;
 }
 
 .settings-section__header--with-actions {
@@ -92,11 +102,15 @@
 }
 
 .weekday-picker__option .button__control[data-shown="true"] {
-   --btn-line: hsl(from var(--accent) h s l / 0.45);
-   --btn-line-hover: hsl(from var(--accent) h s l / 0.65);
-   --btn-bg: hsl(from var(--accent) h s l / 0.14);
-   --btn-bg-hover: hsl(from var(--accent) h s l / 0.2);
+   --btn-line: hsl(from var(--accent) h s l / 0.55);
+   --btn-line-hover: hsl(from var(--accent) h s l / 0.7);
+   --btn-bg: hsl(from var(--accent) h s l / 0.18);
+   --btn-bg-hover: hsl(from var(--accent) h s l / 0.24);
    --btn-text: var(--accent);
+}
+
+.weekday-picker__option .button__control[data-shown="true"] .button__surface {
+   box-shadow: inset 0 0 0 1px hsl(from var(--accent) h s l / 0.22);
 }
 
 .settings-dialog__field {
@@ -118,11 +132,13 @@
 .settings-dialog__field-header a {
    color: var(--accent);
    font-size: 0.76rem;
-   text-decoration: none;
+   text-decoration: underline;
+   text-decoration-thickness: 1px;
+   text-underline-offset: 2px;
 }
 
 .settings-dialog__field-header a:hover {
-   text-decoration: underline;
+   text-decoration-thickness: 2px;
 }
 
 .settings-dialog__field input {
@@ -243,7 +259,13 @@
 }
 
 @media (max-width: 480px) {
+   .settings-section__header--with-actions {
+      grid-template-columns: 20px minmax(0, 1fr);
+   }
+
    .settings-section__header--with-actions > .action-group {
+      grid-column: 2;
+      justify-self: start;
       width: 100%;
       min-width: 0;
    }

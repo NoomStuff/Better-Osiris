@@ -74,6 +74,7 @@ export function RosterAccessSettings({ onTokenDraftChange, onSaveToken, successf
       <>
          <section className="settings-section" aria-labelledby="token-settings-title">
             <div className="settings-section__header">
+               <i className="settings-section__icon fa-solid fa-key" aria-hidden="true" />
                <div className="settings-section__copy">
                   <h3 id="token-settings-title">Roster access</h3>
                   <p>{tokenAccessDetail}</p>

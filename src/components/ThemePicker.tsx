@@ -31,6 +31,7 @@ export function ThemePicker() {
    return (
       <section className="settings-section" aria-labelledby="theme-settings-title">
          <div className="settings-section__header settings-section__header--with-actions">
+            <i className="settings-section__icon fa-solid fa-palette" aria-hidden="true" />
             <div className="settings-section__copy">
                <h3 id="theme-settings-title">Theme</h3>
                <p>Colors for the whole app.</p>

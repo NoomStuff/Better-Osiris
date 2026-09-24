@@ -82,6 +82,7 @@ export function DevToolsSettings() {
    return (
       <section className="settings-section" aria-labelledby="devtools-settings-title">
          <div className="settings-section__header settings-section__header--with-control">
+            <i className="settings-section__icon fa-solid fa-flask" aria-hidden="true" />
             <div className="settings-section__copy">
                <h3 id="devtools-settings-title">Devtools</h3>
                <p>Local-only test helpers. Fake the clock and class changes; these controls never ship.</p>

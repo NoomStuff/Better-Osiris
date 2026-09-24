@@ -14,6 +14,7 @@ export function NotificationSettings() {
    return (
       <section className="settings-section" aria-labelledby="notification-settings-title">
          <div className="settings-section__header">
+            <i className="settings-section__icon fa-solid fa-bell" aria-hidden="true" />
             <div className="settings-section__copy">
                <h3 id="notification-settings-title">Notifications</h3>
                <p id="notification-settings-detail">{notificationDetail}</p>

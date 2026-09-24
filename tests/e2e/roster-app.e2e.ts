@@ -711,7 +711,7 @@ test("class details use location and date as context for the primary facts", asy
    await expect(glance).toContainText("Tuesday 16 June");
    await expect(glance).toContainText("09:00 – 10:30");
    const teacher = dialog.getByRole("region", { name: "Teacher" });
-   await expect(teacher).toContainText("is teaching");
+   await expect(teacher).toContainText("Teacher");
    await expect(teacher).toContainText("SOURCE_TEACHER");
    await expect(glance.getByRole("region", { name: "Details" })).toContainText("SOURCE_DESCRIPTION");
    await expect(dialog.getByRole("heading", { name: "Details" })).toHaveCount(0);

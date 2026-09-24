@@ -132,6 +132,7 @@ export function SettingsDialog({
 
             <section className="settings-section" aria-labelledby="days-settings-title">
                <div className="settings-section__header settings-section__header--with-actions">
+                  <i className="settings-section__icon fa-solid fa-calendar-days" aria-hidden="true" />
                   <div className="settings-section__copy">
                      <h3 id="days-settings-title">Shown days</h3>
                      <p>Which weekdays the agenda and grid display.</p>
@@ -175,6 +176,7 @@ export function SettingsDialog({
 
             <section className="settings-section" aria-labelledby="grid-hours-settings-title">
                <div className="settings-section__header settings-section__header--with-actions">
+                  <i className="settings-section__icon fa-solid fa-clock" aria-hidden="true" />
                   <div className="settings-section__copy">
                      <h3 id="grid-hours-settings-title">Grid hours</h3>
                      <p>The time range shown in the weekly grid.</p>
@@ -209,6 +211,7 @@ export function SettingsDialog({
 
             <section className="settings-section" aria-labelledby="agenda-folding-settings-title">
                <div className="settings-section__header settings-section__header--with-actions">
+                  <i className="settings-section__icon fa-solid fa-layer-group" aria-hidden="true" />
                   <div className="settings-section__copy">
                      <h3 id="agenda-folding-settings-title">Agenda folding</h3>
                      <p>Which days open automatically when you view a week.</p>
