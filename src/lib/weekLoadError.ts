@@ -7,9 +7,11 @@ export interface WeekLoadError {
    isAuthRelated: boolean;
    retryable: boolean;
    retryAfterMs?: number;
+   /** OSIRIS rejected a token that had already loaded successfully, so it likely expired rather than was mistyped. */
+   savedTokenExpired?: boolean;
 }
 
-export function toWeekLoadError(error: unknown): WeekLoadError {
+export function toWeekLoadError(error: unknown, options: { hadSuccessfulLoad?: boolean } = {}): WeekLoadError {
    if (error instanceof WeekRequestError) {
       return {
          title: "Could not load your roster.",
@@ -18,6 +20,7 @@ export function toWeekLoadError(error: unknown): WeekLoadError {
          isAuthRelated: error.isAuthRelated,
          retryable: error.retryable,
          retryAfterMs: error.retryAfterMs,
+         savedTokenExpired: error.code === "UPSTREAM_AUTH_FAILED" && options.hadSuccessfulLoad === true,
       };
    }
 

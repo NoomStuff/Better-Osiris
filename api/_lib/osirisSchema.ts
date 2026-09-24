@@ -5,21 +5,15 @@ export function parseOsirisRosterResponse(value: unknown): OsirisRosterResponse 
    const record = readRecord(value, "response");
    return {
       items: readArray(record["items"], "items").map((item, index) => parseWeek(item, `items[${index}]`)),
-      hasMore: readBoolean(record["hasMore"], "hasMore"),
-      limit: readInteger(record["limit"], "limit"),
       offset: readInteger(record["offset"], "offset"),
-      count: readInteger(record["count"], "count"),
-      source: "per_week",
    };
 }
 
 function parseWeek(value: unknown, path: string): OsirisWeek {
    const record = readRecord(value, path);
    return {
-      jaar: readInteger(record["jaar"], `${path}.jaar`),
       week: readInteger(record["week"], `${path}.week`),
       startdatum: readDate(record["startdatum"], `${path}.startdatum`),
-      einddatum: readDate(record["einddatum"], `${path}.einddatum`),
       dagen: readArray(record["dagen"], `${path}.dagen`).map((day, index) => parseDay(day, `${path}.dagen[${index}]`)),
    };
 }
@@ -119,13 +113,6 @@ function readDate(value: unknown, path: string) {
    }
 
    throw invalidResponse(`${path} must be a valid date.`);
-}
-
-function readBoolean(value: unknown, path: string) {
-   if (typeof value !== "boolean") {
-      throw invalidResponse(`${path} must be a boolean.`);
-   }
-   return value;
 }
 
 function invalidResponse(message: string) {

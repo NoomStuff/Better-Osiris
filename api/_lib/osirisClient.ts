@@ -30,20 +30,14 @@ export interface OsirisDay {
 }
 
 export interface OsirisWeek {
-   jaar: number;
    week: number;
    startdatum: string;
-   einddatum: string;
    dagen: OsirisDay[];
 }
 
 export interface OsirisRosterResponse {
    items: OsirisWeek[];
-   hasMore: boolean;
-   limit: number;
    offset: number;
-   count: number;
-   source?: "per_week";
    fetchedAt?: number;
 }
 
@@ -67,7 +61,7 @@ export async function fetchOsirisRosterWeeks(offset: number, limit = 1, tokenOve
    const bearerToken = normalizeToken(tokenOverride);
 
    if (!bearerToken) {
-      clearOsirisRosterCache();
+      // The cache is keyed by token hash, so a missing credential never justifies evicting other callers' entries.
       throw new ApiError("Bearer token is missing. Set one in the app before using live OSIRIS data.", {
          code: "AUTH_REQUIRED",
          status: 401,
@@ -138,9 +132,10 @@ async function fetchOsirisRosterWeeksFromEndpoint(rosterUrl: string, offset: num
    });
 
    if (!response.ok) {
+      const isAuthRejection = response.status === 401 || response.status === 403;
       throw new ApiError(`OSIRIS request failed with ${response.status}.`, {
-         code: "UPSTREAM_REQUEST_FAILED",
-         status: response.status === 401 || response.status === 403 ? response.status : 502,
+         code: isAuthRejection ? "UPSTREAM_AUTH_FAILED" : "UPSTREAM_REQUEST_FAILED",
+         status: isAuthRejection ? response.status : 502,
          retryable: response.status === 408 || response.status === 429 || response.status >= 500,
       });
    }

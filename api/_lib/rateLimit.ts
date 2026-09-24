@@ -83,12 +83,12 @@ function trimEntries(now: number) {
 /** A shared school address gets an abuse ceiling; each credential has its own normal allowance. */
 export function enforceRosterRateLimit(req: IncomingMessage) {
    enforceRateLimit(req, "roster-ip", 6000, 60_000);
-   const context = getCredentialContext(resolveOsirisBearerToken(req.headers.cookie));
+   const context = getCredentialContext(resolveOsirisBearerToken(req.headers.cookie).token);
    if (context) enforceRateLimit(req, "roster-session", 120, 60_000, context);
 }
 export function enforceTokenRateLimit(req: IncomingMessage) {
    enforceRateLimit(req, "token-mutation-ip", 1000, 15 * 60_000);
-   const context = getCredentialContext(resolveOsirisBearerToken(req.headers.cookie));
+   const context = getCredentialContext(resolveOsirisBearerToken(req.headers.cookie).token);
    // Anonymous callers have no per-credential bucket, and every mutation validates their token
    // against live OSIRIS; without a tighter bucket the shared address cap is the only brake.
    if (context) enforceRateLimit(req, "token-mutation-session", 20, 15 * 60_000, context);

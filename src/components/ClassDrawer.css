@@ -189,21 +189,6 @@
    overflow-wrap: anywhere;
 }
 
-.class-panel__stat[data-changed="true"]::before,
-.class-panel__fact[data-changed="true"]::before {
-   content: "";
-   position: absolute;
-   top: 14px;
-   bottom: 14px;
-   left: 0;
-   width: 2px;
-   background: var(--warning);
-}
-
-.class-panel__stat + .class-panel__stat[data-changed="true"]::before {
-   left: 20px;
-}
-
 .class-panel__fact {
    position: relative;
    display: grid;
@@ -416,10 +401,6 @@
       padding: 14px 0;
       border-top: 1px solid var(--line);
       border-left: 0;
-   }
-
-   .class-panel__stat + .class-panel__stat[data-changed="true"]::before {
-      left: 0;
    }
 }
 

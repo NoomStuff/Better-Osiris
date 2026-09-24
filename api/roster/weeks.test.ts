@@ -133,6 +133,48 @@ void describe("GET /api/roster/weeks", () => {
       assert.equal(payload.error, "Bearer token is missing. Set one in the app before using live OSIRIS data.");
       assert.equal(osirisWasCalled, false);
    });
+
+   void it("clears the saved token cookie when OSIRIS rejects it", async () => {
+      let osirisWasCalled = false;
+      globalThis.fetch = () => {
+         osirisWasCalled = true;
+         return Promise.resolve(new Response("unauthorized", { status: 401 }));
+      };
+      process.env["COOKIE_SECRET"] = TEST_COOKIE_SECRET;
+      process.env["OSIRIS_ROSTER_URL"] = TEST_OSIRIS_ROSTER_URL;
+
+      const response = await callWeeksHandler({
+         url: "/api/roster/weeks?offset=0&limit=1",
+         cookie: createTokenCookie("Bearer expired-token", process.env["COOKIE_SECRET"]),
+      });
+      const payload = JSON.parse(response.body) as { code?: string };
+      const setCookie = response.headers.get("set-cookie");
+
+      assert.equal(osirisWasCalled, true);
+      assert.equal(response.statusCode, 401);
+      assert.equal(payload.code, "UPSTREAM_AUTH_FAILED");
+      assert.match(String(setCookie), /osiris_bearer=;/);
+      assert.match(String(setCookie), /Max-Age=0/);
+   });
+
+   void it("keeps cookies out of it when OSIRIS rejects the server token", async () => {
+      let osirisWasCalled = false;
+      globalThis.fetch = () => {
+         osirisWasCalled = true;
+         return Promise.resolve(new Response("unauthorized", { status: 401 }));
+      };
+      process.env["COOKIE_SECRET"] = TEST_COOKIE_SECRET;
+      process.env["OSIRIS_ROSTER_URL"] = TEST_OSIRIS_ROSTER_URL;
+      process.env["BEARER_TOKEN"] = "Bearer server-token";
+
+      const response = await callWeeksHandler({ url: "/api/roster/weeks?offset=0&limit=1" });
+      const payload = JSON.parse(response.body) as { code?: string };
+
+      assert.equal(osirisWasCalled, true);
+      assert.equal(response.statusCode, 401);
+      assert.equal(payload.code, "UPSTREAM_AUTH_FAILED");
+      assert.equal(response.headers.get("set-cookie"), undefined);
+   });
 });
 
 async function callWeeksHandler(options: MockRequestOptions) {
@@ -186,13 +228,10 @@ function mockOsirisFetch(requests: OsirisRequest[], response: OsirisRosterRespon
          ? {
               ...response,
               offset: requestedOffset,
-              limit: requestedLimit,
-              count: requestedLimit,
               items: Array.from({ length: requestedLimit }, (_, index) => ({
                  ...firstItem,
                  week: firstItem.week + index,
                  startdatum: shiftCalendarDate(firstItem.startdatum, index * 7),
-                 einddatum: shiftCalendarDate(firstItem.einddatum, index * 7),
                  dagen: index === 0 ? firstItem.dagen : [],
               })),
            }
@@ -221,16 +260,11 @@ function getFetchUrl(input: Parameters<typeof fetch>[0]) {
 
 function createOsirisRosterResponse(): OsirisRosterResponse {
    return {
-      hasMore: true,
-      limit: 5,
       offset: 2,
-      count: 1,
       items: [
          {
-            jaar: 2026,
             week: 25,
             startdatum: "2026-06-15",
-            einddatum: "2026-06-21",
             dagen: [
                {
                   datum: "2026-06-16",

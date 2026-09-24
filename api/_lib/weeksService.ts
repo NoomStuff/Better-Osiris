@@ -25,7 +25,22 @@ export function parseWeeksRange(offsetValue: string | null | undefined, limitVal
 
 export async function loadWeekBatch(request: WeeksRequest): Promise<WeekBatch> {
    const { offset, limit } = parseWeeksRange(request.offset, request.limit);
-   return loadWeekBatchWithToken(offset, limit, resolveOsirisBearerToken(request.cookieHeader));
+   const { token, fromCookie } = resolveOsirisBearerToken(request.cookieHeader);
+   try {
+      return await loadWeekBatchWithToken(offset, limit, token);
+   } catch (error) {
+      // A credential the browser stored no longer works: tell the route to clear it so the client stops retrying with it.
+      if (fromCookie && error instanceof ApiError && error.code === "UPSTREAM_AUTH_FAILED") {
+         throw new ApiError(error.message, {
+            code: error.code,
+            status: error.status,
+            retryable: error.retryable,
+            cause: error,
+            clearCredential: true,
+         });
+      }
+      throw error;
+   }
 }
 
 export async function loadWeekBatchWithToken(offset: number, limit: number, token: string | null): Promise<WeekBatch> {

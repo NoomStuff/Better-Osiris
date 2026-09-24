@@ -616,6 +616,74 @@ test("settings keeps a rejected token editable", async ({ page }) => {
    await expect(settings.getByRole("button", { name: "Save" })).toBeEnabled();
 });
 
+test("an expired saved token shows the expired-token screen until a fresh one is saved", async ({ page }) => {
+   let tokenRejected = false;
+   let hasCustomToken = true;
+   let homeBatchLoaded = false;
+   await page.route("**/api/settings/osiris-token", async (route) => {
+      if (route.request().method() === "PUT") {
+         hasCustomToken = true;
+      }
+
+      await route.fulfill({
+         status: 200,
+         contentType: "application/json",
+         body: JSON.stringify({ hasCustomToken, hasBearerToken: hasCustomToken, contextId: hasCustomToken ? "test-context" : null }),
+      });
+   });
+   await page.route("**/api/roster/weeks?*", async (route) => {
+      const url = new URL(route.request().url());
+      const offset = Number(url.searchParams.get("offset") ?? "0");
+      const limit = Number(url.searchParams.get("limit") ?? "5");
+      if (offset === 0 && !homeBatchLoaded) {
+         homeBatchLoaded = true;
+         await route.fulfill({
+            status: 200,
+            contentType: "application/json",
+            body: JSON.stringify(createRosterBatch(offset, limit)),
+         });
+         return;
+      }
+
+      if (!tokenRejected && offset === 0) {
+         // The home week's refresh is where the user meets the expired token; the server clears the dead cookie.
+         tokenRejected = true;
+         hasCustomToken = false;
+      }
+
+      if (!tokenRejected || hasCustomToken) {
+         await route.fulfill({
+            status: 200,
+            contentType: "application/json",
+            body: JSON.stringify(createRosterBatch(offset, limit)),
+         });
+         return;
+      }
+
+      await route.fulfill({
+         status: 401,
+         contentType: "application/json",
+         body: JSON.stringify({ code: "UPSTREAM_AUTH_FAILED", error: "OSIRIS rejected the saved token.", retryable: false }),
+      });
+   });
+
+   await page.goto("/");
+   await expect(page.locator(".grid-class", { hasText: "SOURCE_TITLE_0_1" })).toBeVisible();
+
+   // A refresh of the home week fails; the settings refresh it triggers clears the cookie.
+   // The expired screen must survive both and stay up until a fresh token is saved.
+   await page.evaluate(() => window.dispatchEvent(new Event("online")));
+   await expect(page.getByRole("heading", { name: "Bearer token expired" })).toBeVisible();
+   await expect(page.getByText("OSIRIS no longer accepts your saved token.")).toBeVisible();
+
+   const overlay = page.locator(".roster-overlay-state");
+   await overlay.getByLabel("Bearer token").fill("Bearer fresh-token");
+   await overlay.getByRole("button", { name: "Load roster" }).click();
+
+   await expect(page.getByRole("heading", { name: "Bearer token expired" })).toBeHidden();
+   await expect(page.locator(".grid-class", { hasText: "SOURCE_TITLE_0_1" })).toBeVisible();
+});
+
 test("an aborted credential request cannot restore stale roster data", async ({ page }) => {
    let tokenVersion = 1;
    let releaseInitialRequest = () => undefined;

@@ -10,16 +10,11 @@ void describe("OSIRIS roster normalizer", () => {
       const sourceDescription = "SOURCE_DESCRIPTION";
       const sourceTeacher = "SOURCE_TEACHER";
       const rawResponse = {
-         hasMore: true,
-         limit: 2,
          offset: 3,
-         count: 2,
          items: [
             {
-               jaar: 2026,
                week: 25,
                startdatum: "2026-06-15",
-               einddatum: "2026-06-21",
                dagen: [
                   {
                      datum: "2026-06-16",
@@ -41,10 +36,8 @@ void describe("OSIRIS roster normalizer", () => {
                ],
             },
             {
-               jaar: 2026,
                week: 26,
                startdatum: "2026-06-22",
-               einddatum: "2026-06-28",
                dagen: [],
             },
          ],
@@ -74,16 +67,11 @@ void describe("OSIRIS roster normalizer", () => {
       process.env["ROSTER_TIME_ZONE"] = "Asia/Tokyo";
       try {
          const rawResponse = {
-            hasMore: false,
-            limit: 1,
             offset: 0,
-            count: 1,
             items: [
                {
-                  jaar: 2026,
                   week: 25,
                   startdatum: "2026-06-15",
-                  einddatum: "2026-06-21",
                   dagen: [
                      {
                         datum: "2026-06-15T15:30:00Z",
@@ -122,16 +110,11 @@ void describe("OSIRIS roster normalizer", () => {
 
    void it("does not treat the actueel flag as a cancellation status", () => {
       const rawResponse = {
-         hasMore: false,
-         limit: 1,
          offset: 0,
-         count: 1,
          items: [
             {
-               jaar: 2026,
                week: 25,
                startdatum: "2026-06-15",
-               einddatum: "2026-06-21",
                dagen: [
                   {
                      datum: "2026-06-16",
@@ -163,16 +146,11 @@ void describe("OSIRIS roster normalizer", () => {
 
    void it("uses cancellation text from any explicit status field", () => {
       const rawResponse = {
-         hasMore: false,
-         limit: 1,
          offset: 0,
-         count: 1,
          items: [
             {
-               jaar: 2026,
                week: 25,
                startdatum: "2026-06-15",
-               einddatum: "2026-06-19",
                dagen: [
                   {
                      datum: "2026-06-16",
@@ -210,10 +188,7 @@ void describe("OSIRIS roster normalizer", () => {
 
    void it("rejects partial or mismatched upstream batches", () => {
       const response = {
-         hasMore: true,
-         limit: 2,
          offset: 3,
-         count: 0,
          items: [],
       } satisfies OsirisRosterResponse;
 
@@ -224,16 +199,11 @@ void describe("OSIRIS roster normalizer", () => {
 
 function createSingleClassResponse(classOverrides: Partial<OsirisRosterResponse["items"][number]["dagen"][number]["rooster"][number]>): OsirisRosterResponse {
    return {
-      hasMore: false,
-      limit: 1,
       offset: 0,
-      count: 1,
       items: [
          {
-            jaar: 2026,
             week: 25,
             startdatum: "2026-06-15",
-            einddatum: "2026-06-21",
             dagen: [
                {
                   datum: "2026-06-16",

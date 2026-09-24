@@ -47,12 +47,12 @@ export function clearOsirisTokenSetting(): OsirisTokenSettingsResult {
    };
 }
 
-export function resolveOsirisBearerToken(cookieHeader: string | undefined): string | null {
+export function resolveOsirisBearerToken(cookieHeader: string | undefined): { token: string | null; fromCookie: boolean } {
    const cookieSecret = getCookieSecret();
    const cookieToken = readOsirisTokenFromCookie(cookieHeader, cookieSecret);
    if (cookieToken) {
       try {
-         return normalizeBearerToken(cookieToken);
+         return { token: normalizeBearerToken(cookieToken), fromCookie: true };
       } catch {
          throw new ApiError("The saved bearer token is invalid.", {
             code: "AUTH_REQUIRED",
@@ -61,5 +61,5 @@ export function resolveOsirisBearerToken(cookieHeader: string | undefined): stri
       }
    }
 
-   return getDefaultOsirisToken();
+   return { token: getDefaultOsirisToken(), fromCookie: false };
 }

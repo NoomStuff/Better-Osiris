@@ -86,6 +86,10 @@ export function BearerTokenState({ token, status, onTokenChange, onSubmit }: Bea
          title: "Bearer token rejected",
          detail: "OSIRIS did not accept this token. Paste a fresh token and try again.",
       },
+      expired: {
+         title: "Bearer token expired",
+         detail: "OSIRIS no longer accepts your saved token. It likely expired; paste a fresh one to continue.",
+      },
       unavailable: {
          title: "Could not check bearer token",
          detail: "OSIRIS is unavailable right now. Your token was saved; the roster will retry automatically.",

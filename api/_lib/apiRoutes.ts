@@ -1,7 +1,8 @@
 import { MAX_WEEK_LIMIT, type OsirisTokenSettings, type RosterConfig } from "../../shared/weeks.js";
+import { buildClearOsirisTokenCookieHeader } from "./auth.js";
 import { toApiError, toApiErrorPayload, errorHeaders } from "./errors.js";
 import { clearOsirisTokenSetting, getOsirisTokenSettings, saveOsirisTokenSetting } from "./osirisTokenSettingsService.js";
-import { getRosterTimeZone, normalizeBearerToken } from "./osirisConfig.js";
+import { getRosterTimeZone, isProduction, normalizeBearerToken } from "./osirisConfig.js";
 import { loadWeekBatch, loadWeekBatchWithToken, type WeeksRequest } from "./weeksService.js";
 
 export interface ApiRouteResponse<TPayload = unknown> {
@@ -64,7 +65,10 @@ function errorResponse(error: unknown, fallbackMessage: string): ApiRouteRespons
    const apiError = toApiError(error, fallbackMessage);
    return {
       statusCode: apiError.status,
-      headers: errorHeaders(apiError),
+      headers: {
+         ...errorHeaders(apiError),
+         ...(apiError.clearCredential ? { "Set-Cookie": buildClearOsirisTokenCookieHeader(isProduction()) } : {}),
+      },
       payload: toApiErrorPayload(apiError),
    };
 }

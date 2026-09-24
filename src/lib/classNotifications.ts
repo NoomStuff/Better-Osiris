@@ -3,6 +3,7 @@ import type { ClassSnapshot } from "../types/weeks";
 import { dayLabel, parseLocalDateTime, timeLabel } from "./date";
 import type { SessionClassDiff } from "./classDiffs";
 import { notifyWarning } from "./notyf";
+import { randomId } from "./randomId";
 import { readBrowserStorage, writeBrowserStorage } from "./browserStorage";
 import { deliverNotification, runNotificationQueue } from "./notificationDelivery";
 import { SESSION_EPOCH_KEY } from "./sessionStore";
@@ -87,7 +88,7 @@ export async function notifyClassDiffs(diffs: SessionClassDiff[], contextId: str
             const body = getClassNotificationBodies(group.map((item) => item.diff))[0];
             const current = () => isCurrent() && group.every((item) => pendingChanges.get(item.key) === item.pending);
             if (!body || !current()) continue;
-            if (!(await deliverNotification(body, `class-change:${crypto.randomUUID()}`, current))) continue;
+            if (!(await deliverNotification(body, `class-change:${randomId()}`, current))) continue;
             group.forEach((item) => {
                ledger.markDelivered(item.key, item.state);
                const latest = pendingChanges.get(item.key);

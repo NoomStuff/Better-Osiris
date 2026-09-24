@@ -1,10 +1,9 @@
-import { getReminderMinutes, notifyUpcomingClasses } from "../lib/classReminders";
+import { getNextReminderCheckDelay, getReminderMinutes, notifyUpcomingClasses } from "../lib/classReminders";
 import { useCallback, useEffect, useMemo, useState, useSyncExternalStore } from "react";
 import { WeekRepository, type WeekRepositoryOptions } from "../lib/weekRepository";
 import { canNavigateToWeek, getDerivedWeekTitle, getHomeWeek, getAdjacentWeekOffset } from "../lib/weekPolicy";
 import { useClock } from "./useClock";
 import { isRosterTimeZoneKnown } from "../lib/rosterTimeZone";
-import { parseLocalDateTime } from "../lib/date";
 import type { Week } from "../types/weeks";
 
 export function useWeeks(offset: number, options: WeekRepositoryOptions) {
@@ -24,15 +23,11 @@ export function useWeeks(offset: number, options: WeekRepositoryOptions) {
       const check = () => {
          clearTimeout(timer);
          void notifyUpcomingClasses(classes, contextId, () => active);
-         const now = Date.now();
-         const lead = getReminderMinutes() * 60_000;
-         const next = classes.reduce((delay, item) => {
-            if (item.status === "cancelled") return delay;
-            const dueIn = parseLocalDateTime(item.start).getTime() - lead - now;
-            const endsIn = parseLocalDateTime(item.end).getTime() - now;
-            return Math.min(delay, dueIn > 0 ? dueIn : delay, endsIn > 0 ? endsIn : delay);
-         }, 15_000);
-         timer = setTimeout(check, next);
+         const delay = getNextReminderCheckDelay(classes, getReminderMinutes() * 60_000, Date.now());
+         if (delay === null) return;
+         // Sleep until the next due moment. One second keeps timing stable, one day
+         // bounds the wait so clock changes and far-future classes cannot stall the chain.
+         timer = setTimeout(check, Math.min(Math.max(delay, 1_000), 24 * 60 * 60_000));
       };
       check();
       window.addEventListener("storage", check);

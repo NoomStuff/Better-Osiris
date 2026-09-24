@@ -1,6 +1,7 @@
 import { clearOsirisToken, fetchOsirisTokenSettings, saveOsirisToken } from "../api/settings";
 import type { OsirisTokenSettings } from "../../shared/weeks";
 import { readBrowserStorage, writeBrowserStorage } from "./browserStorage";
+import { randomId } from "./randomId";
 import { clearWeekBrowserCache } from "./weekCache";
 
 export const SESSION_EPOCH_KEY = "roster-session-epoch-v1";
@@ -112,7 +113,7 @@ async function mutate(run: () => Promise<OsirisTokenSettings>) {
    publish({ isMutating: true });
    try {
       const settings = await run();
-      writeBrowserStorage("localStorage", SESSION_EPOCH_KEY, crypto.randomUUID());
+      writeBrowserStorage("localStorage", SESSION_EPOCH_KEY, randomId());
       clearWeekBrowserCache();
       invalidate();
       publish({ settings, isInitialLoading: false, initialLoadError: null });
@@ -123,3 +124,11 @@ async function mutate(run: () => Promise<OsirisTokenSettings>) {
 }
 export const saveSessionToken = (token: string) => mutate(() => saveOsirisToken(token));
 export const clearSessionToken = () => mutate(clearOsirisToken);
+
+/** Manual escape hatch for the retry loop while the settings endpoint is unreachable. */
+export function retrySessionSettings() {
+   if (state.isMutating || !state.isInitialLoading) return;
+   generation += 1;
+   clearTimeout(timer);
+   void loadSettings();
+}

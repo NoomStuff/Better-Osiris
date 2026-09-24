@@ -41,4 +41,24 @@ void describe("OSIRIS client", () => {
          return true;
       });
    });
+
+   void it("keeps cached weeks when a request arrives without a token", async () => {
+      process.env["OSIRIS_ROSTER_URL"] = "https://example.test/roster";
+      let upstreamCalls = 0;
+      globalThis.fetch = () => {
+         upstreamCalls += 1;
+         return Promise.resolve(
+            new Response(JSON.stringify({ items: [{ week: 25, startdatum: "2026-06-15", dagen: [] }], offset: 0 }), {
+               status: 200,
+               headers: { "Content-Type": "application/json" },
+            })
+         );
+      };
+
+      await fetchOsirisRosterWeeks(0, 1, "Bearer known-token");
+      await assert.rejects(fetchOsirisRosterWeeks(0, 1, null), /Bearer token is missing/);
+      // The anonymous request must not evict the cached entry for the known token.
+      await fetchOsirisRosterWeeks(0, 1, "Bearer known-token");
+      assert.equal(upstreamCalls, 1);
+   });
 });

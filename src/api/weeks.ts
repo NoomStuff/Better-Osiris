@@ -46,7 +46,7 @@ export class WeekRequestError extends Error {
    }
 
    get isAuthRelated() {
-      return this.status === 401 || this.status === 403 || this.code === "AUTH_REQUIRED";
+      return this.status === 401 || this.status === 403 || this.code === "AUTH_REQUIRED" || this.code === "UPSTREAM_AUTH_FAILED";
    }
 }
 

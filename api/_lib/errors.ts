@@ -3,6 +3,7 @@ export type ApiErrorCode =
    | "CONFIGURATION_ERROR"
    | "INVALID_REQUEST"
    | "PAYLOAD_TOO_LARGE"
+   | "UPSTREAM_AUTH_FAILED"
    | "UPSTREAM_INVALID_RESPONSE"
    | "UPSTREAM_REQUEST_FAILED"
    | "UPSTREAM_TIMEOUT";
@@ -12,14 +13,20 @@ export class ApiError extends Error {
    readonly status: number;
    readonly retryable: boolean;
    readonly retryAfterMs: number;
+   /** Upstream rejected the credential from the browser cookie: the response should clear it. */
+   readonly clearCredential: boolean;
 
-   constructor(message: string, options: { code: ApiErrorCode; status: number; retryable?: boolean; retryAfterMs?: number; cause?: unknown }) {
+   constructor(
+      message: string,
+      options: { code: ApiErrorCode; status: number; retryable?: boolean; retryAfterMs?: number; cause?: unknown; clearCredential?: boolean }
+   ) {
       super(message, options.cause === undefined ? undefined : { cause: options.cause });
       this.name = "ApiError";
       this.code = options.code;
       this.status = options.status;
       this.retryable = options.retryable ?? false;
       this.retryAfterMs = options.retryAfterMs ?? 0;
+      this.clearCredential = options.clearCredential ?? false;
    }
 }
 

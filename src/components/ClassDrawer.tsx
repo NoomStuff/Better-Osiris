@@ -87,7 +87,6 @@ export function ClassDrawer({ schoolClass, onClose }: ClassDrawerProps) {
    const previousPlace = previous ? getPlaceDisplay(previousRoom, previousLocation) : null;
    const locationChanged = Boolean(previous && (room || previousRoom) && previousLocation !== location);
    const previousPlaceValue = previousPlace && previousPlace.value !== place.value ? previousPlace.value : null;
-   const placeChanged = Boolean(previous && (previousRoom !== room || previousLocation !== location));
    const teacherValue = teacher || "Not set";
    const previousTeacherValue = previous && previousTeacher !== teacher ? previousTeacher || "Not set" : null;
    const isCancelled = activeClass.status === "cancelled";
@@ -98,7 +97,6 @@ export function ClassDrawer({ schoolClass, onClose }: ClassDrawerProps) {
    const distinctLocation = Boolean(room && location && normalizeClassField(location) !== normalizeClassField(room));
    const roomLabelCurrent = locationChanged ? location || "Not set" : distinctLocation ? location : "Room";
    const roomLabelPrevious = locationChanged ? previousLocation || "Not set" : null;
-   const timeChanged = (previousDateValue !== null && previousDateValue !== dateValue) || (previousTimeValue !== null && previousTimeValue !== timeValue);
    return (
       <OverlayPanel
          className="class-panel"
@@ -128,7 +126,7 @@ export function ClassDrawer({ schoolClass, onClose }: ClassDrawerProps) {
          <div ref={detailsRef} className="class-panel__content">
             <section className="class-panel__facts" aria-label="Where and when">
                <div className="class-panel__stats">
-                  <div className="class-panel__stat class-panel__time" data-changed={timeChanged ? "true" : undefined}>
+                  <div className="class-panel__stat class-panel__time">
                      <div className="class-panel__stat-label">
                         <i className="fa-regular fa-calendar" aria-hidden="true" />
                         <ChangeValue current={dateValue} previous={previousDateValue !== dateValue ? previousDateValue : null} cancelled={isCancelled} />
@@ -142,7 +140,7 @@ export function ClassDrawer({ schoolClass, onClose }: ClassDrawerProps) {
                      />
                   </div>
 
-                  <div className="class-panel__stat class-panel__place" data-changed={placeChanged ? "true" : undefined}>
+                  <div className="class-panel__stat class-panel__place">
                      <div className="class-panel__glance-context class-panel__stat-label">
                         <i className="fa-solid fa-location-dot" aria-hidden="true" />
                         <ChangeValue current={roomLabelCurrent} previous={roomLabelPrevious} cancelled={isCancelled} />
@@ -157,11 +155,7 @@ export function ClassDrawer({ schoolClass, onClose }: ClassDrawerProps) {
                   </div>
                </div>
 
-               <section
-                  className="class-panel__fact class-panel__teacher"
-                  aria-label="Teacher"
-                  data-changed={previousTeacherValue === null ? undefined : "true"}
-               >
+               <section className="class-panel__fact class-panel__teacher" aria-label="Teacher">
                   <div className="class-panel__fact-label">
                      <i className="fa-solid fa-user" aria-hidden="true" />
                      <span>Teacher</span>

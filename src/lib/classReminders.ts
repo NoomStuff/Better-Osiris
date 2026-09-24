@@ -15,6 +15,24 @@ export function isClassReminderDue(item: Class, minutes: number, now: number) {
    const start = parseLocalDateTime(item.start).getTime();
    return item.status !== "cancelled" && start > now && start - minutes * 60_000 <= now;
 }
+
+/**
+ * Time in ms until the next scheduler obligation (a reminder becoming due, or a reminder
+ * expiring), or null when nothing is pending and events must wake the scheduler instead.
+ */
+export function getNextReminderCheckDelay(classes: Class[], leadMs: number, now: number): number | null {
+   let next: number | null = null;
+   for (const item of classes) {
+      if (item.status === "cancelled") continue;
+      for (const moment of [parseLocalDateTime(item.start).getTime() - leadMs, parseLocalDateTime(item.end).getTime()]) {
+         const delay = moment - now;
+         if (delay <= 0) continue;
+         next = next === null ? delay : Math.min(next, delay);
+      }
+   }
+   return next;
+}
+
 /** Simultaneous classes keep their reminders; only a later start replaces them. */
 export function getClassReminderExpiry(item: Class, classes: Class[], minutes: number) {
    const start = parseLocalDateTime(item.start).getTime();

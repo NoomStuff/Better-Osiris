@@ -364,7 +364,7 @@ export class WeekRepository {
          })
          .catch((error: unknown) => {
             if (controller.signal.aborted || generation !== this.generation || epoch !== getSessionEpoch()) return;
-            const loadError = toWeekLoadError(error);
+            const loadError = toWeekLoadError(error, { hadSuccessfulLoad: this.snapshot.lastSuccessfulResetKey === this.resetKey });
             const entries = { ...this.snapshot.entries };
             const failedOffsets = [
                ...new Set([...offsets, ...Array.from({ length: requestLimit }, (_, index) => requestOffset + (this.sourceShift ?? 0) + index)]),

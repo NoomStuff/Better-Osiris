@@ -27,15 +27,17 @@ export function RosterAccessSettings({ onTokenDraftChange, onSaveToken, successf
    const tokenAccessDetail =
       tokenValidationStatus === "checking"
          ? "Checking whether OSIRIS accepts this token."
-         : tokenValidationStatus === "rejected"
-           ? "OSIRIS rejected this token. Paste a fresh one and try again."
-           : tokenValidationStatus === "save-unavailable"
-             ? "The token was not saved. Try again with the same token."
-             : tokenValidationStatus === "unavailable"
-               ? "OSIRIS is unavailable. The roster will retry automatically."
-               : hasCustomToken || hasBearerToken
-                 ? "Roster requests are using your saved bearer token."
-                 : "No bearer token is set.";
+         : tokenValidationStatus === "expired"
+           ? "OSIRIS rejected your saved token, it likely expired. Paste a fresh one."
+           : tokenValidationStatus === "rejected"
+             ? "OSIRIS rejected this token. Paste a fresh one and try again."
+             : tokenValidationStatus === "save-unavailable"
+               ? "The token was not saved. Try again with the same token."
+               : tokenValidationStatus === "unavailable"
+                 ? "OSIRIS is unavailable. The roster will retry automatically."
+                 : hasCustomToken || hasBearerToken
+                   ? "Roster requests are using your saved bearer token."
+                   : "No bearer token is set.";
 
    useEffect(() => {
       if (successfulTokenValidationKey === null) {

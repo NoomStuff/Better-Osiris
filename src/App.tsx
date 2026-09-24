@@ -1,4 +1,4 @@
-import { onSessionInvalidated } from "./lib/sessionStore";
+import { onSessionInvalidated, retrySessionSettings } from "./lib/sessionStore";
 import { useCallback, useEffect, useMemo, useRef, useState, type AnimationEvent, type CSSProperties, type TransitionEvent } from "react";
 import { AgendaView } from "./components/AgendaView";
 import { AppToolbar } from "./components/AppToolbar";
@@ -108,7 +108,7 @@ export default function App() {
       }
 
       if (error.isAuthRelated && tokenSettings?.hasCustomToken) {
-         return "OSIRIS rejected your saved bearer token.";
+         return error.savedTokenExpired ? "OSIRIS rejected your saved bearer token. It likely expired." : "OSIRIS rejected your saved bearer token.";
       }
 
       return error.detail;
@@ -366,7 +366,20 @@ export default function App() {
          );
       }
       if (isTokenSettingsLoading && !hasDisplayedData) {
-         return <LoadingState message={tokenSettingsLoadError ? "Waiting for the roster server." : "Checking bearer token."} />;
+         if (tokenSettingsLoadError) {
+            return (
+               <ErrorState
+                  title="Roster server unavailable"
+                  detail="Your bearer token settings could not be loaded. The app keeps retrying on its own."
+                  log={tokenSettingsLoadError}
+                  retryCountdownMs={0}
+                  isRetrying={false}
+                  canRetry={false}
+                  onRetry={retrySessionSettings}
+               />
+            );
+         }
+         return <LoadingState message="Checking bearer token." />;
       }
       if (shouldShowTokenEntry) {
          const tokenStatus = tokenValidationStatus === "ready" ? "required" : tokenValidationStatus;
@@ -394,6 +407,7 @@ export default function App() {
                retryCountdownMs={retryCountdownMs}
                isRetrying={retrying}
                canRetry={error.retryable}
+               onRetry={refresh}
             />
          );
       }
