@@ -25,9 +25,14 @@ export function getClassLabel(schoolClass: Class): string {
    return schoolClass.title || schoolClass.subject;
 }
 
-/** "Teacher · Room · Location", the shared detail line under the class label in both views. */
+/** "Teacher · Room · Location", the detail line under the class label in the agenda view. */
 export function getClassDetailsLabel(schoolClass: Class): string {
    return [schoolClass.teacher, getClassLocationLabel(schoolClass)].filter(Boolean).join(DETAILS_SEPARATOR);
+}
+
+/** "Time · Teacher", the first detail line of a grid item; the bare time when no teacher is set. */
+export function getClassWhenLabel(schoolClass: Class, timeRange: string): string {
+   return [timeRange, schoolClass.teacher.trim()].filter(Boolean).join(DETAILS_SEPARATOR);
 }
 
 export function normalizeClassField(value: string) {

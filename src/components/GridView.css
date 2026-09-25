@@ -233,13 +233,13 @@
    background: var(--class-surface-cancelled);
 }
 
-/* Room for the corner status chip. */
-.grid-class:is(.status-added, .status-changed, .status-cancelled) .grid-class__meta {
+/* Room for the corner status chip: the extra line sits at the bottom edge in roomy
+   cards, while the meta lines reach it in the smallest ones. */
+.grid-class:is(.status-added, .status-changed, .status-cancelled) :is(.grid-class__meta, .grid-class__extra) {
    padding-inline-end: 18px;
 }
 
-.grid-class__title,
-.grid-class__meta,
+.grid-class__extra,
 .grid-class small,
 .grid-class strong {
    display: block;
@@ -255,7 +255,7 @@
    letter-spacing: 0;
 }
 
-.grid-class__title {
+.grid-class__extra {
    min-height: 0;
    color: var(--text-muted);
    font-size: 0.66rem;
@@ -269,29 +269,32 @@
 .grid-class__meta {
    flex: 0 0 auto;
    display: grid;
+   grid-template-columns: minmax(0, 1fr);
    gap: 0;
 }
 
 .grid-class__meta > span {
    min-width: 0;
+   overflow: hidden;
+   text-overflow: ellipsis;
+   white-space: nowrap;
 }
 
-.grid-class.is-compact .grid-class__title {
+.grid-class.is-compact .grid-class__extra {
    line-clamp: 1;
    -webkit-line-clamp: 1;
 }
 
 .grid-class.is-tight {
-   justify-content: center;
    padding-block: 4px;
 }
 
-.grid-class.is-tight .grid-class__title {
+.grid-class.is-tight .grid-class__extra {
    display: block;
    white-space: nowrap;
 }
 
-.grid-class.is-tiny .grid-class__title {
+.grid-class.is-tiny .grid-class__extra {
    display: none;
 }
 
@@ -307,23 +310,11 @@
 }
 
 .grid-class.is-tiny {
-   display: grid;
-   grid-template-columns: minmax(0, 1fr) auto;
-   align-content: center;
-   gap: 2px 6px;
    line-height: 1.15;
 }
 
 .grid-class.is-tiny strong {
    font-size: 0.82rem;
-}
-
-.grid-class.is-tiny .grid-class__meta {
-   display: contents;
-}
-
-.grid-class.is-tiny .grid-class__meta-teacher {
-   grid-column: 1 / -1;
 }
 
 @media (max-width: 900px) {

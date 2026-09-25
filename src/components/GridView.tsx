@@ -2,7 +2,7 @@ import { getGridCurrentTime } from "../lib/dayTimeline";
 import { useEffect, useMemo, useRef, useState, type CSSProperties, type MouseEvent } from "react";
 import { dayShortLabel, formatClock, fullDayLabel, timeLabel, getMinutesFromMidnight } from "../lib/date";
 import { clamp } from "../lib/clamp";
-import { getClassDetailsLabel, getClassLabel, getClassLocationLabel } from "../lib/classFormat";
+import { getClassLabel, getClassLocationLabel, getClassWhenLabel } from "../lib/classFormat";
 import type { GridHourRange } from "../lib/gridHours";
 import type { Day, GridZoom, Class } from "../types/weeks";
 import "./GridView.css";
@@ -243,13 +243,14 @@ export function GridView({ days, zoom: zoomId, hours, now, onSelectClass }: Grid
                            const isCompact = visibleHeight > 0 && visibleHeight < COMPACT_HEIGHT_PX;
                            const timeRange = `${timeLabel.format(schoolClass.startDate)}-${timeLabel.format(schoolClass.endDate)}`;
                            const classLabel = getClassLabel(schoolClass);
-                           const subtitleLabel = schoolClass.subject !== classLabel ? schoolClass.subject : "";
-                           const teacherLocationLabel = getClassDetailsLabel(schoolClass);
+                           const extraLabel = schoolClass.subject !== classLabel ? schoolClass.subject : "";
+                           const whenLabel = getClassWhenLabel(schoolClass, timeRange);
+                           const whereLabel = getClassLocationLabel(schoolClass);
                            const isTiny = visibleHeight > 0 && visibleHeight < TINY_HEIGHT_PX;
 
                            const accessibleLabel = [
                               classLabel,
-                              subtitleLabel,
+                              extraLabel,
                               fullDayLabel.format(schoolClass.startDate),
                               timeRange,
                               schoolClass.teacher,
@@ -277,14 +278,18 @@ export function GridView({ days, zoom: zoomId, hours, now, onSelectClass }: Grid
                                  <ClassStatusMarker status={schoolClass.status} />
                                  <strong>{classLabel}</strong>
                                  <span className="grid-class__meta">
-                                    <span className="grid-class__meta-time">{timeRange}</span>
-                                    {teacherLocationLabel ? (
-                                       <span className="grid-class__meta-teacher" title={teacherLocationLabel}>
-                                          {teacherLocationLabel}
+                                    <span className="grid-class__meta-when" title={whenLabel}>
+                                       {whenLabel}
+                                    </span>
+                                    {whereLabel ? (
+                                       <span className="grid-class__meta-where" title={whereLabel}>
+                                          {whereLabel}
                                        </span>
                                     ) : null}
                                  </span>
-                                 {subtitleLabel ? <small className="grid-class__title">{subtitleLabel}</small> : null}
+                                 <small className="grid-class__extra" title={extraLabel || undefined}>
+                                    {extraLabel}
+                                 </small>
                               </button>
                            );
                         })}
