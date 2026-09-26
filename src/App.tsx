@@ -10,6 +10,7 @@ import { WarningBanner } from "./components/WarningBanner";
 import { WeekContentState } from "./components/WeekContentState";
 import { SettingsDialog } from "./components/SettingsDialog";
 import { WeekNavigator } from "./components/WeekNavigator";
+import { NextUpCard } from "./components/NextUpCard";
 import { useAppKeyboardShortcuts } from "./hooks/useAppKeyboardShortcuts";
 import { getNextClassDay } from "./lib/agendaPolicy";
 import { useAgendaState } from "./hooks/useAgendaState";
@@ -17,6 +18,7 @@ import { useOsirisTokenSettings } from "./hooks/useOsirisTokenSettings";
 import { usePreferences } from "./hooks/preferences";
 import { useRosterTimeZone } from "./hooks/useRosterTimeZone";
 import { useDockedMobileBar } from "./hooks/useDockedMobileBar";
+import { useNextUpOpenPreference } from "./hooks/useNextUpOpenPreference";
 import { useWeekDays } from "./hooks/useWeekDays";
 import { useViewportMetrics } from "./hooks/useViewportMetrics";
 import { useWeekSwipeNavigation } from "./hooks/useWeekSwipeNavigation";
@@ -45,6 +47,7 @@ export default function App() {
    const [selectedClassId, setSelectedClassId] = useState<string | null>(null);
    const [isSettingsOpen, setIsSettingsOpen] = useState(false);
    const [bearerTokenInput, setBearerTokenInput] = useState("");
+   const [nextUpOpen, setNextUpOpen] = useNextUpOpenPreference();
    const perceivedNow = devPreview.perceivedNow;
    const rosterTimeZone = useRosterTimeZone();
    const {
@@ -93,6 +96,10 @@ export default function App() {
    const displayedData = useMemo(
       () => applyDevClassStatusPreview(data, devPreview.isEnabled ? devPreview.statusPreviewMode : "none"),
       [data, devPreview.isEnabled, devPreview.statusPreviewMode]
+   );
+   const nextUpWeeks = useMemo(
+      () => knownWeeks.flatMap((week) => (devPreview.isEnabled ? (applyDevClassStatusPreview(week, devPreview.statusPreviewMode) ?? []) : [week])),
+      [knownWeeks, devPreview.isEnabled, devPreview.statusPreviewMode]
    );
    const errorDetail = useMemo(() => {
       if (!error) {
@@ -212,12 +219,17 @@ export default function App() {
    );
 
    const selectedClass: Class | null = useMemo(() => {
-      if (!displayedData || !selectedClassId) {
+      if (!selectedClassId) {
          return null;
       }
 
-      return displayedData.classes.find((schoolClass) => schoolClass.id === selectedClassId) ?? null;
-   }, [displayedData, selectedClassId]);
+      // The next-up card can point at a class outside the week being viewed, so fall back to every cached week.
+      return (
+         displayedData?.classes.find((schoolClass) => schoolClass.id === selectedClassId) ??
+         nextUpWeeks.flatMap((week) => week.classes).find((schoolClass) => schoolClass.id === selectedClassId) ??
+         null
+      );
+   }, [displayedData, nextUpWeeks, selectedClassId]);
 
    const selectClass = useCallback((schoolClass: Class) => {
       setIsSettingsOpen(false);
@@ -362,6 +374,13 @@ export default function App() {
             >
                {rosterTimeZone.isKnown && viewMode === "agenda" ? (
                   <ErrorBoundary variant="view">
+                     <NextUpCard
+                        weeks={nextUpWeeks}
+                        timeOverride={devPreview.isEnabled ? devPreview.timeOverride : null}
+                        isOpen={nextUpOpen}
+                        onChangeOpen={setNextUpOpen}
+                        onSelectClass={selectClass}
+                     />
                      <AgendaView
                         days={visibleDays}
                         expandedDays={visibleExpandedDays}
