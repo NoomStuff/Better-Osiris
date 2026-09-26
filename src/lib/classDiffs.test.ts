@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { applySessionClassDiffs, recordSessionClassDiffs, type SessionClassDiffsByWeek } from "./classDiffs.js";
+import { applySessionClassDiffs, reconcileWeeks, type SessionClassDiffsByWeek } from "./classDiffs.js";
 import type { Class, Week } from "../types/weeks";
 
 void describe("session roster diff states", () => {
@@ -194,4 +194,11 @@ function createClass(overrides: Partial<Class> = {}): Class {
    if (details.status === "changed") return { ...details, status: details.status, previous: previous ?? { ...details, status: "scheduled" } };
    if (details.status === "cancelled") return { ...details, status: "cancelled", ...(previous ? { previous } : {}) };
    return { ...details, status: details.status };
+}
+
+function recordSessionClassDiffs(previous: Week, next: Week, changes: SessionClassDiffsByWeek) {
+   const result = reconcileWeeks(new Map([[previous.week.start, previous]]), [next], changes);
+   changes.clear();
+   result.changes.forEach((diffs, date) => changes.set(date, diffs));
+   return result.notifications;
 }

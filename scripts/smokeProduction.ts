@@ -36,6 +36,7 @@ child.stderr.on("data", (chunk: Buffer) => {
 try {
    let ready = false;
    for (let attempt = 0; attempt < 100 && !ready; attempt += 1) {
+      if (child.exitCode !== null) break;
       try {
          ready = (await fetch(base + "/api/roster/config")).ok;
       } catch {
@@ -43,7 +44,7 @@ try {
       }
       if (!ready) await new Promise((resolve) => setTimeout(resolve, 100));
    }
-   assert.ok(ready, "Production server did not start");
+   assert.ok(ready, `Production server did not start.\n${logs.replaceAll(token, "[redacted]")}`);
    const shell = await fetch(base);
    assert.equal(shell.status, 200);
    assert.equal(shell.headers.get("cache-control"), "no-cache");

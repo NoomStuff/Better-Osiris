@@ -15,7 +15,7 @@ import { ApiError, toApiError, toApiErrorPayload, errorHeaders } from "./api/_li
 import { isProduction, validateServerConfiguration } from "./api/_lib/osirisConfig.js";
 import { enforceRateLimit, enforceRosterRateLimit, enforceTokenRateLimit } from "./api/_lib/rateLimit.js";
 import { applyPrivateResponseHeaders, assertSameOrigin, CONTENT_SECURITY_POLICY } from "./api/_lib/security.js";
-import { sendApiNotFound } from "./api/_lib/http.js";
+import { sendApiNotFound, sendMethodNotAllowed } from "./api/_lib/http.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -137,12 +137,6 @@ app.listen(port, () => {
 function sendRouteResponse(res: express.Response, response: ApiRouteResponse) {
    Object.entries(response.headers ?? {}).forEach(([name, value]) => res.setHeader(name, value));
    res.status(response.statusCode).json(response.payload);
-}
-
-function sendMethodNotAllowed(res: express.Response, allowedMethods: readonly string[]) {
-   const error = new ApiError("Method not allowed.", { code: "INVALID_REQUEST", status: 405 });
-   res.setHeader("Allow", allowedMethods.join(", "));
-   res.status(error.status).json(toApiErrorPayload(error));
 }
 
 function assertTokenMutationAllowed(req: express.Request) {

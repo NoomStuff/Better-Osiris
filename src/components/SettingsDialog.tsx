@@ -4,7 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import type { OsirisTokenValidationStatus } from "../types/osirisToken";
 import type { IsoWeekday } from "../lib/date";
 import { DEFAULT_GRID_HOURS, formatGridHour, GRID_HOUR_MAX, GRID_HOUR_MIN, type GridHourRange } from "../lib/gridHours";
-import type { AgendaFoldingMode } from "../hooks/useAgendaFoldingPreference";
+import type { AgendaFoldingMode } from "../lib/agendaPolicy";
 import { usePreferences } from "../hooks/preferences";
 import { useOverlayScrollbar } from "../hooks/useOverlayScrollbar";
 import { DEFAULT_SHOWN_WEEKDAYS, ISO_WEEKDAYS } from "../lib/weekLayout";

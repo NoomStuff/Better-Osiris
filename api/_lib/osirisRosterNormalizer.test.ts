@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import { normalizeWeeksResponse } from "./osirisRosterNormalizer.js";
-import type { OsirisRosterResponse } from "./osirisClient.js";
+import type { OsirisRosterResponse } from "./osirisSchema.js";
 
 void describe("OSIRIS roster normalizer", () => {
    void it("normalizes stable fixture fields without depending on live roster content", () => {

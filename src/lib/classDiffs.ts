@@ -101,12 +101,5 @@ export function reconcileWeeks(previous: ReadonlyMap<string, Week>, incoming: re
    changes.forEach((diffs, date) => {
       if (!diffs.size) changes.delete(date);
    });
-   return { rawWeeks, changes, notifications, weeks: [...rawWeeks.values()].map((week) => applySessionClassDiffs(week, changes)) };
-}
-
-export function recordSessionClassDiffs(previous: Week, next: Week, changes: SessionClassDiffsByWeek) {
-   const result = reconcileWeeks(new Map([[previous.week.start, previous]]), [next], changes);
-   changes.clear();
-   result.changes.forEach((diffs, date) => changes.set(date, diffs));
-   return result.notifications;
+   return { rawWeeks, changes, notifications };
 }

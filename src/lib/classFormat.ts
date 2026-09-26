@@ -2,7 +2,6 @@ import type { Class, ClassStatus } from "../types/weeks";
 
 export const DETAILS_SEPARATOR = " · ";
 
-/** The one icon per change status, shared by the inline markers and the drawer badge. */
 export const CLASS_STATUS_ICONS: Record<Exclude<ClassStatus, "scheduled">, string> = {
    added: "fa-solid fa-thumbtack",
    changed: "fa-solid fa-pen",
@@ -20,7 +19,6 @@ export function getClassLocationLabel(schoolClass: Class): string {
    return room || location;
 }
 
-/** The one-line label for a class: its title, or its subject when untitled. */
 export function getClassLabel(schoolClass: Class): string {
    return schoolClass.title || schoolClass.subject;
 }

@@ -1,45 +1,7 @@
 import crypto from "node:crypto";
 import { ApiError } from "./errors.js";
 import { getOsirisRosterUrl } from "./osirisConfig.js";
-import { parseOsirisRosterResponse } from "./osirisSchema.js";
-
-export interface OsirisTeacher {
-   naam: string;
-}
-
-export interface OsirisRosterEntry {
-   id_rooster: string;
-   datum: string;
-   onderwerp: string;
-   subonderwerp: string;
-   tijd_vanaf: string;
-   tijd_tm: string;
-   locatie: string;
-   locatie_adres: string;
-   docenten: OsirisTeacher[];
-   actueel: "J" | "N";
-   status?: string;
-   roosterstatus?: string;
-   status_omschrijving?: string;
-   statusomschrijving?: string;
-}
-
-export interface OsirisDay {
-   datum: string;
-   rooster: OsirisRosterEntry[];
-}
-
-export interface OsirisWeek {
-   week: number;
-   startdatum: string;
-   dagen: OsirisDay[];
-}
-
-export interface OsirisRosterResponse {
-   items: OsirisWeek[];
-   offset: number;
-   fetchedAt?: number;
-}
+import { parseOsirisRosterResponse, type OsirisRosterResponse } from "./osirisSchema.js";
 
 const WEEK_CACHE_TTL_MS = 60_000;
 const MAX_CACHE_ENTRIES = 100;
@@ -90,6 +52,8 @@ export async function fetchOsirisRosterWeeks(offset: number, limit = 1, tokenOve
    const request = fetchOsirisRosterWeeksFromEndpoint(rosterUrl, offset, safeLimit, bearerToken)
       .then((data) => {
          data.fetchedAt = Date.now();
+         // A cleared cache must stay empty even if an older request finishes later.
+         if (inFlightRequests.get(cacheKey) !== request) return data;
          weekCache.set(cacheKey, {
             data,
             expiresAt: Date.now() + WEEK_CACHE_TTL_MS,
@@ -98,7 +62,7 @@ export async function fetchOsirisRosterWeeks(offset: number, limit = 1, tokenOve
          return data;
       })
       .finally(() => {
-         inFlightRequests.delete(cacheKey);
+         if (inFlightRequests.get(cacheKey) === request) inFlightRequests.delete(cacheKey);
       });
 
    inFlightRequests.set(cacheKey, request);

@@ -13,9 +13,7 @@ type Validation =
 
 export function useTokenValidation(hasToken: boolean, error: WeekLoadError | null, lastSuccessfulRevision: number | null, currentRevision: number) {
    const [state, setState] = useState<Validation>({ phase: "idle" });
-   // The auth-error settings refresh clears the week error, so the expiry is
-   // remembered here until the next token submit. Stored the React way: during
-   // render, guarded by the previously seen flag.
+   // Remember expiry after the auth refresh clears the week error, until the next token submission.
    const [expiredToken, setExpiredToken] = useState(false);
    const [seenSavedTokenExpired, setSeenSavedTokenExpired] = useState(false);
    if ((error?.savedTokenExpired ?? false) !== seenSavedTokenExpired) {

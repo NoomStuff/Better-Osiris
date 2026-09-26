@@ -9,26 +9,13 @@ import {
    type RefObject,
    type TouchEvent,
 } from "react";
+import { lockPageScroll } from "../lib/pageScrollLock";
 import { createPortal } from "react-dom";
 import { TooltipPortalProvider } from "./Tooltip";
 import "./OverlayPanel.css";
 
 const overlayStack: string[] = [];
 const overlayRoots = new Map<string, HTMLElement>();
-let bodyLockCount = 0;
-let originalBodyOverflow = "";
-let originalBodyOverscrollBehavior = "";
-let originalHtmlOverflow = "";
-let originalHtmlOverflowPriority = "";
-let originalHtmlOverscrollBehavior = "";
-let originalHtmlOverscrollPriority = "";
-let originalHtmlScrollbarGutter = "";
-let originalHtmlScrollbarGutterPriority = "";
-let originalBodyPosition = "";
-let originalBodyTop = "";
-let originalBodyWidth = "";
-let originalScrollY = 0;
-
 const FOCUSABLE_SELECTOR = [
    "a[href]",
    "button:not([disabled])",
@@ -85,7 +72,7 @@ export function OverlayPanel({
    const returnFocusRef = useRef<HTMLElement | null>(document.activeElement instanceof HTMLElement ? document.activeElement : null);
    const touchStartYRef = useRef<number | null>(null);
    useOverlayLifecycle(overlayId, rootRef, surfaceRef, returnFocusRef, closeOnEscape, onClose);
-   useLockedBodyScroll();
+   useEffect(lockPageScroll, []);
 
    const rootClassName = ["overlay-panel", `overlay-panel--${placement}`, className, rootProps?.className].filter(Boolean).join(" ");
    const backdropClassNames = ["overlay-panel__backdrop", backdropClassName].filter(Boolean).join(" ");
@@ -236,53 +223,6 @@ function useOverlayLifecycle(
    }, [closeOnEscape, overlayId, returnFocusRef, rootRef, surfaceRef]);
 }
 
-function useLockedBodyScroll() {
-   useEffect(() => {
-      if (bodyLockCount === 0) {
-         const htmlStyle = document.documentElement.style;
-         originalBodyOverflow = document.body.style.overflow;
-         originalBodyOverscrollBehavior = document.body.style.overscrollBehavior;
-         originalHtmlOverflow = htmlStyle.getPropertyValue("overflow");
-         originalHtmlOverflowPriority = htmlStyle.getPropertyPriority("overflow");
-         originalHtmlOverscrollBehavior = htmlStyle.getPropertyValue("overscroll-behavior");
-         originalHtmlOverscrollPriority = htmlStyle.getPropertyPriority("overscroll-behavior");
-         originalHtmlScrollbarGutter = htmlStyle.getPropertyValue("scrollbar-gutter");
-         originalHtmlScrollbarGutterPriority = htmlStyle.getPropertyPriority("scrollbar-gutter");
-         originalBodyPosition = document.body.style.position;
-         originalBodyTop = document.body.style.top;
-         originalBodyWidth = document.body.style.width;
-         originalScrollY = window.scrollY;
-         htmlStyle.setProperty("overflow", "hidden", "important");
-         htmlStyle.setProperty("overscroll-behavior", "none", "important");
-         // Hiding the root overflow removes the document scrollbar, which would widen the viewport and shift
-         // the whole page sideways on platforms with classic scrollbars. Reserving the gutter keeps the
-         // viewport at exactly the width it had while the scrollbar was showing.
-         htmlStyle.setProperty("scrollbar-gutter", "stable", "important");
-         document.body.style.overflow = "hidden";
-         document.body.style.overscrollBehavior = "none";
-         document.body.style.position = "fixed";
-         document.body.style.top = `${-originalScrollY}px`;
-         document.body.style.width = "100%";
-      }
-      bodyLockCount += 1;
-
-      return () => {
-         bodyLockCount = Math.max(0, bodyLockCount - 1);
-         if (bodyLockCount === 0) {
-            document.body.style.overflow = originalBodyOverflow;
-            document.body.style.overscrollBehavior = originalBodyOverscrollBehavior;
-            document.body.style.position = originalBodyPosition;
-            document.body.style.top = originalBodyTop;
-            document.body.style.width = originalBodyWidth;
-            restoreStyleProperty(document.documentElement.style, "overflow", originalHtmlOverflow, originalHtmlOverflowPriority);
-            restoreStyleProperty(document.documentElement.style, "overscroll-behavior", originalHtmlOverscrollBehavior, originalHtmlOverscrollPriority);
-            restoreStyleProperty(document.documentElement.style, "scrollbar-gutter", originalHtmlScrollbarGutter, originalHtmlScrollbarGutterPriority);
-            window.scrollTo(0, originalScrollY);
-         }
-      };
-   }, []);
-}
-
 function syncOverlayInertness() {
    const topmostId = overlayStack.at(-1);
    const appRoot = document.getElementById("app");
@@ -296,14 +236,6 @@ function syncOverlayInertness() {
       root.inert = isBackgroundOverlay;
       root.setAttribute("aria-hidden", isBackgroundOverlay ? "true" : "false");
    });
-}
-
-function restoreStyleProperty(style: CSSStyleDeclaration, property: string, value: string, priority: string) {
-   if (value) {
-      style.setProperty(property, value, priority);
-   } else {
-      style.removeProperty(property);
-   }
 }
 
 function isSwipeIgnored(target: EventTarget, selector: string | undefined) {

@@ -10,7 +10,6 @@ interface WarningBannerProps {
 
 const DEFAULT_ICON = "fa-solid fa-triangle-exclamation";
 
-/** A page-backdrop warning strip: what went on and, optionally, the way out. */
 export function WarningBanner({ children, action, icon = DEFAULT_ICON }: WarningBannerProps) {
    return (
       <aside className="warning-banner" role="status">

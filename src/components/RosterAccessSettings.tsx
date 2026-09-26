@@ -14,7 +14,6 @@ interface RosterAccessSettingsProps {
    tokenValidationStatus: OsirisTokenValidationStatus;
 }
 
-/** The roster access section owns its own token settings store; token validation stays with the app overlay. */
 export function RosterAccessSettings({ onTokenDraftChange, onSaveToken, successfulTokenValidationKey, tokenValidationStatus }: RosterAccessSettingsProps) {
    const { isMutating: isTokenLoading, settings: tokenSettings } = useOsirisTokenSettings();
    const [token, setToken] = useState("");

@@ -1,8 +1,8 @@
 import assert from "node:assert/strict";
 import { beforeEach, describe, it } from "node:test";
-import { getDefaultExpandedDays, getNextClassDay } from "./useAgendaState.js";
+import { getDefaultExpandedDays, getNextClassDay } from "./agendaPolicy.js";
 import type { Day, Week } from "../types/weeks.js";
-import { setRosterTimeZone } from "../lib/rosterTimeZone.js";
+import { setRosterTimeZone } from "./rosterTimeZone.js";
 
 const days = ["2026-06-15", "2026-06-16", "2026-06-17"].map((key) => ({ key, date: new Date(`${key}T12:00:00`), classes: [] })) satisfies Day[];
 

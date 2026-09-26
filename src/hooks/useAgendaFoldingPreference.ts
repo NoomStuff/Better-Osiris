@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { readBrowserStorage, writeBrowserStorage } from "../lib/browserStorage";
 
-export type AgendaFoldingMode = "single" | "smart" | "all";
+import type { AgendaFoldingMode } from "../lib/agendaPolicy";
 
 const STORAGE_KEY = "roster-agenda-folding";
 const DEFAULT_MODE: AgendaFoldingMode = "smart";

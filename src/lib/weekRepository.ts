@@ -2,7 +2,7 @@ import { fetchWeeks } from "../api/weeks";
 import { getLocalWeekStartIso } from "./date";
 import { shiftCalendarDate, weekDistance } from "../../shared/calendar";
 import { MAX_WEEK_OFFSET } from "../../shared/weeks";
-import type { Week } from "../types/weeks";
+import type { Week, WeekBatch } from "../types/weeks";
 import { applySessionClassDiffs, reconcileWeeks, type SessionClassDiff, type SessionClassDiffsByWeek } from "./classDiffs";
 import {
    getClassFetchTimes,
@@ -13,7 +13,7 @@ import {
    storeWeekCache,
    type StoredWeek,
 } from "./weekPersistence";
-import { getHomeWeek, createWeekEntry, getBatchOffsets, getBatchStart, isSameWeekData, type WeekEntries } from "./weekPolicy";
+import { ROSTER_BATCH_SIZE, getHomeWeek, createWeekEntry, getBatchOffsets, getBatchStart, isSameWeekData, type WeekEntries } from "./weekPolicy";
 import { getRosterTimeZone, isRosterTimeZoneKnown, setRosterTimeZone } from "./rosterTimeZone";
 import { getSessionEpoch, onSessionInvalidated, refreshSession } from "./sessionStore";
 import { clearWeekBrowserCache } from "./weekCache";
@@ -33,6 +33,19 @@ interface Snapshot {
    lastSuccessfulResetKey: number | null;
    sourceShift: number | null;
 }
+interface BatchRequest {
+   start: number;
+   offsets: number[];
+   controller: AbortController;
+   generation: number;
+   epoch: string | null;
+   anchor: string;
+   successesAtDispatch: number;
+   requestOffset: number;
+   requestLimit: number;
+   passive: boolean;
+}
+
 const REFRESH_MS = 5 * 60_000;
 
 /** Owns asynchronous work and date-keyed raw data. React only subscribes to snapshots. */
@@ -222,7 +235,7 @@ export class WeekRepository {
    private loadActive() {
       const start = getBatchStart(this.activeOffset);
       this.load(start);
-      this.load(start < 0 ? 0 : start + 5);
+      this.load(start < 0 ? 0 : start + ROSTER_BATCH_SIZE);
    }
    refresh = () => {
       this.load(getBatchStart(this.activeOffset), true);
@@ -266,167 +279,187 @@ export class WeekRepository {
       const successesAtDispatch = this.successRevision;
       const requestOffset = Math.min(MAX_WEEK_OFFSET, Math.max(0, start - (this.sourceShift ?? 0)));
       const requestLimit = Math.min(offsets.length, MAX_WEEK_OFFSET - requestOffset + 1);
+      const request: BatchRequest = {
+         start,
+         offsets,
+         controller,
+         generation,
+         epoch,
+         anchor,
+         successesAtDispatch,
+         requestOffset,
+         requestLimit,
+         passive,
+      };
       void fetchWeeks(requestOffset, requestLimit, controller.signal)
-         .then((payload) => {
-            if (generation !== this.generation || epoch !== getSessionEpoch()) return;
-            if (payload.contextId !== this.contextId) {
-               void refreshSession();
-               return;
-            }
-            if (payload.timeZone !== getRosterTimeZone()) {
-               setRosterTimeZone(payload.timeZone);
-               this.abort();
-               this.raw.clear();
-               this.stored.clear();
-               this.changes.clear();
-               this.sourceShift = null;
-               this.sourceFetchedAt = 0;
-               this.anchor = getLocalWeekStartIso(new Date());
-               this.publish({});
-               this.loadActive();
-               return;
-            }
-            if (anchor !== getLocalWeekStartIso(new Date())) {
-               this.rollover();
-               this.loadActive();
-               return;
-            }
-            const firstWeek = payload.weeks[0];
-            if (payload.offset !== requestOffset || payload.limit !== requestLimit || !firstWeek)
-               throw new Error("The server returned a different batch than requested.");
-            if (payload.fetchedAt >= this.sourceFetchedAt) {
-               this.sourceShift = weekDistance(anchor, firstWeek.week.start) - payload.offset;
-               this.sourceFetchedAt = payload.fetchedAt;
-            }
-            const incomingWeeks = getFreshIncomingWeeks(payload.weeks, payload.fetchedAt, this.stored);
-            const incomingDates = new Set(incomingWeeks.map((week) => week.week.start));
-            const returnedDates = new Set(payload.weeks.map((week) => week.week.start));
-            const successRevision = ++this.successRevision;
-            incomingDates.forEach((date) => this.weekSuccessRevisions.set(date, successRevision));
-            // Clear request placeholders even when the source has moved beyond those dates.
-            const settledEntries = { ...this.snapshot.entries };
-            offsets.forEach((offset) => {
-               const entry = settledEntries[offset];
-               if (entry)
-                  settledEntries[offset] = createWeekEntry(entry.data, {
-                     updatedAt: entry.updatedAt,
-                     isOmitted:
-                        (requestOffset === 0 && offset < (this.sourceShift ?? 0)) ||
-                        // A truncated batch ends the roster horizon: its missing weeks are omitted,
-                        // not missing data.
-                        (payload.weeks.length < requestLimit && !returnedDates.has(shiftCalendarDate(anchor, offset * 7))),
-                  });
+         .then((payload) => this.receiveBatch(request, payload))
+         .catch((error: unknown) => this.rejectBatch(request, error))
+         .finally(() => this.finishBatch(request));
+   }
+
+   private isCurrentRequest(request: BatchRequest) {
+      return !request.controller.signal.aborted && request.generation === this.generation && request.epoch === getSessionEpoch();
+   }
+
+   private receiveBatch(request: BatchRequest, payload: WeekBatch) {
+      const { start, offsets, anchor, requestOffset, requestLimit } = request;
+      if (!this.isCurrentRequest(request)) return;
+      if (payload.contextId !== this.contextId) {
+         void refreshSession();
+         return;
+      }
+      if (payload.timeZone !== getRosterTimeZone()) {
+         setRosterTimeZone(payload.timeZone);
+         this.abort();
+         this.raw.clear();
+         this.stored.clear();
+         this.changes.clear();
+         this.sourceShift = null;
+         this.sourceFetchedAt = 0;
+         this.anchor = getLocalWeekStartIso(new Date());
+         this.publish({});
+         this.loadActive();
+         return;
+      }
+      if (anchor !== getLocalWeekStartIso(new Date())) {
+         this.rollover();
+         this.loadActive();
+         return;
+      }
+      const firstWeek = payload.weeks[0];
+      if (payload.offset !== requestOffset || payload.limit !== requestLimit || !firstWeek)
+         throw new Error("The server returned a different batch than requested.");
+      if (payload.fetchedAt >= this.sourceFetchedAt) {
+         this.sourceShift = weekDistance(anchor, firstWeek.week.start) - payload.offset;
+         this.sourceFetchedAt = payload.fetchedAt;
+      }
+      const incomingWeeks = getFreshIncomingWeeks(payload.weeks, payload.fetchedAt, this.stored);
+      const incomingDates = new Set(incomingWeeks.map((week) => week.week.start));
+      const returnedDates = new Set(payload.weeks.map((week) => week.week.start));
+      const successRevision = ++this.successRevision;
+      incomingDates.forEach((date) => this.weekSuccessRevisions.set(date, successRevision));
+      // Clear request placeholders even when the source has moved beyond those dates.
+      const settledEntries = { ...this.snapshot.entries };
+      offsets.forEach((offset) => {
+         const entry = settledEntries[offset];
+         if (entry)
+            settledEntries[offset] = createWeekEntry(entry.data, {
+               updatedAt: entry.updatedAt,
+               isOmitted:
+                  (requestOffset === 0 && offset < (this.sourceShift ?? 0)) ||
+                  // A truncated batch ends the roster horizon: its missing weeks are omitted,
+                  // not missing data.
+                  (payload.weeks.length < requestLimit && !returnedDates.has(shiftCalendarDate(anchor, offset * 7))),
             });
-            this.snapshot = { ...this.snapshot, entries: settledEntries };
-            // Use the home week the user had before this update. Cancelling its final class
-            // can advance Home, but must still notify about that cancellation.
-            const previousHome = getHomeWeek(this.snapshot.entries, this.sourceShift, new Date());
-            const result = reconcileWeeks(this.raw, incomingWeeks, this.changes);
-            const checkedAt = Date.now();
-            result.rawWeeks.forEach((week, date) => {
-               const old = this.stored.get(date);
-               const incoming = incomingDates.has(date);
-               this.stored.set(date, {
-                  data: week,
-                  fetchedAt: incoming ? payload.fetchedAt : (old?.fetchedAt ?? payload.fetchedAt),
-                  checkedAt: incoming ? checkedAt : (old?.checkedAt ?? checkedAt),
-                  changedAt: isSameWeekData(this.raw.get(date), week) ? (old?.changedAt ?? checkedAt) : checkedAt,
-                  classFetchTimes: getClassFetchTimes(old, week, payload.fetchedAt, incoming),
-               });
-            });
-            this.raw = result.rawWeeks;
-            this.changes = result.changes;
-            this.prune();
-            this.persist();
-            this.didNotify = false;
-            this.publishWeeks(
-               false,
-               start === getBatchStart(this.activeOffset) || payload.weeks.some((week) => week.week.start === shiftCalendarDate(anchor, this.activeOffset * 7))
-                  ? this.resetKey
-                  : this.snapshot.lastSuccessfulResetKey,
-               incomingDates
-            );
-            const home = previousHome.offset === null ? getHomeWeek(this.snapshot.entries, this.sourceShift, new Date()) : previousHome;
-            const homeStart = home.offset === null ? null : shiftCalendarDate(this.anchor, home.offset * 7);
-            const notifications = result.notifications.filter(
-               (diff) =>
-                  homeStart !== null &&
-                  diff.schoolClass.start.slice(0, 10) >= homeStart &&
-                  diff.schoolClass.start.slice(0, 10) <= shiftCalendarDate(homeStart, 6)
-            );
-            // Cancellations wait until every in-flight batch has settled: a row that vanished in
-            // one response may reappear via a concurrent one, and only the surviving diff notifies.
-            notifications.filter((diff) => diff.status === "cancelled").forEach((diff) => this.pendingCancellations.set(diff.schoolClass.id, diff));
-            void notifyClassDiffs(
-               notifications.filter((diff) => diff.status !== "cancelled"),
-               this.contextId
-            );
-         })
-         .catch((error: unknown) => {
-            if (controller.signal.aborted || generation !== this.generation || epoch !== getSessionEpoch()) return;
-            const loadError = toWeekLoadError(error, { hadSuccessfulLoad: this.snapshot.lastSuccessfulResetKey === this.resetKey });
-            const entries = { ...this.snapshot.entries };
-            const failedOffsets = [
-               ...new Set([...offsets, ...Array.from({ length: requestLimit }, (_, index) => requestOffset + (this.sourceShift ?? 0) + index)]),
-            ].filter(
-               (offset) =>
-                  offset >= -1 &&
-                  offset <= MAX_WEEK_OFFSET &&
-                  (this.weekSuccessRevisions.get(shiftCalendarDate(anchor, offset * 7)) ?? 0) <= successesAtDispatch
-            );
-            const delay =
-               loadError.retryable && !passive && failedOffsets.length > 0
-                  ? Math.max(
-                       loadError.retryAfterMs ?? 0,
-                       Math.min(Math.max(...failedOffsets.map((offset) => entries[offset]?.retryDelayMs ?? 0), 1000) * 2, REFRESH_MS)
-                    )
-                  : 0;
-            failedOffsets.forEach((offset) => {
-               const old = entries[offset];
-               if (passive && !old?.data) return;
-               entries[offset] = createWeekEntry(old?.data ?? null, {
-                  error: loadError,
-                  updatedAt: old?.updatedAt ?? 0,
-                  retryDelayMs: delay,
-                  retryAt: delay ? Date.now() + delay : 0,
-               });
-            });
-            this.publish(entries);
-            if (!passive && failedOffsets.includes(this.activeOffset) && !this.didNotify) {
-               this.didNotify = true;
-               notifyError("Something went wrong while loading the roster.");
-            }
-            if (delay)
-               this.retryTimers.set(
-                  start,
-                  setTimeout(() => {
-                     this.retryTimers.delete(start);
-                     this.load(start, true);
-                  }, delay)
-               );
-         })
-         .finally(() => {
-            if (this.requests.get(start) === controller) this.requests.delete(start);
-            if (generation === this.generation && this.requests.size === 0 && this.contextId) {
-               const cancellations = [...this.pendingCancellations.values()].filter(
-                  (diff) => ![...this.raw.values()].some((week) => week.classes.some((item) => item.id === diff.schoolClass.id && item.status !== "cancelled"))
-               );
-               this.pendingCancellations.clear();
-               void notifyClassDiffs(cancellations, this.contextId);
-            }
-            // A source rollover can shift a response beyond the selected batch's first date.
-            // Fetch that date with the corrected mapping, without changing the selected week.
-            const active = this.snapshot.entries[this.activeOffset];
-            if (
-               generation === this.generation &&
-               this.sourceShift !== null &&
-               this.activeOffset >= Math.max(0, this.sourceShift) &&
-               this.activeOffset <= MAX_WEEK_OFFSET + this.sourceShift &&
-               !active?.data &&
-               !active?.error &&
-               !active?.isFetching
-            )
-               this.load(getBatchStart(this.activeOffset));
+      });
+      this.snapshot = { ...this.snapshot, entries: settledEntries };
+      // Use the home week the user had before this update. Cancelling its final class
+      // can advance Home, but must still notify about that cancellation.
+      const previousHome = getHomeWeek(this.snapshot.entries, this.sourceShift, new Date());
+      const result = reconcileWeeks(this.raw, incomingWeeks, this.changes);
+      const checkedAt = Date.now();
+      result.rawWeeks.forEach((week, date) => {
+         const old = this.stored.get(date);
+         const incoming = incomingDates.has(date);
+         this.stored.set(date, {
+            data: week,
+            fetchedAt: incoming ? payload.fetchedAt : (old?.fetchedAt ?? payload.fetchedAt),
+            checkedAt: incoming ? checkedAt : (old?.checkedAt ?? checkedAt),
+            changedAt: isSameWeekData(this.raw.get(date), week) ? (old?.changedAt ?? checkedAt) : checkedAt,
+            classFetchTimes: getClassFetchTimes(old, week, payload.fetchedAt, incoming),
          });
+      });
+      this.raw = result.rawWeeks;
+      this.changes = result.changes;
+      this.prune();
+      this.persist();
+      this.didNotify = false;
+      this.publishWeeks(
+         false,
+         start === getBatchStart(this.activeOffset) || payload.weeks.some((week) => week.week.start === shiftCalendarDate(anchor, this.activeOffset * 7))
+            ? this.resetKey
+            : this.snapshot.lastSuccessfulResetKey,
+         incomingDates
+      );
+      const home = previousHome.offset === null ? getHomeWeek(this.snapshot.entries, this.sourceShift, new Date()) : previousHome;
+      const homeStart = home.offset === null ? null : shiftCalendarDate(this.anchor, home.offset * 7);
+      const notifications = result.notifications.filter(
+         (diff) =>
+            homeStart !== null && diff.schoolClass.start.slice(0, 10) >= homeStart && diff.schoolClass.start.slice(0, 10) <= shiftCalendarDate(homeStart, 6)
+      );
+      // Cancellations wait until every in-flight batch has settled: a row that vanished in
+      // one response may reappear via a concurrent one, and only the surviving diff notifies.
+      notifications.filter((diff) => diff.status === "cancelled").forEach((diff) => this.pendingCancellations.set(diff.schoolClass.id, diff));
+      void notifyClassDiffs(
+         notifications.filter((diff) => diff.status !== "cancelled"),
+         this.contextId
+      );
+   }
+
+   private rejectBatch(request: BatchRequest, error: unknown) {
+      const { start, offsets, anchor, successesAtDispatch, requestOffset, requestLimit, passive } = request;
+      if (!this.isCurrentRequest(request)) return;
+      const loadError = toWeekLoadError(error, { hadSuccessfulLoad: this.snapshot.lastSuccessfulResetKey === this.resetKey });
+      const entries = { ...this.snapshot.entries };
+      const failedOffsets = [
+         ...new Set([...offsets, ...Array.from({ length: requestLimit }, (_, index) => requestOffset + (this.sourceShift ?? 0) + index)]),
+      ].filter(
+         (offset) =>
+            offset >= -1 && offset <= MAX_WEEK_OFFSET && (this.weekSuccessRevisions.get(shiftCalendarDate(anchor, offset * 7)) ?? 0) <= successesAtDispatch
+      );
+      const delay =
+         loadError.retryable && !passive && failedOffsets.length > 0
+            ? Math.max(
+                 loadError.retryAfterMs ?? 0,
+                 Math.min(Math.max(...failedOffsets.map((offset) => entries[offset]?.retryDelayMs ?? 0), 1000) * 2, REFRESH_MS)
+              )
+            : 0;
+      failedOffsets.forEach((offset) => {
+         const old = entries[offset];
+         if (passive && !old?.data) return;
+         entries[offset] = createWeekEntry(old?.data ?? null, {
+            error: loadError,
+            updatedAt: old?.updatedAt ?? 0,
+            retryDelayMs: delay,
+            retryAt: delay ? Date.now() + delay : 0,
+         });
+      });
+      this.publish(entries);
+      if (!passive && failedOffsets.includes(this.activeOffset) && !this.didNotify) {
+         this.didNotify = true;
+         notifyError("Something went wrong while loading the roster.");
+      }
+      if (delay)
+         this.retryTimers.set(
+            start,
+            setTimeout(() => {
+               this.retryTimers.delete(start);
+               this.load(start, true);
+            }, delay)
+         );
+   }
+
+   private finishBatch(request: BatchRequest) {
+      const { start, controller } = request;
+      if (this.requests.get(start) === controller) this.requests.delete(start);
+      if (this.isCurrentRequest(request) && this.requests.size === 0 && this.contextId) {
+         const activeIds = new Set([...this.raw.values()].flatMap((week) => week.classes.filter((item) => item.status !== "cancelled").map((item) => item.id)));
+         const cancellations = [...this.pendingCancellations.values()].filter((diff) => !activeIds.has(diff.schoolClass.id));
+         this.pendingCancellations.clear();
+         void notifyClassDiffs(cancellations, this.contextId);
+      }
+      // A source rollover can shift a response beyond the selected batch's first date.
+      // Fetch that date with the corrected mapping, without changing the selected week.
+      const active = this.snapshot.entries[this.activeOffset];
+      if (
+         this.isCurrentRequest(request) &&
+         this.sourceShift !== null &&
+         this.activeOffset >= Math.max(0, this.sourceShift) &&
+         this.activeOffset <= MAX_WEEK_OFFSET + this.sourceShift &&
+         !active?.data &&
+         !active?.error &&
+         !active?.isFetching
+      )
+         this.load(getBatchStart(this.activeOffset));
    }
 }

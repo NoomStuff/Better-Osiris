@@ -6,7 +6,7 @@ import { buildOsirisTokenCookieHeader } from "../_lib/auth.js";
 import { createEncryptedOsirisTokenCookieValue } from "../_lib/osirisTokenCookie.js";
 import handler from "./weeks.js";
 import type { IncomingMessage, ServerResponse } from "node:http";
-import type { OsirisRosterResponse } from "../_lib/osirisClient.js";
+import type { OsirisRosterResponse } from "../_lib/osirisSchema.js";
 
 interface MockRequestOptions {
    method?: string;

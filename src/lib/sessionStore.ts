@@ -42,11 +42,13 @@ function invalidate() {
    generation += 1;
    clearTimeout(timer);
    invalidators.forEach((listener) => listener());
-   publish({ settings: null, isInitialLoading: true, revision: state.revision + 1 });
+   publish({ settings: null, isInitialLoading: true, initialLoadError: null, revision: state.revision + 1 });
 }
 
 async function loadSettings(delay = 250): Promise<void> {
-   const requestGeneration = generation;
+   if (state.isMutating) return;
+   clearTimeout(timer);
+   const requestGeneration = ++generation;
    const epoch = getSessionEpoch();
    try {
       const settings = await fetchOsirisTokenSettings();
@@ -54,7 +56,7 @@ async function loadSettings(delay = 250): Promise<void> {
       if (!settings.hasBearerToken) clearWeekBrowserCache();
       publish({ settings, isInitialLoading: false, initialLoadError: null });
    } catch (error) {
-      if (requestGeneration !== generation) return;
+      if (requestGeneration !== generation || epoch !== getSessionEpoch()) return;
       publish({ initialLoadError: error instanceof Error ? error.message : "Bearer token settings could not be loaded." });
       timer = setTimeout(() => {
          void loadSettings(Math.min(delay * 2, 5000));
@@ -68,17 +70,20 @@ export function refreshSession() {
 }
 /** Authentication failures may refresh settings without erasing the failed week or retrying it forever. */
 export async function checkSessionAfterAuthError() {
-   const requestGeneration = generation;
+   if (state.isMutating) return;
+   clearTimeout(timer);
+   const requestGeneration = ++generation;
+   const epoch = getSessionEpoch();
    try {
       const settings = await fetchOsirisTokenSettings();
-      if (requestGeneration !== generation) return;
+      if (requestGeneration !== generation || epoch !== getSessionEpoch()) return;
       if (settings.contextId !== state.settings?.contextId) {
          clearWeekBrowserCache();
          invalidate();
       }
       publish({ settings, isInitialLoading: false, initialLoadError: null });
    } catch {
-      /* The existing roster error remains the recovery surface. */
+      // Keep the roster error visible if checking the credential also fails.
    }
 }
 function onStorage(event: StorageEvent) {
@@ -110,6 +115,10 @@ export function startSession() {
 }
 
 async function mutate(run: () => Promise<OsirisTokenSettings>) {
+   if (state.isMutating) throw new Error("A bearer token update is already in progress.");
+   // Reads dispatched before the cookie changes must not restore the old credential state.
+   generation += 1;
+   clearTimeout(timer);
    publish({ isMutating: true });
    try {
       const settings = await run();
@@ -120,6 +129,7 @@ async function mutate(run: () => Promise<OsirisTokenSettings>) {
       return settings;
    } finally {
       publish({ isMutating: false });
+      if (state.isInitialLoading && users > 0) void loadSettings();
    }
 }
 export const saveSessionToken = (token: string) => mutate(() => saveOsirisToken(token));

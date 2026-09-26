@@ -24,10 +24,8 @@ export function sendApiNotFound(res: ServerResponse) {
 }
 
 export function sendMethodNotAllowed(res: ServerResponse, allowedMethods: readonly string[]) {
-   res.statusCode = 405;
-   applyPrivateResponseHeaders(res);
-   res.setHeader("Allow", allowedMethods.join(", "));
-   res.end("Method Not Allowed");
+   const error = new ApiError("Method not allowed.", { code: "INVALID_REQUEST", status: 405 });
+   sendJson(res, error.status, toApiErrorPayload(error), { headers: { Allow: allowedMethods.join(", ") } });
 }
 
 export async function readJsonBody(req: IncomingMessage, maxBytes = DEFAULT_MAX_JSON_BODY_BYTES): Promise<unknown> {

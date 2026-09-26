@@ -3,7 +3,7 @@ import { shiftCalendarDate } from "../../shared/calendar.js";
 import { getZoneDateFormatter } from "../../shared/timeZone.js";
 import { ApiError } from "./errors.js";
 import { getRosterTimeZone } from "./osirisConfig.js";
-import type { OsirisRosterEntry, OsirisRosterResponse, OsirisWeek } from "./osirisClient.js";
+import type { OsirisRosterEntry, OsirisRosterResponse, OsirisWeek } from "./osirisSchema.js";
 
 function splitSubject(rawSubject: string) {
    const parts = rawSubject

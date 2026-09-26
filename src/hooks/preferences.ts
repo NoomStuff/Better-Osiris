@@ -1,5 +1,5 @@
 import { createContext, useContext, type Dispatch, type SetStateAction } from "react";
-import type { AgendaFoldingMode } from "./useAgendaFoldingPreference";
+import type { AgendaFoldingMode } from "../lib/agendaPolicy";
 import type { useDevPreview } from "./useDevPreview";
 import type { IsoWeekday } from "../lib/date";
 import type { GridHourRange } from "../lib/gridHours";
@@ -22,7 +22,6 @@ export interface Preferences {
 
 export const PreferencesContext = createContext<Preferences | null>(null);
 
-/** The persisted app-wide preferences, shared between the views and the settings dialog. */
 export function usePreferences() {
    const preferences = useContext(PreferencesContext);
    if (!preferences) {

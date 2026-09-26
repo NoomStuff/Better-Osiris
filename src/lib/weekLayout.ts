@@ -4,7 +4,6 @@ import type { Day, Class, PositionedClass, Week, WeekMeta } from "../types/weeks
 
 export const ISO_WEEKDAYS: readonly IsoWeekday[] = [1, 2, 3, 4, 5, 6, 7];
 
-/** Default of the shown-days setting: Monday through Friday. */
 export const DEFAULT_SHOWN_WEEKDAYS: readonly IsoWeekday[] = [1, 2, 3, 4, 5];
 
 /** The weekdays the views render. Visual only: every class stays grouped into its day in the data. */
@@ -12,12 +11,10 @@ export function getVisibleDays(days: Day[], shownWeekdays: readonly IsoWeekday[]
    return days.filter((day) => shownWeekdays.includes(getIsoWeekday(day.key)));
 }
 
-/** Days that hold classes but are excluded by the shown-days setting; drives the hidden-days warning. */
 export function getHiddenDaysWithClasses(days: Day[], shownWeekdays: readonly IsoWeekday[]): Day[] {
    return days.filter((day) => day.classes.length > 0 && !shownWeekdays.includes(getIsoWeekday(day.key)));
 }
 
-/** Weekdays with at least one class across the supplied weeks. Used by the shown-days smart action. */
 export function getWeekdaysWithClasses(weeks: readonly Week[]): IsoWeekday[] {
    const weekdays = new Set<IsoWeekday>();
 

@@ -1,7 +1,7 @@
 import { getGridCurrentTime } from "../lib/dayTimeline";
-import { useEffect, useMemo, useRef, useState, type CSSProperties, type MouseEvent } from "react";
+import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import { dayShortLabel, formatClock, fullDayLabel, timeLabel, getMinutesFromMidnight } from "../lib/date";
-import { clamp } from "../lib/clamp";
+import { useGridHoverGuide } from "../hooks/useGridHoverGuide";
 import { getClassLabel, getClassLocationLabel, getClassWhenLabel } from "../lib/classFormat";
 import type { GridHourRange } from "../lib/gridHours";
 import type { Day, GridZoom, Class } from "../types/weeks";
@@ -27,11 +27,6 @@ const BASE_INTERVAL = zoomOptions[2].interval;
 const COMPACT_HEIGHT_PX = 85;
 /** Below this rendered height secondary subject text is hidden. */
 const TINY_HEIGHT_PX = 64;
-/** Per-second rate of the hover guide's chase toward the cursor; about 95% of the way in 170ms. */
-const GUIDE_CHASE_RATE = 18;
-/** How close the hover guide must be to its target, in percent of the grid height, to count as arrived. */
-const GUIDE_SETTLE_PERCENT = 0.01;
-
 type GridStyle = CSSProperties & { "--grid-day-count": number };
 
 export function GridView({ days, zoom: zoomId, hours, now, onSelectClass }: GridViewProps) {
@@ -39,9 +34,7 @@ export function GridView({ days, zoom: zoomId, hours, now, onSelectClass }: Grid
    const [contentHeight, setContentHeight] = useState(0);
    const previousZoomRef = useRef<GridZoom | null>(null);
    const contentRef = useRef<HTMLDivElement | null>(null);
-   const guideElementRef = useRef<HTMLDivElement | null>(null);
-   const guideLabelRef = useRef<HTMLSpanElement | null>(null);
-   const guideMotion = useRef({ top: 0, target: 0, visible: false, frame: 0, lastTime: 0 });
+   const { guideElementRef, guideLabelRef, updateHoverGuide, clearHoverGuide } = useGridHoverGuide(hours);
    const zoom = zoomOptions.find((option) => option.id === zoomId) ?? zoomOptions[0];
    const startMinutes = hours[0] * 60;
    const endMinutes = hours[1] * 60;
@@ -53,8 +46,6 @@ export function GridView({ days, zoom: zoomId, hours, now, onSelectClass }: Grid
    const timeLabels = timeMarks.filter((minutes) => minutes !== startMinutes && minutes !== endMinutes);
    const getOffsetPercent = (minutes: number) => ((minutes - startMinutes) / shownMinutes) * 100;
    const { todayKey, visible: showNowLine, top: nowLineTop } = getGridCurrentTime(days, hours, now);
-
-   useEffect(() => () => cancelAnimationFrame(guideMotion.current.frame), []);
 
    useEffect(() => {
       if (previousZoomRef.current && previousZoomRef.current !== zoomId) {
@@ -81,85 +72,6 @@ export function GridView({ days, zoom: zoomId, hours, now, onSelectClass }: Grid
 
       return () => observer.disconnect();
    }, []);
-
-   const renderGuide = () => {
-      const motion = guideMotion.current;
-      const element = guideElementRef.current;
-      if (!element) {
-         return;
-      }
-      element.style.top = `${motion.top}%`;
-      if (guideLabelRef.current) {
-         const minutes = clamp(Math.round(startMinutes + (motion.top / 100) * shownMinutes), startMinutes, endMinutes);
-         guideLabelRef.current.textContent = formatClock(minutes);
-      }
-   };
-
-   const stepGuide = (time: number) => {
-      const motion = guideMotion.current;
-      motion.frame = 0;
-      if (!motion.lastTime) {
-         motion.lastTime = time;
-      }
-      const delta = Math.min((time - motion.lastTime) / 1000, 0.1);
-      motion.lastTime = time;
-      motion.top += (motion.target - motion.top) * (1 - Math.exp(-GUIDE_CHASE_RATE * delta));
-      if (Math.abs(motion.target - motion.top) < GUIDE_SETTLE_PERCENT) {
-         motion.top = motion.target;
-      }
-      renderGuide();
-      if (motion.top !== motion.target) {
-         motion.frame = requestAnimationFrame(stepGuide);
-      }
-   };
-
-   const animateGuide = () => {
-      const motion = guideMotion.current;
-      if (motion.frame) {
-         return;
-      }
-      if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
-         motion.top = motion.target;
-         renderGuide();
-         return;
-      }
-      motion.lastTime = 0;
-      motion.frame = requestAnimationFrame(stepGuide);
-   };
-
-   const updateHoverGuide = (event: MouseEvent<HTMLDivElement>) => {
-      const rect = event.currentTarget.getBoundingClientRect();
-      const height = event.currentTarget.clientHeight;
-      const y = clamp(event.clientY - rect.top, 0, height);
-      const minutes = clamp(Math.round(startMinutes + (y / height) * shownMinutes), startMinutes, endMinutes);
-      const motion = guideMotion.current;
-      motion.target = getOffsetPercent(minutes);
-
-      if (!motion.visible) {
-         motion.visible = true;
-         motion.top = motion.target;
-         guideElementRef.current?.style.setProperty("opacity", "1");
-      }
-
-      if (motion.top !== motion.target) {
-         animateGuide();
-      } else {
-         renderGuide();
-      }
-   };
-
-   const clearHoverGuide = () => {
-      const motion = guideMotion.current;
-      if (!motion.visible) {
-         return;
-      }
-      motion.visible = false;
-      guideElementRef.current?.style.setProperty("opacity", "0");
-      if (motion.frame) {
-         cancelAnimationFrame(motion.frame);
-         motion.frame = 0;
-      }
-   };
 
    return (
       <div className="grid-shell" role="region" aria-label="Weekly timetable grid">

@@ -4,7 +4,7 @@ import { dayLabel, parseLocalDateTime, timeLabel } from "./date";
 import type { SessionClassDiff } from "./classDiffs";
 import { notifyWarning } from "./notyf";
 import { randomId } from "./randomId";
-import { readBrowserStorage, writeBrowserStorage } from "./browserStorage";
+import { readBrowserStorage } from "./browserStorage";
 import { deliverNotification, runNotificationQueue } from "./notificationDelivery";
 import { SESSION_EPOCH_KEY } from "./sessionStore";
 
@@ -19,10 +19,6 @@ export function getClassNotificationPermission(): ClassNotificationPermission {
 
 export function getClassNotificationsEnabled() {
    return readBrowserStorage("localStorage", CLASS_NOTIFICATIONS_STORAGE_KEY) === "true";
-}
-
-export function setClassNotificationsEnabled(enabled: boolean) {
-   writeBrowserStorage("localStorage", CLASS_NOTIFICATIONS_STORAGE_KEY, String(enabled));
 }
 
 export async function requestNotificationPermission(): Promise<ClassNotificationPermission> {

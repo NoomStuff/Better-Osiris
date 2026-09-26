@@ -1,5 +1,5 @@
-import { onSessionInvalidated, retrySessionSettings } from "./lib/sessionStore";
-import { useCallback, useEffect, useMemo, useRef, useState, type AnimationEvent, type CSSProperties, type TransitionEvent } from "react";
+import { onSessionInvalidated } from "./lib/sessionStore";
+import { useCallback, useEffect, useMemo, useRef, useState, type AnimationEvent, type CSSProperties } from "react";
 import { AgendaView } from "./components/AgendaView";
 import { AppToolbar } from "./components/AppToolbar";
 import { GridView } from "./components/GridView";
@@ -7,12 +7,12 @@ import { ClassDrawer } from "./components/ClassDrawer";
 import { HiddenDaysWarning } from "./components/HiddenDaysWarning";
 import { HiddenGridHoursWarning } from "./components/HiddenGridHoursWarning";
 import { WarningBanner } from "./components/WarningBanner";
-import { Button } from "./components/Button";
-import { BearerTokenState, ErrorState, LoadingState, WeekOverlayState } from "./components/LoadingState";
+import { WeekContentState } from "./components/WeekContentState";
 import { SettingsDialog } from "./components/SettingsDialog";
 import { WeekNavigator } from "./components/WeekNavigator";
 import { useAppKeyboardShortcuts } from "./hooks/useAppKeyboardShortcuts";
-import { getNextClassDay, useAgendaState } from "./hooks/useAgendaState";
+import { getNextClassDay } from "./lib/agendaPolicy";
+import { useAgendaState } from "./hooks/useAgendaState";
 import { useOsirisTokenSettings } from "./hooks/useOsirisTokenSettings";
 import { usePreferences } from "./hooks/preferences";
 import { useRosterTimeZone } from "./hooks/useRosterTimeZone";
@@ -21,24 +21,17 @@ import { useWeekDays } from "./hooks/useWeekDays";
 import { useViewportMetrics } from "./hooks/useViewportMetrics";
 import { useWeekSwipeNavigation } from "./hooks/useWeekSwipeNavigation";
 import { applyDevClassStatusPreview } from "./lib/devStatusPreview";
+import { useGridZoom } from "./hooks/useGridZoom";
 import { useWeeks } from "./hooks/useWeeks";
 import { dayLabel, getIsoWeekday, parseIsoDateToLocal, toDayKey } from "./lib/date";
-import { getEmptyWeekMessage } from "./lib/flavor";
-import { getHiddenDaysWithClasses, getWeekdaysWithClasses } from "./lib/weekLayout";
+import { ISO_WEEKDAYS, getHiddenDaysWithClasses, getWeekdaysWithClasses } from "./lib/weekLayout";
 import { countClassesOutsideGridHours, getRequiredGridHours, getSmartGridHours, mergeGridHourRanges } from "./lib/gridHours";
 import { ErrorBoundary } from "./components/ErrorBoundary";
 import { useTokenValidation } from "./hooks/useTokenValidation";
-import type { GridZoom, Class, WeekMeta, ViewMode } from "./types/weeks";
+import type { Class, ViewMode } from "./types/weeks";
 import "./styles/App.css";
 
 type WeekTransitionDirection = "default" | "previous" | "next" | "settled";
-const ALL_WEEKDAYS = [1, 2, 3, 4, 5, 6, 7] as const;
-
-function EmptyWeekState({ week }: { week: WeekMeta }) {
-   const message = getEmptyWeekMessage(week.start);
-
-   return <WeekOverlayState icon={message.icon} title={message.title} detail={message.detail} />;
-}
 
 export default function App() {
    const [weekOffset, setWeekOffset] = useState(0);
@@ -48,8 +41,7 @@ export default function App() {
    const weekOffsetRef = useRef(0);
    const [seekingHome, setSeekingHome] = useState(true);
    const isBarDocked = useDockedMobileBar(appContentRef);
-   const [gridZoom, setGridZoom] = useState<GridZoom>("hour");
-   const [animateGridHeight, setAnimateGridHeight] = useState(false);
+   const { gridZoom, animateGridHeight, changeGridZoom, handleGridHeightTransitionEnd } = useGridZoom(viewMode);
    const [selectedClassId, setSelectedClassId] = useState<string | null>(null);
    const [isSettingsOpen, setIsSettingsOpen] = useState(false);
    const [bearerTokenInput, setBearerTokenInput] = useState("");
@@ -137,7 +129,7 @@ export default function App() {
 
    const isEmptyWeek = displayedData?.classes.length === 0;
    const hasBlankWeekUnderlay = !displayedData || isEmptyWeek;
-   const visibleWeekdays = hasBlankWeekUnderlay ? ALL_WEEKDAYS : shownWeekdays;
+   const visibleWeekdays = hasBlankWeekUnderlay ? ISO_WEEKDAYS : shownWeekdays;
    const visibleAgendaFoldingMode = hasBlankWeekUnderlay && agendaFoldingMode !== "single" ? "all" : agendaFoldingMode;
    const { allDays, visibleDays } = useWeekDays(displayedData, weekOffset, perceivedDay, visibleWeekdays);
    const { animateAgenda, collapseAllDays, expandAllDays, resetAgenda, toggleDay, visibleExpandedDays } = useAgendaState(
@@ -284,37 +276,6 @@ export default function App() {
 
    const closeSettings = useCallback(() => setIsSettingsOpen(false), []);
 
-   const changeGridZoom = useCallback(
-      (nextZoom: GridZoom) => {
-         // Batched with the zoom update so the height transition is present
-         // on the same render that changes the height. Setting the flag in
-         // an effect would run after paint, after the height already snapped.
-         if (nextZoom !== gridZoom && viewMode === "grid") {
-            setAnimateGridHeight(true);
-         }
-         setGridZoom(nextZoom);
-      },
-      [gridZoom, viewMode]
-   );
-
-   useEffect(() => {
-      if (!animateGridHeight) {
-         return;
-      }
-      const timer = window.setTimeout(() => setAnimateGridHeight(false), 480);
-      return () => window.clearTimeout(timer);
-   }, [animateGridHeight]);
-
-   const handleGridHeightTransitionEnd = useCallback((event: TransitionEvent<HTMLElement>) => {
-      if (event.currentTarget !== event.target) {
-         return;
-      }
-      if (event.propertyName && event.propertyName !== "height") {
-         return;
-      }
-      setAnimateGridHeight(false);
-   }, []);
-
    useAppKeyboardShortcuts({
       enabled: !isSettingsOpen && selectedClass === null,
       viewMode,
@@ -347,87 +308,6 @@ export default function App() {
    const frameStyle = {
       "--grid-min-height": `${(gridHours[1] - gridHours[0]) * 52 * gridZoomScale}px`,
    } as CSSProperties;
-
-   const overlay = (() => {
-      if (!rosterTimeZone.isKnown) {
-         if (rosterTimeZone.isInitialLoading) {
-            return <LoadingState message="Checking roster configuration." />;
-         }
-         return (
-            <ErrorState
-               title="Roster configuration unavailable"
-               detail="The server did not declare which time zone the roster uses, so roster data cannot be interpreted safely."
-               log={rosterTimeZone.configError ?? "The roster time zone was not declared."}
-               retryCountdownMs={0}
-               isRetrying={false}
-               canRetry={false}
-               onRetry={rosterTimeZone.retry}
-            />
-         );
-      }
-      if (isTokenSettingsLoading && !hasDisplayedData) {
-         if (tokenSettingsLoadError) {
-            return (
-               <ErrorState
-                  title="Roster server unavailable"
-                  detail="Your bearer token settings could not be loaded. The app keeps retrying on its own."
-                  log={tokenSettingsLoadError}
-                  retryCountdownMs={0}
-                  isRetrying={false}
-                  canRetry={false}
-                  onRetry={retrySessionSettings}
-               />
-            );
-         }
-         return <LoadingState message="Checking bearer token." />;
-      }
-      if (shouldShowTokenEntry) {
-         const tokenStatus = tokenValidationStatus === "ready" ? "required" : tokenValidationStatus;
-         return (
-            <BearerTokenState
-               token={bearerTokenInput}
-               status={tokenStatus}
-               onTokenChange={(token) => {
-                  setBearerTokenInput(token);
-                  clearTokenValidationFailure();
-               }}
-               onSubmit={() => void submitBearerToken(bearerTokenInput)}
-            />
-         );
-      }
-      if (loading) {
-         return <LoadingState message="Fetching week data." />;
-      }
-      if (error && !data) {
-         return (
-            <ErrorState
-               title={error.title}
-               detail={errorDetail}
-               log={error.log}
-               retryCountdownMs={retryCountdownMs}
-               isRetrying={retrying}
-               canRetry={error.retryable}
-               onRetry={refresh}
-            />
-         );
-      }
-      if (weekNotReturned && !displayedData) {
-         return (
-            <WeekOverlayState
-               title="Week not returned"
-               detail="OSIRIS did not include this week in its latest response."
-               icon="fa-solid fa-triangle-exclamation"
-               role="status"
-            >
-               <Button onClick={refresh}>Try again</Button>
-            </WeekOverlayState>
-         );
-      }
-      if (displayedData?.classes.length === 0) {
-         return <EmptyWeekState week={displayedData.week} />;
-      }
-      return null;
-   })();
 
    return (
       <div className="shell">
@@ -497,7 +377,27 @@ export default function App() {
                      <GridView days={visibleDays} hours={gridHours} zoom={visibleGridZoom} now={perceivedNow} onSelectClass={selectClass} />
                   </ErrorBoundary>
                ) : null}
-               {overlay}
+               <WeekContentState
+                  rosterTimeZone={rosterTimeZone}
+                  isTokenSettingsLoading={isTokenSettingsLoading}
+                  tokenSettingsLoadError={tokenSettingsLoadError}
+                  shouldShowTokenEntry={shouldShowTokenEntry}
+                  tokenValidationStatus={tokenValidationStatus}
+                  bearerTokenInput={bearerTokenInput}
+                  onTokenChange={(token) => {
+                     setBearerTokenInput(token);
+                     clearTokenValidationFailure();
+                  }}
+                  onTokenSubmit={() => void submitBearerToken(bearerTokenInput)}
+                  loading={loading}
+                  error={error}
+                  errorDetail={errorDetail}
+                  retryCountdownMs={retryCountdownMs}
+                  retrying={retrying}
+                  refresh={refresh}
+                  weekNotReturned={weekNotReturned}
+                  displayedData={displayedData}
+               />
             </section>
          </main>
 

@@ -2,7 +2,6 @@ import { useClassNotificationsPreference } from "../hooks/useClassNotificationsP
 import { ClassReminderSettings } from "./ClassReminderSettings";
 import { ToggleSwitch } from "./ToggleSwitch";
 
-/** The notifications section owns its own preference state, like every other settings section. */
 export function NotificationSettings() {
    const notifications = useClassNotificationsPreference();
    const notificationDetail = !notifications.isSupported

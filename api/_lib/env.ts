@@ -13,10 +13,6 @@ export function getEnvValue(key: string): string | undefined {
    return fileEnvironment.get(key);
 }
 
-export function clearEnvironmentFileCache() {
-   fileEnvironment = null;
-}
-
 export function loadEnvironmentFiles(directory = process.cwd(), mode = process.env["NODE_ENV"]?.trim()) {
    const values = new Map<string, string>();
    const envFiles = mode ? [`.env.${mode}.local`, `.env.${mode}`, ".env.local", ".env"] : [".env.local", ".env"];

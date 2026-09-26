@@ -1,5 +1,41 @@
 import { ApiError } from "./errors.js";
-import type { OsirisDay, OsirisRosterEntry, OsirisRosterResponse, OsirisTeacher, OsirisWeek } from "./osirisClient.js";
+export interface OsirisTeacher {
+   naam: string;
+}
+
+export interface OsirisRosterEntry {
+   id_rooster: string;
+   datum: string;
+   onderwerp: string;
+   subonderwerp: string;
+   tijd_vanaf: string;
+   tijd_tm: string;
+   locatie: string;
+   locatie_adres: string;
+   docenten: OsirisTeacher[];
+   actueel: "J" | "N";
+   status?: string;
+   roosterstatus?: string;
+   status_omschrijving?: string;
+   statusomschrijving?: string;
+}
+
+export interface OsirisDay {
+   datum: string;
+   rooster: OsirisRosterEntry[];
+}
+
+export interface OsirisWeek {
+   week: number;
+   startdatum: string;
+   dagen: OsirisDay[];
+}
+
+export interface OsirisRosterResponse {
+   items: OsirisWeek[];
+   offset: number;
+   fetchedAt?: number;
+}
 
 export function parseOsirisRosterResponse(value: unknown): OsirisRosterResponse {
    const record = readRecord(value, "response");

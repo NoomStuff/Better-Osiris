@@ -1,7 +1,7 @@
-import { getNextReminderCheckDelay, getReminderMinutes, notifyUpcomingClasses } from "../lib/classReminders";
+import { useClassReminders } from "./useClassReminders";
 import { useCallback, useEffect, useMemo, useState, useSyncExternalStore } from "react";
 import { WeekRepository, type WeekRepositoryOptions } from "../lib/weekRepository";
-import { canNavigateToWeek, getDerivedWeekTitle, getHomeWeek, getAdjacentWeekOffset } from "../lib/weekPolicy";
+import { ROSTER_BATCH_SIZE, canNavigateToWeek, getDerivedWeekTitle, getHomeWeek, getAdjacentWeekOffset } from "../lib/weekPolicy";
 import { useClock } from "./useClock";
 import { isRosterTimeZoneKnown } from "../lib/rosterTimeZone";
 import type { Week } from "../types/weeks";
@@ -15,34 +15,7 @@ export function useWeeks(offset: number, options: WeekRepositoryOptions) {
       () => repository.configure({ enabled, clearCache, contextId, resetKey, timeZone }, offset),
       [repository, enabled, clearCache, contextId, resetKey, timeZone, offset]
    );
-   useEffect(() => {
-      if (!enabled || !contextId || lastSuccessfulResetKey !== resetKey) return;
-      let active = true;
-      const classes = Object.values(entries).flatMap((entry) => entry?.data?.classes ?? []);
-      let timer: ReturnType<typeof setTimeout>;
-      const check = () => {
-         clearTimeout(timer);
-         void notifyUpcomingClasses(classes, contextId, () => active);
-         const delay = getNextReminderCheckDelay(classes, getReminderMinutes() * 60_000, Date.now());
-         if (delay === null) return;
-         // Sleep until the next due moment. One second keeps timing stable, one day
-         // bounds the wait so clock changes and far-future classes cannot stall the chain.
-         timer = setTimeout(check, Math.min(Math.max(delay, 1_000), 24 * 60 * 60_000));
-      };
-      check();
-      window.addEventListener("storage", check);
-      window.addEventListener("notificationpreferenceschange", check);
-      window.addEventListener("pageshow", check);
-      document.addEventListener("visibilitychange", check);
-      return () => {
-         active = false;
-         clearTimeout(timer);
-         window.removeEventListener("storage", check);
-         window.removeEventListener("notificationpreferenceschange", check);
-         window.removeEventListener("pageshow", check);
-         document.removeEventListener("visibilitychange", check);
-      };
-   }, [entries, enabled, contextId, lastSuccessfulResetKey, resetKey]);
+   useClassReminders(entries, contextId, enabled && lastSuccessfulResetKey === resetKey);
    const active = entries[offset];
    const clock = useClock(60_000);
    const home = useMemo(
@@ -68,8 +41,11 @@ export function useWeeks(offset: number, options: WeekRepositoryOptions) {
    const nextWeekOffset = clearCache ? null : getAdjacentWeekOffset(offset, 1, entries, sourceShift);
    const knownWeeks = useMemo(() => (clearCache ? [] : Object.values(entries).flatMap((entry) => (entry?.data ? [entry.data] : []))), [entries, clearCache]);
    const initialWeeks = useMemo(
-      () => Array.from({ length: 5 }, (_, index) => entries[firstOffset + index]?.data).filter((week): week is Week => Boolean(week)),
-      [entries, firstOffset]
+      () =>
+         clearCache
+            ? []
+            : Array.from({ length: ROSTER_BATCH_SIZE }, (_, index) => entries[firstOffset + index]?.data).filter((week): week is Week => Boolean(week)),
+      [entries, firstOffset, clearCache]
    );
    return {
       data,
@@ -83,7 +59,7 @@ export function useWeeks(offset: number, options: WeekRepositoryOptions) {
       lastSuccessfulResetKey,
       isWeekNavigable,
       weekNotReturned,
-      areInitialWeeksLoaded: initialWeeks.length === 5,
+      areInitialWeeksLoaded: initialWeeks.length === ROSTER_BATCH_SIZE,
       canGoPrevious: previousWeekOffset !== null,
       canGoNext: nextWeekOffset !== null,
       loading: enabled && !data && !error && (!weekNotReturned || Boolean(active?.isFetching)),
