@@ -1,8 +1,8 @@
 import { useId, useMemo, useRef, useState, type CSSProperties, type PointerEvent } from "react";
 import { clamp } from "../lib/clamp";
-import { CLASS_STATUS_ICONS, DETAILS_SEPARATOR, getClassLabel, getClassLocationLabel } from "../lib/classFormat";
+import { CLASS_STATUS_ICONS, DETAILS_SEPARATOR, getClassLabel } from "../lib/classFormat";
 import { timeLabel } from "../lib/date";
-import { collectNextUpEntries, getNextUpDayLabel, getNextUpSuggestion, getNextUpSummary, type NextUpEntry } from "../lib/nextUp";
+import { collectNextUpEntries, getNextUpDayLabel, getNextUpSuggestion, type NextUpEntry } from "../lib/nextUp";
 import { useClock } from "../hooks/useClock";
 import { ClassStatusMarker } from "./ClassStatusMarker";
 import "./NextUpCard.css";
@@ -29,9 +29,10 @@ interface DragState {
 }
 
 /**
- * The glanceable answer to "what do I need to be where, and how soon". Collapsed it is a
- * centered countdown pill; clicking or pulling it down reveals the floating card. The card
- * derives everything from already-cached weeks and never fetches.
+ * A status strip above the timetable that answers "where do I need to be, and how soon" in both
+ * views. Collapsed it is a centered pill leading with the countdown and the room; clicking or
+ * pulling it down reveals the panel with the exact times, location, and teacher. Everything is
+ * derived from already-cached weeks and never fetches.
  */
 export function NextUpCard({ weeks, timeOverride, isOpen, onChangeOpen, onSelectClass }: NextUpCardProps) {
    const now = useClock(isOpen ? 1000 : 5000, timeOverride);
@@ -54,7 +55,7 @@ export function NextUpCard({ weeks, timeOverride, isOpen, onChangeOpen, onSelect
       const delta = event.clientY - drag.startY;
       if (!drag.moved && Math.abs(delta) <= TAP_SLOP_PX) return;
       drag.moved = true;
-      // Pulling down reveals the card; pulling up furls it again. Either way it tracks the finger.
+      // Pulling down reveals the panel; pulling up furls it again. Either way it tracks the finger.
       setDragProgress(clamp((isOpen ? 1 : 0) + delta / REVEAL_DISTANCE_PX, 0, 1));
    };
 
@@ -82,16 +83,18 @@ export function NextUpCard({ weeks, timeOverride, isOpen, onChangeOpen, onSelect
 
    if (!suggestion) return null;
 
-   const { phase, target, progress, cancelled, then } = suggestion;
-   const summary = getNextUpSummary(suggestion, now);
-   const title = getClassLabel(target.schoolClass);
-   const details = [
-      `${timeLabel.format(target.startDate)} – ${timeLabel.format(target.endDate)}`,
-      getClassLocationLabel(target.schoolClass),
-      target.schoolClass.teacher.trim(),
-   ]
+   const { phase, target, lead, progress, cancelled, then } = suggestion;
+   const schoolClass = target.schoolClass;
+   const room = schoolClass.room.trim();
+   const location = schoolClass.location.trim();
+   // The room is the primary destination; the campus location only stands in when no room is set.
+   const destination = room || location || null;
+   const detailsLocation = room && location && room.toLowerCase() !== location.toLowerCase() ? location : "";
+   const dayLabel = getNextUpDayLabel(target, now);
+   const details = [dayLabel, `${timeLabel.format(target.startDate)} – ${timeLabel.format(target.endDate)}`, detailsLocation, schoolClass.teacher.trim()]
       .filter(Boolean)
       .join(DETAILS_SEPARATOR);
+   const title = getClassLabel(schoolClass);
    const cardStyle: CSSProperties | undefined =
       dragProgress === null
          ? undefined
@@ -115,30 +118,41 @@ export function NextUpCard({ weeks, timeOverride, isOpen, onChangeOpen, onSelect
             onPointerCancel={() => endDrag(false)}
          >
             {phase === "now" ? <span className="next-up__dot" aria-hidden="true" /> : <i className="fa-regular fa-clock" aria-hidden="true" />}
-            <span className="next-up__summary">{summary}</span>
+            <span className="next-up__lead">{lead}</span>
+            {destination ? (
+               <>
+                  <span className="next-up__separator" aria-hidden="true">
+                     ·
+                  </span>
+                  <span className="next-up__destination">{destination}</span>
+               </>
+            ) : null}
             <i className="fa-solid fa-chevron-down next-up__chevron" aria-hidden="true" />
          </button>
 
          <div className="next-up__card" id={cardId} role="region" aria-label="Next up" data-open={isOpen} style={cardStyle}>
-            <button className="next-up__main" type="button" onClick={() => onSelectClass(target.schoolClass)}>
-               <span className="next-up__eyebrow" data-live={phase === "now"}>
-                  {phase === "now" ? <span className="next-up__dot" aria-hidden="true" /> : <i className="fa-regular fa-clock" aria-hidden="true" />}
-                  {summary}
+            {phase === "now" ? (
+               <span className="next-up__elapsed" aria-hidden="true">
+                  <span style={{ width: `${progress * 100}%` }} />
+               </span>
+            ) : null}
+
+            <button className="next-up__main" type="button" onClick={() => onSelectClass(schoolClass)}>
+               <span className="next-up__hero">
+                  <span className="next-up__lead" data-live={phase === "now"}>
+                     {lead}
+                  </span>
+                  {destination ? <span className="next-up__roomchip">{destination}</span> : null}
                </span>
                <span className="next-up__title">
                   <span className="next-up__title-text" title={title}>
                      {title}
                   </span>
-                  <ClassStatusMarker status={target.schoolClass.status} />
+                  <ClassStatusMarker status={schoolClass.status} />
                </span>
                <span className="next-up__details" title={details}>
                   {details}
                </span>
-               {phase === "now" ? (
-                  <span className="next-up__progress" aria-hidden="true">
-                     <span style={{ width: `${progress * 100}%` }} />
-                  </span>
-               ) : null}
             </button>
 
             {cancelled ? <NextUpCancelledRow entry={cancelled} now={now} /> : null}
@@ -163,11 +177,8 @@ function NextUpCancelledRow({ entry, now }: { entry: NextUpEntry; now: Date }) {
 
 function NextUpThenRow({ entry, now }: { entry: NextUpEntry; now: Date }) {
    const day = getNextUpDayLabel(entry, now) ?? "";
-   const text = [
-      `Then ${day} ${timeLabel.format(entry.startDate)}`.replace(/\s+/g, " ").trim(),
-      getClassLabel(entry.schoolClass),
-      getClassLocationLabel(entry.schoolClass),
-   ]
+   const room = entry.schoolClass.room.trim() || entry.schoolClass.location.trim();
+   const text = [`Then ${day} ${timeLabel.format(entry.startDate)}`.replace(/\s+/g, " ").trim(), getClassLabel(entry.schoolClass), room]
       .filter(Boolean)
       .join(DETAILS_SEPARATOR);
    return (

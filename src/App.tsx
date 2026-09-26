@@ -361,6 +361,17 @@ export default function App() {
                <HiddenGridHoursWarning count={hiddenGridClassCount} targetRange={expandedGridHours} onShow={showHiddenGridClasses} />
             ) : null}
 
+            {/* Floating free of both views: the strip anchors to the content frame's top edge without occupying layout space. */}
+            {rosterTimeZone.isKnown ? (
+               <NextUpCard
+                  weeks={nextUpWeeks}
+                  timeOverride={devPreview.isEnabled ? devPreview.timeOverride : null}
+                  isOpen={nextUpOpen}
+                  onChangeOpen={setNextUpOpen}
+                  onSelectClass={selectClass}
+               />
+            ) : null}
+
             <section
                className={`app-content-frame app-content-frame--${viewMode} app-content-frame--zoom-${frameGridZoom} view-enter`}
                data-blank-week-underlay={hasBlankWeekUnderlay}
@@ -374,13 +385,6 @@ export default function App() {
             >
                {rosterTimeZone.isKnown && viewMode === "agenda" ? (
                   <ErrorBoundary variant="view">
-                     <NextUpCard
-                        weeks={nextUpWeeks}
-                        timeOverride={devPreview.isEnabled ? devPreview.timeOverride : null}
-                        isOpen={nextUpOpen}
-                        onChangeOpen={setNextUpOpen}
-                        onSelectClass={selectClass}
-                     />
                      <AgendaView
                         days={visibleDays}
                         expandedDays={visibleExpandedDays}

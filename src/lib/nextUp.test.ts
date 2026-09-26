@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { beforeEach, describe, it } from "node:test";
-import { collectNextUpEntries, getNextUpDayLabel, getNextUpDurationLabel, getNextUpSuggestion, getNextUpSummary } from "./nextUp.js";
+import { collectNextUpEntries, getLeadLabel, getNextUpDayLabel, getNextUpSuggestion } from "./nextUp.js";
 import { setRosterTimeZone } from "./rosterTimeZone.js";
 import type { Class, Week } from "../types/weeks.js";
 
@@ -105,33 +105,67 @@ void describe("next up suggestion", () => {
       ]);
       assert.equal(getNextUpSuggestion(cancelled, new Date("2026-06-16T10:00:00+02:00")), null);
    });
+
+   void it("switches to the next class ten minutes before the running one ends", () => {
+      const entries = collectNextUpEntries([
+         makeWeek([
+            makeClass({ id: "running", start: "2026-06-16T09:00:00", end: "2026-06-16T10:30:00" }),
+            makeClass({ id: "next", start: "2026-06-16T11:00:00", end: "2026-06-16T12:00:00" }),
+         ]),
+      ]);
+      const stillRunning = getNextUpSuggestion(entries, new Date("2026-06-16T10:15:00+02:00"));
+      assert.ok(stillRunning);
+      assert.equal(stillRunning.phase, "now");
+      assert.equal(stillRunning.target.schoolClass.id, "running");
+
+      const movingOn = getNextUpSuggestion(entries, new Date("2026-06-16T10:23:00+02:00"));
+      assert.ok(movingOn);
+      assert.equal(movingOn.phase, "upcoming");
+      assert.equal(movingOn.target.schoolClass.id, "next");
+      assert.equal(movingOn.lead, "in 37 min");
+   });
+
+   void it("keeps showing the running class when nothing follows it", () => {
+      const entries = collectNextUpEntries([makeWeek([makeClass({ id: "running", start: "2026-06-16T09:00:00", end: "2026-06-16T10:30:00" })])]);
+      const suggestion = getNextUpSuggestion(entries, new Date("2026-06-16T10:25:00+02:00"));
+      assert.ok(suggestion);
+      assert.equal(suggestion.phase, "now");
+      assert.equal(suggestion.target.schoolClass.id, "running");
+      assert.equal(suggestion.lead, "5 min left");
+   });
 });
 
 void describe("next up labels", () => {
-   void it("formats durations, rounding the last minute up", () => {
-      assert.equal(getNextUpDurationLabel(30_000), "1 min");
-      assert.equal(getNextUpDurationLabel(59 * 60_000), "59 min");
-      assert.equal(getNextUpDurationLabel(60 * 60_000), "1 hr");
-      assert.equal(getNextUpDurationLabel(65 * 60_000), "1 hr 5 min");
-      assert.equal(getNextUpDurationLabel(120 * 60_000), "2 hrs");
+   void it("leads with minutes, then hours, tomorrow, days and weeks", () => {
+      const now = new Date("2026-06-16T09:00:00+02:00");
+      assert.equal(getLeadLabel(30_000, now), "in 1 min");
+      assert.equal(getLeadLabel(59 * 60_000, now), "in 59 min");
+      assert.equal(getLeadLabel(60 * 60_000, now), "in 1 hr");
+      assert.equal(getLeadLabel(65 * 60_000, now), "in 1 hr 5 min");
+      assert.equal(getLeadLabel(3.4 * 3_600_000, now), "in 3 hr");
+      assert.equal(getLeadLabel(11 * 3_600_000, now), "in 11 hr");
+      // 13 hours ahead lands the same evening, so the clock keeps counting.
+      assert.equal(getLeadLabel(13 * 3_600_000, now), "in 13 hr");
+      // 12.75 hours ahead crosses midnight, so the calendar word takes over.
+      assert.equal(getLeadLabel(12.75 * 3_600_000, new Date("2026-06-16T20:00:00+02:00")), "Tomorrow");
+      assert.equal(getLeadLabel(30 * 3_600_000, now), "Tomorrow");
+      assert.equal(getLeadLabel(3 * 24 * 3_600_000, now), "in 3 days");
+      assert.equal(getLeadLabel(10 * 24 * 3_600_000, now), "in 1 week");
+      assert.equal(getLeadLabel(15 * 24 * 3_600_000, now), "in 2 weeks");
    });
 
-   void it("summarizes a running class as time left", () => {
+   void it("reports a running class as time left", () => {
       const entries = collectNextUpEntries([makeWeek([makeClass({ id: "running", start: "2026-06-16T09:00:00", end: "2026-06-16T10:30:00" })])]);
       const suggestion = getNextUpSuggestion(entries, new Date("2026-06-16T10:00:00+02:00"));
       assert.ok(suggestion);
-      assert.equal(getNextUpSummary(suggestion, new Date("2026-06-16T10:00:00+02:00")), "Now · 30 min left");
+      assert.equal(suggestion.lead, "30 min left");
    });
 
-   void it("counts down to imminent classes and names the day for distant ones", () => {
+   void it("counts down to imminent classes", () => {
       const entries = collectNextUpEntries([makeWeek([makeClass({ id: "target", start: "2026-06-16T13:00:00", end: "2026-06-16T14:30:00" })])]);
-      const imminent = getNextUpSuggestion(entries, new Date("2026-06-16T12:40:00+02:00"));
-      assert.ok(imminent);
-      assert.equal(getNextUpSummary(imminent, new Date("2026-06-16T12:40:00+02:00")), "in 20 min");
-
-      const distant = getNextUpSuggestion(entries, new Date("2026-06-16T09:00:00+02:00"));
-      assert.ok(distant);
-      assert.equal(getNextUpSummary(distant, new Date("2026-06-16T09:00:00+02:00")), "Today 13:00");
+      const suggestion = getNextUpSuggestion(entries, new Date("2026-06-16T12:40:00+02:00"));
+      assert.ok(suggestion);
+      assert.equal(suggestion.lead, "in 20 min");
    });
 
    void it("names tomorrow and weekdays for classes beyond today", () => {
@@ -147,22 +181,7 @@ void describe("next up labels", () => {
 
       const tomorrow = getNextUpSuggestion(entries, now);
       assert.ok(tomorrow);
-      assert.equal(getNextUpSummary(tomorrow, now), "Tomorrow 08:45");
-
-      const weekdayOnly = collectNextUpEntries([makeWeek([makeClass({ id: "thursday", start: "2026-06-18T08:45:00", end: "2026-06-18T10:00:00" })])]);
-      const later = getNextUpSuggestion(weekdayOnly, now);
-      assert.ok(later);
-      assert.equal(getNextUpSummary(later, now), "Thu 08:45");
-   });
-
-   void it("uses today for a distant class later today", () => {
-      const entries = collectNextUpEntries([makeWeek([makeClass({ id: "target", start: "2026-06-16T21:00:00", end: "2026-06-16T22:00:00" })])]);
-      const [entry] = entries;
-      assert.ok(entry);
-      const now = new Date("2026-06-16T09:00:00+02:00");
-      assert.equal(getNextUpDayLabel(entry, now), null);
-      const suggestion = getNextUpSuggestion(entries, now);
-      assert.ok(suggestion);
-      assert.equal(getNextUpSummary(suggestion, now), "Today 21:00");
+      assert.equal(tomorrow.target.schoolClass.id, "tomorrow");
+      assert.equal(tomorrow.lead, "Tomorrow");
    });
 });

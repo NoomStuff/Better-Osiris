@@ -1,6 +1,6 @@
 import { shiftCalendarDate } from "../../shared/calendar";
 import { clamp } from "./clamp";
-import { dayShortLabel, parseLocalDateTime, timeLabel, toDayKey } from "./date";
+import { dayShortLabel, parseLocalDateTime, toDayKey } from "./date";
 import type { Class, Week } from "../types/weeks";
 
 /** A class with its times resolved to instants, ready to compare against "now". */
@@ -14,16 +14,22 @@ export interface NextUpSuggestion {
    /** "now" while the target class is running, "upcoming" before it starts. */
    phase: "now" | "upcoming";
    target: NextUpEntry;
-   /** Elapsed fraction of the target, 0 for upcoming classes. */
+   /** The primary lead: "in 12 min", "Tomorrow", "45 min left". The room and exact times come from the target. */
+   lead: string;
+   /** Elapsed fraction of the running target, 0 for upcoming classes. */
    progress: number;
    /** The cancelled class that died between now and the target, explaining why the target is not the first one. */
    cancelled: NextUpEntry | null;
-   /** The next active class after the target; only shown while the target is running. */
+   /** The next active class after the running target. */
    then: NextUpEntry | null;
 }
 
-/** Beyond this horizon the absolute day and time say more than a countdown. */
-const UPCOMING_COUNTDOWN_LIMIT_MS = 90 * 60_000;
+/** How long before a running class ends the card switches to the next one; time to start moving. */
+const ADVANCE_SWITCH_MS = 10 * 60_000;
+/** Hours above this round to whole hours instead of carrying minutes. */
+const MINUTES_IN_LEAD_LIMIT_MS = 3 * 3_600_000;
+/** Beyond this horizon the calendar takes over from the clock: hours stop ticking, days start counting. */
+const LEAD_CALENDAR_LIMIT_MS = 12 * 3_600_000;
 
 /**
  * Resolves class times once per roster change; picking a suggestion then only compares dates,
@@ -47,22 +53,39 @@ export function collectNextUpEntries(weeks: Week[]): NextUpEntry[] {
 export function getNextUpSuggestion(entries: NextUpEntry[], now: Date): NextUpSuggestion | null {
    const active = entries.filter((entry) => entry.schoolClass.status !== "cancelled");
    const nowTime = now.getTime();
-   const target = active.find((entry) => entry.startDate.getTime() <= nowTime && nowTime < entry.endDate.getTime());
+   const running = active.find((entry) => entry.startDate.getTime() <= nowTime && nowTime < entry.endDate.getTime());
+   const upcoming = active.find((entry) => entry.startDate.getTime() > nowTime);
 
-   if (target) {
-      const duration = target.endDate.getTime() - target.startDate.getTime();
+   if (running) {
+      const remaining = running.endDate.getTime() - nowTime;
+      // Close to the bell the next class takes over: the question becomes where to go next.
+      if (upcoming && remaining <= ADVANCE_SWITCH_MS) {
+         return getUpcomingSuggestion(entries, upcoming, now);
+      }
+
+      const duration = running.endDate.getTime() - running.startDate.getTime();
       return {
          phase: "now",
-         target,
-         progress: duration > 0 ? clamp((nowTime - target.startDate.getTime()) / duration, 0, 1) : 1,
-         cancelled: getCancelledBefore(entries, target, nowTime),
-         then: active.find((entry) => entry.startDate.getTime() > nowTime) ?? null,
+         target: running,
+         lead: `${getDurationLabel(remaining)} left`,
+         progress: duration > 0 ? clamp((nowTime - running.startDate.getTime()) / duration, 0, 1) : 1,
+         cancelled: getCancelledBefore(entries, running, nowTime),
+         then: upcoming ?? null,
       };
    }
 
-   const upcoming = active.find((entry) => entry.startDate.getTime() > nowTime);
-   if (!upcoming) return null;
-   return { phase: "upcoming", target: upcoming, progress: 0, cancelled: getCancelledBefore(entries, upcoming, nowTime), then: null };
+   return upcoming ? getUpcomingSuggestion(entries, upcoming, now) : null;
+}
+
+function getUpcomingSuggestion(entries: NextUpEntry[], target: NextUpEntry, now: Date): NextUpSuggestion {
+   return {
+      phase: "upcoming",
+      target,
+      lead: getLeadLabel(target.startDate.getTime() - now.getTime(), now),
+      progress: 0,
+      cancelled: getCancelledBefore(entries, target, now.getTime()),
+      then: null,
+   };
 }
 
 /** The most recent cancellation that is still ahead of "now" and sits before the target. */
@@ -77,8 +100,8 @@ function getCancelledBefore(entries: NextUpEntry[], target: NextUpEntry, nowTime
    return latest;
 }
 
-/** "12 min", "1 hr 5 min"; always at least a minute so an imminent start never reads as zero. */
-export function getNextUpDurationLabel(durationMs: number): string {
+/** "45 min" / "1 hr 5 min"; always at least a minute so an imminent moment never reads as zero. */
+function getDurationLabel(durationMs: number): string {
    const totalMinutes = Math.max(1, Math.ceil(durationMs / 60_000));
    if (totalMinutes < 60) return `${totalMinutes} min`;
    const hours = Math.floor(totalMinutes / 60);
@@ -87,20 +110,35 @@ export function getNextUpDurationLabel(durationMs: number): string {
 }
 
 /**
- * The one-line answer shared by the collapsed handle and the card header: how soon, or
- * when on the calendar once the countdown stops earning its place.
+ * Time until a class starts, in speaking order: minutes, hours, tomorrow, days, weeks.
+ * Durations tick below twelve hours; beyond that the calendar labels take over.
  */
-export function getNextUpSummary(suggestion: NextUpSuggestion, now: Date): string {
-   if (suggestion.phase === "now") {
-      return `Now · ${getNextUpDurationLabel(suggestion.target.endDate.getTime() - now.getTime())} left`;
+export function getLeadLabel(deltaMs: number, now: Date): string {
+   const totalMinutes = Math.max(1, Math.ceil(deltaMs / 60_000));
+   if (totalMinutes < 60) return `in ${totalMinutes} min`;
+
+   if (deltaMs < MINUTES_IN_LEAD_LIMIT_MS) {
+      const hours = Math.floor(totalMinutes / 60);
+      const minutes = totalMinutes % 60;
+      return `in ${hours} hr${hours === 1 ? "" : "s"}${minutes > 0 ? ` ${minutes} min` : ""}`;
    }
 
-   const delta = suggestion.target.startDate.getTime() - now.getTime();
-   if (delta < UPCOMING_COUNTDOWN_LIMIT_MS) {
-      return `in ${getNextUpDurationLabel(delta)}`;
-   }
+   const roundedHours = Math.round(deltaMs / 3_600_000);
+   if (deltaMs < LEAD_CALENDAR_LIMIT_MS) return `in ${roundedHours} hr`;
 
-   return `${getNextUpDayLabel(suggestion.target, now) ?? "Today"} ${timeLabel.format(suggestion.target.startDate)}`;
+   const days = getCalendarDayGap(deltaMs, now);
+   if (days === 0) return `in ${roundedHours} hr`;
+   if (days === 1) return "Tomorrow";
+   if (days < 7) return `in ${days} days`;
+   const weeks = Math.max(1, Math.round(days / 7));
+   return `in ${weeks} week${weeks === 1 ? "" : "s"}`;
+}
+
+/** Whole calendar days between the moment that is `deltaMs` away and today, ignoring the clock time. */
+function getCalendarDayGap(deltaMs: number, now: Date): number {
+   const then = toDayKey(new Date(now.getTime() + deltaMs));
+   const today = toDayKey(now);
+   return Math.round((Date.parse(`${then}T00:00:00Z`) - Date.parse(`${today}T00:00:00Z`)) / (24 * 3_600_000));
 }
 
 /** "Tomorrow" or the weekday of an entry; null when it falls on today. */

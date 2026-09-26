@@ -1,9 +1,12 @@
+/* The next-up strip floats free of both views: its anchor takes no layout space and sits exactly
+   on the content frame's top edge, so the pill straddles the border in the agenda and the grid alike. */
 .next-up {
    position: relative;
    z-index: 9;
+   height: 0;
    display: flex;
    justify-content: center;
-   padding: 12px 14px 10px;
+   align-items: flex-start;
    animation: next-up-enter 320ms var(--ease-out) both;
 }
 
@@ -21,18 +24,18 @@
 
 .next-up__handle {
    position: relative;
-   z-index: 2;
+   top: -15px;
    display: inline-flex;
    align-items: center;
    gap: 8px;
    max-width: 100%;
-   padding: 7px 13px;
+   padding: 6px 13px;
    border: 1px solid var(--line);
    border-radius: 999px;
    background: hsl(from var(--overlay-surface) h s l / 0.92);
-   color: var(--text-dim);
-   font-size: 0.8rem;
-   font-weight: 650;
+   color: var(--text-strong);
+   font-size: 0.84rem;
+   font-weight: 700;
    font-variant-numeric: tabular-nums;
    white-space: nowrap;
    cursor: pointer;
@@ -41,14 +44,11 @@
    backdrop-filter: blur(14px);
    transition:
       border-color 180ms ease,
-      background 180ms ease,
-      color 180ms ease,
       transform 220ms var(--bounce-overshoot);
 }
 
 .next-up__handle:hover {
    border-color: var(--line-strong);
-   color: var(--text-strong);
    transform: translateY(-1px);
 }
 
@@ -59,6 +59,24 @@
 .next-up__handle > i {
    color: var(--accent);
    font-size: 0.78rem;
+}
+
+.next-up__lead {
+   color: var(--accent);
+   letter-spacing: 0.01em;
+}
+
+.next-up__handle[data-live="true"] .next-up__lead {
+   color: var(--danger);
+}
+
+.next-up__separator {
+   color: var(--text-muted);
+   font-weight: 400;
+}
+
+.next-up__destination {
+   color: var(--text-strong);
 }
 
 .next-up__chevron {
@@ -76,11 +94,6 @@
    width: 7px;
    height: 7px;
    border-radius: 999px;
-   background: var(--accent);
-}
-
-.next-up__handle[data-live="true"] .next-up__dot,
-.next-up__eyebrow[data-live="true"] .next-up__dot {
    background: var(--danger);
    animation: next-up-pulse 2.2s ease-out infinite;
 }
@@ -101,20 +114,19 @@
 
 .next-up__card {
    position: absolute;
-   top: calc(100% - 8px);
+   top: 21px;
    right: 0;
    left: 0;
    z-index: 1;
-   width: min(100% - 28px, 640px);
+   width: min(100% - 28px, 430px);
    margin-inline: auto;
    display: grid;
-   gap: 2px;
-   padding: 12px 14px;
+   overflow: hidden;
    border: 1px solid var(--line-strong);
-   border-radius: 16px;
+   border-radius: 18px;
    background: var(--overlay-surface);
    box-shadow: var(--shadow);
-   backdrop-filter: blur(20px);
+   backdrop-filter: blur(24px);
    visibility: hidden;
    opacity: 0;
    pointer-events: none;
@@ -142,13 +154,29 @@
    transition: none;
 }
 
+/* While a class runs, its top edge is the elapsed time filling the panel. */
+.next-up__elapsed {
+   position: absolute;
+   top: 0;
+   right: 0;
+   left: 0;
+   height: 3px;
+   background: hsl(from var(--danger) h s l / 0.16);
+}
+
+.next-up__elapsed span {
+   display: block;
+   height: 100%;
+   background: var(--danger);
+   transition: width 1s linear;
+}
+
 .next-up__main {
    display: grid;
    gap: 3px;
    width: 100%;
    min-width: 0;
-   padding: 2px 6px 8px;
-   border-radius: 10px;
+   padding: 13px 16px 12px;
    color: inherit;
    text-align: left;
    cursor: pointer;
@@ -160,22 +188,41 @@
    transition: none;
 }
 
-.next-up__eyebrow {
-   display: inline-flex;
+.next-up__hero {
+   display: flex;
    align-items: center;
-   gap: 7px;
-   color: var(--accent);
-   font-size: 0.78rem;
-   font-weight: 700;
-   font-variant-numeric: tabular-nums;
+   gap: 12px;
+   min-width: 0;
+   margin-bottom: 3px;
 }
 
-.next-up__eyebrow[data-live="true"] {
+.next-up__hero .next-up__lead {
+   min-width: 0;
+   overflow: hidden;
+   color: var(--accent);
+   font-size: 1.32rem;
+   font-weight: 760;
+   line-height: 1.15;
+   letter-spacing: -0.02em;
+   text-overflow: ellipsis;
+   white-space: nowrap;
+}
+
+.next-up__hero .next-up__lead[data-live="true"] {
    color: var(--danger);
 }
 
-.next-up__eyebrow i {
-   font-size: 0.8rem;
+.next-up__roomchip {
+   flex: 0 0 auto;
+   margin-left: auto;
+   padding: 3px 10px;
+   border: 1px solid var(--line-strong);
+   border-radius: 9px;
+   background: hsl(from var(--highlight) h s l / 0.045);
+   color: var(--text-strong);
+   font-size: 0.95rem;
+   font-weight: 750;
+   letter-spacing: 0.01em;
 }
 
 .next-up__title {
@@ -184,9 +231,8 @@
    gap: 8px;
    min-width: 0;
    color: var(--text-strong);
-   font-size: 1.02rem;
+   font-size: 0.92rem;
    font-weight: 680;
-   letter-spacing: -0.01em;
 }
 
 .next-up__title-text {
@@ -199,26 +245,9 @@
    overflow: hidden;
    text-overflow: ellipsis;
    white-space: nowrap;
-   color: var(--text-dim);
-   font-size: 0.84rem;
+   color: var(--text-muted);
+   font-size: 0.79rem;
    font-variant-numeric: tabular-nums;
-}
-
-.next-up__progress {
-   position: relative;
-   height: 3px;
-   margin-top: 5px;
-   overflow: hidden;
-   border-radius: 999px;
-   background: hsl(from var(--danger) h s l / 0.16);
-}
-
-.next-up__progress span {
-   position: absolute;
-   inset: 0 auto 0 0;
-   border-radius: inherit;
-   background: var(--danger);
-   transition: width 1s linear;
 }
 
 .next-up__row {
@@ -226,9 +255,9 @@
    align-items: center;
    gap: 8px;
    min-width: 0;
-   padding: 7px 6px 2px;
+   padding: 8px 16px 9px;
    border-top: 1px solid var(--line);
-   font-size: 0.8rem;
+   font-size: 0.78rem;
    font-variant-numeric: tabular-nums;
 }
 
@@ -244,11 +273,6 @@
    color: var(--text-muted);
 }
 
-.next-up__row-text strong {
-   color: var(--text-dim);
-   font-weight: 700;
-}
-
 .next-up__row--then i {
    color: var(--accent);
 }
@@ -262,24 +286,31 @@
 }
 
 @media (max-width: 640px) {
-   .next-up {
-      padding: 10px 10px 8px;
+   .next-up__handle {
+      top: -14px;
    }
 
    .next-up__card {
-      width: min(100% - 20px, 640px);
-      padding: 11px 12px;
+      top: 19px;
+      width: min(100% - 20px, 430px);
    }
 
-   .next-up__title {
-      font-size: 0.95rem;
+   .next-up__hero .next-up__lead {
+      font-size: 1.2rem;
+   }
+
+   .next-up__main {
+      padding: 12px 14px 11px;
+   }
+
+   .next-up__row {
+      padding: 8px 14px 9px;
    }
 }
 
 @media (prefers-reduced-motion: reduce) {
    .next-up,
-   .next-up__handle .next-up__dot,
-   .next-up__eyebrow .next-up__dot {
+   .next-up__dot {
       animation: none;
    }
 }
