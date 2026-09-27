@@ -1,0 +1,283 @@
+/* The next-up card floats free of both views, parked above the bottom edge (above the mobile
+   bar on phones). The panel rises upward from it, so the pill is the handle from either side:
+   pull up to reveal, pull down on the panel to furl. */
+.next-up {
+   position: fixed;
+   right: 0;
+   bottom: calc(var(--app-padding, 20px) + 2px);
+   left: 0;
+   z-index: 9;
+   display: flex;
+   justify-content: center;
+   align-items: flex-end;
+   pointer-events: none;
+   animation: next-up-enter 320ms var(--ease-out) both;
+}
+
+@keyframes next-up-enter {
+   from {
+      opacity: 0;
+      transform: translateY(8px);
+   }
+
+   to {
+      opacity: 1;
+      transform: translateY(0);
+   }
+}
+
+.next-up__handle {
+   position: relative;
+   pointer-events: auto;
+   display: inline-flex;
+   align-items: center;
+   gap: 8px;
+   max-width: 100%;
+   padding: 6px 13px;
+   border: 1px solid var(--line);
+   border-radius: 999px;
+   background: hsl(from var(--overlay-surface) h s l / 0.92);
+   color: var(--text-strong);
+   font-size: 0.84rem;
+   font-weight: 700;
+   font-variant-numeric: tabular-nums;
+   white-space: nowrap;
+   cursor: pointer;
+   touch-action: none;
+   box-shadow: 0 5px 12px hsl(0 0% 0% / 0.14);
+   backdrop-filter: blur(14px);
+   transition:
+      border-color 180ms ease,
+      scale 220ms var(--bounce-overshoot);
+   scale: 1;
+}
+
+.next-up__handle:hover {
+   border-color: var(--line-strong);
+}
+
+.next-up__handle:active {
+   scale: 0.975;
+}
+
+.next-up__handle > i {
+   color: var(--accent);
+   font-size: 0.78rem;
+}
+
+.next-up__lead {
+   color: var(--accent);
+   letter-spacing: 0.01em;
+}
+
+.next-up__handle[data-live="true"] .next-up__lead {
+   color: var(--danger);
+}
+
+/* A changed class borrows the warning accent, matching the grid's changed borders.
+   Live red still wins while a changed class is running. */
+.next-up__handle[data-status="changed"]:not([data-live="true"]) .next-up__lead,
+.next-up__card[data-status="changed"] .next-up__lead:not([data-live="true"]) {
+   color: var(--warning);
+}
+
+.next-up__separator {
+   color: var(--text-muted);
+   font-weight: 400;
+}
+
+.next-up__destination {
+   color: var(--text-strong);
+}
+
+.next-up__chevron {
+   color: var(--text-muted);
+   font-size: 0.7rem;
+   transition: transform 0.4s cubic-bezier(0.22, 1.75, 0.1, 1);
+   transform: rotate(180deg);
+}
+
+.next-up__handle[aria-expanded="true"] .next-up__chevron {
+   transform: rotate(0deg);
+}
+
+.next-up__dot {
+   flex: 0 0 auto;
+   width: 7px;
+   height: 7px;
+   border-radius: 999px;
+   background: var(--danger);
+   animation: next-up-pulse 2.2s ease-out infinite;
+}
+
+@keyframes next-up-pulse {
+   0% {
+      box-shadow: 0 0 0 0 hsl(from var(--danger) h s l / 0.5);
+   }
+
+   75% {
+      box-shadow: 0 0 0 6px hsl(from var(--danger) h s l / 0);
+   }
+
+   100% {
+      box-shadow: 0 0 0 0 hsl(from var(--danger) h s l / 0);
+   }
+}
+
+.next-up__card {
+   position: absolute;
+   right: 0;
+   bottom: calc(100% + 8px);
+   left: 0;
+   pointer-events: none;
+   width: min(100% - 28px, 430px);
+   margin-inline: auto;
+   display: grid;
+   gap: 3px;
+   overflow: hidden;
+   padding: 13px 16px 12px;
+   border: 1px solid var(--line-strong);
+   border-radius: 18px;
+   background: var(--overlay-surface);
+   box-shadow: var(--shadow);
+   backdrop-filter: blur(24px);
+   color: inherit;
+   text-align: left;
+   cursor: pointer;
+   font: inherit;
+   /* The panel is a drag surface: without this, touch scrolling steals the furl gesture. */
+   touch-action: none;
+   visibility: hidden;
+   opacity: 0;
+   transform: translateY(26px) scale(0.97);
+   transform-origin: bottom center;
+   transition:
+      transform 420ms var(--spring),
+      opacity 220ms ease,
+      visibility 0s linear 420ms,
+      scale 220ms var(--bounce-overshoot);
+   scale: 1;
+}
+
+.next-up__card[data-open="true"] {
+   visibility: visible;
+   opacity: 1;
+   pointer-events: auto;
+   transform: translateY(0) scale(1);
+   transition:
+      transform 420ms var(--spring),
+      opacity 220ms ease,
+      visibility 0s,
+      scale 220ms var(--bounce-overshoot);
+}
+
+.next-up__card:active {
+   scale: 0.975;
+}
+
+.next-up[data-dragging="true"] .next-up__card {
+   visibility: visible;
+   pointer-events: none;
+   transition: none;
+}
+
+/* While a class runs, its top edge is the elapsed time filling the panel. */
+.next-up__elapsed {
+   position: absolute;
+   top: 0;
+   right: 0;
+   left: 0;
+   height: 3px;
+   background: hsl(from var(--danger) h s l / 0.16);
+}
+
+.next-up__elapsed span {
+   display: block;
+   height: 100%;
+   background: var(--danger);
+   transition: width 1s linear;
+}
+
+.next-up__hero {
+   display: flex;
+   align-items: center;
+   gap: 12px;
+   min-width: 0;
+   margin-bottom: 3px;
+}
+
+.next-up__hero .next-up__lead {
+   min-width: 0;
+   overflow: hidden;
+   color: var(--accent);
+   font-size: 1.32rem;
+   font-weight: 760;
+   line-height: 1.15;
+   letter-spacing: -0.02em;
+   text-overflow: ellipsis;
+   white-space: nowrap;
+}
+
+.next-up__hero .next-up__lead[data-live="true"] {
+   color: var(--danger);
+}
+
+.next-up__roomchip {
+   flex: 0 0 auto;
+   margin-left: auto;
+   padding: 3px 10px;
+   border: 1px solid var(--line-strong);
+   border-radius: 9px;
+   background: hsl(from var(--highlight) h s l / 0.045);
+   color: var(--text-strong);
+   font-size: 0.95rem;
+   font-weight: 750;
+   letter-spacing: 0.01em;
+}
+
+.next-up__title {
+   display: flex;
+   align-items: center;
+   gap: 8px;
+   min-width: 0;
+   color: var(--text-strong);
+   font-size: 0.92rem;
+   font-weight: 680;
+}
+
+.next-up__title-text {
+   overflow: hidden;
+   text-overflow: ellipsis;
+   white-space: nowrap;
+}
+
+.next-up__details {
+   overflow: hidden;
+   text-overflow: ellipsis;
+   white-space: nowrap;
+   color: var(--text-muted);
+   font-size: 0.79rem;
+   font-variant-numeric: tabular-nums;
+}
+
+@media (max-width: 640px) {
+   .next-up {
+      bottom: calc(var(--mobile-toolbar-clearance, 130px) + 6px);
+   }
+
+   .next-up__card {
+      width: min(100% - 20px, 430px);
+      padding: 12px 14px 11px;
+   }
+
+   .next-up__hero .next-up__lead {
+      font-size: 1.2rem;
+   }
+}
+
+@media (prefers-reduced-motion: reduce) {
+   .next-up,
+   .next-up__dot {
+      animation: none;
+   }
+}

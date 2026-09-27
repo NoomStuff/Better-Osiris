@@ -1213,14 +1213,16 @@ test("every theme keeps settings text readable", async ({ page, browserName }) =
 test("desktop grid and mobile agenda match their visual baselines", async ({ page, browserName }) => {
    test.skip(browserName !== "chromium", "Visual baselines use Chromium for deterministic rendering.");
 
+   // Viewport screenshots instead of .shell element shots: the mobile bar and the next-up card
+   // are position-fixed, and element screenshots do not composite fixed chrome.
    await page.setViewportSize({ width: 1280, height: 720 });
    await page.goto("/");
    await page.evaluate(() => document.fonts.ready);
-   await expect(page.locator(".shell")).toHaveScreenshot("desktop-grid.png", { animations: "disabled" });
+   await expect(page).toHaveScreenshot("desktop-grid.png", { animations: "disabled" });
 
    await page.setViewportSize({ width: 390, height: 844 });
    await page.getByRole("button", { name: "Agenda view" }).click();
-   await expect(page.locator(".shell")).toHaveScreenshot("mobile-agenda.png", { animations: "disabled" });
+   await expect(page).toHaveScreenshot("mobile-agenda.png", { animations: "disabled" });
 });
 
 async function installFixedClock(page: Page) {
