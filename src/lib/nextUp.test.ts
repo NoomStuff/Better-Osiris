@@ -132,7 +132,7 @@ void describe("next up labels", () => {
       assert.equal(getLeadLabel(30_000, now), "In 1 minute");
       assert.equal(getLeadLabel(59 * 60_000, now), "In 59 minutes");
       assert.equal(getLeadLabel(60 * 60_000, now), "In 1 hour");
-      assert.equal(getLeadLabel(65 * 60_000, now), "In 1 hour 5 minutes");
+      assert.equal(getLeadLabel(65 * 60_000, now), "In 1 hour, 5 minutes");
       assert.equal(getLeadLabel(3.4 * 3_600_000, now), "In 3 hours");
       assert.equal(getLeadLabel(11 * 3_600_000, now), "In 11 hours");
       // 13 hours ahead lands the same evening, so the clock keeps counting.

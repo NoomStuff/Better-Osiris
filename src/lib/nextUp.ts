@@ -83,13 +83,13 @@ function getUpcomingSuggestion(target: NextUpEntry, now: Date): NextUpSuggestion
    };
 }
 
-/** "45 minutes" / "1 hour 5 minutes"; always at least a minute so an imminent moment never reads as zero. */
+/** "45 minutes" / "1 hour, 5 minutes"; always at least a minute so an imminent moment never reads as zero. */
 function getDurationLabel(durationMs: number): string {
    const totalMinutes = Math.max(1, Math.ceil(durationMs / 60_000));
    if (totalMinutes < 60) return `${totalMinutes} minute${totalMinutes === 1 ? "" : "s"}`;
    const hours = Math.floor(totalMinutes / 60);
    const minutes = totalMinutes % 60;
-   return `${hours} hour${hours === 1 ? "" : "s"}${minutes > 0 ? ` ${minutes} minute${minutes === 1 ? "" : "s"}` : ""}`;
+   return `${hours} hour${hours === 1 ? "" : "s"}${minutes > 0 ? `, ${minutes} minute${minutes === 1 ? "" : "s"}` : ""}`;
 }
 
 /**
@@ -103,7 +103,7 @@ export function getLeadLabel(deltaMs: number, now: Date): string {
    if (deltaMs < MINUTES_IN_LEAD_LIMIT_MS) {
       const hours = Math.floor(totalMinutes / 60);
       const minutes = totalMinutes % 60;
-      return `In ${hours} hour${hours === 1 ? "" : "s"}${minutes > 0 ? ` ${minutes} minute${minutes === 1 ? "" : "s"}` : ""}`;
+      return `In ${hours} hour${hours === 1 ? "" : "s"}${minutes > 0 ? `, ${minutes} minute${minutes === 1 ? "" : "s"}` : ""}`;
    }
 
    const roundedHours = Math.min(23, Math.round(deltaMs / 3_600_000));

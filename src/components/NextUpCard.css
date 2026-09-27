@@ -60,7 +60,7 @@
    scale: 0.975;
 }
 
-.next-up__handle > i {
+.next-up__text > i {
    color: var(--accent);
    font-size: 0.78rem;
 }
@@ -70,14 +70,10 @@
    letter-spacing: 0.01em;
 }
 
-.next-up__handle[data-live="true"] .next-up__lead {
-   color: var(--danger);
-}
-
-/* A changed class borrows the warning accent, matching the grid's changed borders.
-   Live red still wins while a changed class is running. */
-.next-up__handle[data-status="changed"]:not([data-live="true"]) .next-up__lead,
-.next-up__card[data-status="changed"] .next-up__lead:not([data-live="true"]) {
+/* A changed class borrows the warning accent, matching the grid's changed borders. The live
+   state itself is carried by the red dot and the elapsed bar, never by the text. */
+.next-up__handle[data-status="changed"] .next-up__lead,
+.next-up__card[data-status="changed"] .next-up__lead {
    color: var(--warning);
 }
 
@@ -88,6 +84,34 @@
 
 .next-up__destination {
    color: var(--text-strong);
+}
+
+/* Countdown and class changes swap with a soft fade; the per-minute text ticks stay still. */
+.next-up__text {
+   display: inline-flex;
+   align-items: center;
+   gap: 8px;
+   min-width: 0;
+   animation: next-up-swap 300ms var(--ease-out) both;
+}
+
+.next-up__content {
+   display: grid;
+   gap: 3px;
+   min-width: 0;
+   animation: next-up-swap 300ms var(--ease-out) both;
+}
+
+@keyframes next-up-swap {
+   from {
+      opacity: 0;
+      transform: translateY(4px);
+   }
+
+   to {
+      opacity: 1;
+      transform: translateY(0);
+   }
 }
 
 .next-up__chevron {
@@ -216,10 +240,6 @@
    letter-spacing: -0.02em;
    text-overflow: ellipsis;
    white-space: nowrap;
-}
-
-.next-up__hero .next-up__lead[data-live="true"] {
-   color: var(--danger);
 }
 
 .next-up__roomchip {

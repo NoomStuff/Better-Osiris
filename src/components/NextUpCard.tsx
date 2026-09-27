@@ -116,6 +116,8 @@ export function NextUpCard({ weeks, timeOverride, isOpen, onChangeOpen, onSelect
               transform: `translateY(${((1 - dragProgress) * CLOSED_DROP_PX).toFixed(2)}px) scale(${(CLOSED_SCALE + (1 - CLOSED_SCALE) * dragProgress).toFixed(4)})`,
               opacity: dragProgress.toFixed(3),
            };
+   // Phase and target identity drive the swap animation; the countdown text itself ticks without animating.
+   const swapKey = `${phase}-${schoolClass.id}`;
 
    return (
       <div className="next-up">
@@ -124,7 +126,6 @@ export function NextUpCard({ weeks, timeOverride, isOpen, onChangeOpen, onSelect
             type="button"
             aria-expanded={isOpen}
             aria-controls={cardId}
-            data-live={phase === "now"}
             data-status={schoolClass.status}
             onClick={handleToggleClick}
             onPointerDown={startDrag}
@@ -132,16 +133,18 @@ export function NextUpCard({ weeks, timeOverride, isOpen, onChangeOpen, onSelect
             onPointerUp={(event) => endDrag(event, true, toggleOpen)}
             onPointerCancel={(event) => endDrag(event, false, toggleOpen)}
          >
-            {phase === "now" ? <span className="next-up__dot" aria-hidden="true" /> : <i className="fa-regular fa-clock" aria-hidden="true" />}
-            <span className="next-up__lead">{lead}</span>
-            {destination ? (
-               <>
-                  <span className="next-up__separator" aria-hidden="true">
-                     ·
-                  </span>
-                  <span className="next-up__destination">{destination}</span>
-               </>
-            ) : null}
+            <span className="next-up__text" key={swapKey}>
+               {phase === "now" ? <span className="next-up__dot" aria-hidden="true" /> : <i className="fa-regular fa-clock" aria-hidden="true" />}
+               <span className="next-up__lead">{lead}</span>
+               {destination ? (
+                  <>
+                     <span className="next-up__separator" aria-hidden="true">
+                        ·
+                     </span>
+                     <span className="next-up__destination">{destination}</span>
+                  </>
+               ) : null}
+            </span>
             <i className="fa-solid fa-chevron-down next-up__chevron" aria-hidden="true" />
          </button>
 
@@ -163,20 +166,20 @@ export function NextUpCard({ weeks, timeOverride, isOpen, onChangeOpen, onSelect
                   <span style={{ width: `${progress * 100}%` }} />
                </span>
             ) : null}
-            <span className="next-up__hero">
-               <span className="next-up__lead" data-live={phase === "now"}>
-                  {lead}
+            <span className="next-up__content" key={swapKey}>
+               <span className="next-up__hero">
+                  <span className="next-up__lead">{lead}</span>
+                  {destination ? <span className="next-up__roomchip">{destination}</span> : null}
                </span>
-               {destination ? <span className="next-up__roomchip">{destination}</span> : null}
-            </span>
-            <span className="next-up__title">
-               <span className="next-up__title-text" title={title}>
-                  {title}
+               <span className="next-up__title">
+                  <span className="next-up__title-text" title={title}>
+                     {title}
+                  </span>
+                  <ClassStatusMarker status={schoolClass.status} />
                </span>
-               <ClassStatusMarker status={schoolClass.status} />
-            </span>
-            <span className="next-up__details" title={details}>
-               {details}
+               <span className="next-up__details" title={details}>
+                  {details}
+               </span>
             </span>
          </button>
       </div>
