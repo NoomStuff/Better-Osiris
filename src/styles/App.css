@@ -68,7 +68,7 @@
 }
 
 .app-content-frame--agenda[data-blank-week-underlay="true"] {
-   max-height: calc(100dvh - var(--chrome-height) - (var(--app-padding) * 2));
+   max-height: calc(100dvh - var(--chrome-height) - var(--app-padding));
 }
 
 .app-content-frame--agenda {
@@ -76,7 +76,7 @@
 }
 
 .app-content-frame--grid {
-   height: max(var(--grid-min-height, 520px), calc(100dvh - var(--chrome-height) - (var(--app-padding) * 2)));
+   height: max(var(--grid-min-height, 520px), calc(100dvh - var(--chrome-height) - var(--app-padding)));
    transition: none;
 }
 
@@ -93,7 +93,7 @@
 }
 
 .app-content-frame--grid.app-content-frame--zoom-quarter {
-   height: max(var(--grid-min-height, 2080px), calc(400dvh - (var(--chrome-height) * 4) - (var(--app-padding) * 2)));
+   height: max(var(--grid-min-height, 2080px), calc(400dvh - (var(--chrome-height) * 4) - (var(--app-padding) * 4)));
 }
 
 .view-enter {

@@ -1270,8 +1270,25 @@ test("the desktop app fills the viewport", async ({ page }) => {
    await page.goto("/");
 
    await expect
-      .poll(() => page.evaluate(() => ({ appHeight: document.querySelector("#app")?.getBoundingClientRect().height, viewportHeight: window.innerHeight })))
-      .toEqual({ appHeight: 720, viewportHeight: 720 });
+      .poll(() =>
+         page.evaluate(() => {
+            const appHeight = document.querySelector("#app")?.getBoundingClientRect().height ?? 0;
+            return Math.abs(appHeight - window.innerHeight);
+         })
+      )
+      .toBeLessThanOrEqual(1);
+   await expect
+      .poll(() =>
+         page.evaluate(() => {
+            const app = document.querySelector("#app");
+            const frame = document.querySelector(".app-content-frame");
+            if (!app || !frame) return null;
+            const appRect = app.getBoundingClientRect();
+            const frameRect = frame.getBoundingClientRect();
+            return Math.round(appRect.bottom - frameRect.bottom);
+         })
+      )
+      .toBe(20);
 
    await page.getByRole("radio", { name: "30m" }).click();
    await expect.poll(() => page.locator("#app").evaluate((app) => app.getBoundingClientRect().height)).toBeGreaterThan(720);
