@@ -1272,6 +1272,9 @@ test("the desktop app fills the viewport", async ({ page }) => {
    await expect
       .poll(() => page.evaluate(() => ({ appHeight: document.querySelector("#app")?.getBoundingClientRect().height, viewportHeight: window.innerHeight })))
       .toEqual({ appHeight: 720, viewportHeight: 720 });
+
+   await page.getByRole("radio", { name: "30m" }).click();
+   await expect.poll(() => page.locator("#app").evaluate((app) => app.getBoundingClientRect().height)).toBeGreaterThan(720);
 });
 
 async function installFixedClock(page: Page) {
