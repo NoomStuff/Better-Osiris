@@ -1225,6 +1225,55 @@ test("desktop grid and mobile agenda match their visual baselines", async ({ pag
    await expect(page).toHaveScreenshot("mobile-agenda.png", { animations: "disabled" });
 });
 
+test("the mobile hour grid fits the viewport and keeps the next-up handle above its card", async ({ page }) => {
+   await page.setViewportSize({ width: 390, height: 844 });
+   await page.goto("/");
+
+   await expect(page.locator("html")).toHaveAttribute("data-page-scrollable", "false");
+   await expect
+      .poll(() =>
+         page.evaluate(() => ({
+            viewportHeight: window.visualViewport?.height ?? window.innerHeight,
+            documentHeight: Math.max(document.documentElement.scrollHeight, document.body.scrollHeight),
+         }))
+      )
+      .toEqual({ viewportHeight: 844, documentHeight: 844 });
+
+   const handle = page.locator(".next-up__handle");
+   const card = page.locator(".next-up__card");
+   await expect(handle.locator(".next-up__lead")).toHaveText("Now");
+   await handle.click();
+   await expect(card).toBeVisible();
+   await expect(card.locator(".next-up__lead")).toHaveText("Ends 10:30");
+   await expect(card.locator(".next-up__elapsed")).toHaveCount(0);
+
+   await expect
+      .poll(async () => {
+         const handleBox = await handle.boundingBox();
+         const cardBox = await card.boundingBox();
+         return handleBox && cardBox ? cardBox.y - (handleBox.y + handleBox.height) : -1;
+      })
+      .toBeGreaterThan(0);
+
+   const cardBox = await card.boundingBox();
+   if (!cardBox) throw new Error("Expected the open next-up card to have a bounding box.");
+   await page.mouse.move(cardBox.x + cardBox.width / 2, cardBox.y + cardBox.height / 2);
+   await page.mouse.down();
+   await page.mouse.move(cardBox.x + cardBox.width / 2, cardBox.y + cardBox.height / 2 + 65);
+   await expect(handle).toHaveCSS("opacity", "1");
+   expect(Number(await card.evaluate((element) => getComputedStyle(element).opacity))).toBeLessThan(0.75);
+   await page.mouse.up();
+});
+
+test("the desktop app fills the viewport", async ({ page }) => {
+   await page.setViewportSize({ width: 1280, height: 720 });
+   await page.goto("/");
+
+   await expect
+      .poll(() => page.evaluate(() => ({ appHeight: document.querySelector("#app")?.getBoundingClientRect().height, viewportHeight: window.innerHeight })))
+      .toEqual({ appHeight: 720, viewportHeight: 720 });
+});
+
 async function installFixedClock(page: Page) {
    await page.addInitScript((fixedNowIso) => {
       const RealDate = Date;

@@ -1,5 +1,4 @@
 import { shiftCalendarDate } from "../../shared/calendar";
-import { clamp } from "./clamp";
 import { parseLocalDateTime, toDayKey } from "./date";
 import type { Class, Week } from "../types/weeks";
 
@@ -14,13 +13,11 @@ export interface NextUpSuggestion {
    /** "now" while the target class is running, "upcoming" before it starts. */
    phase: "now" | "upcoming";
    target: NextUpEntry;
-   /** The primary lead: "in 12 min", "Tomorrow", "45 min left". The room and exact times come from the target. */
+   /** The primary lead shown in the pill. */
    lead: string;
-   /** Elapsed fraction of the running target, 0 for upcoming classes. */
-   progress: number;
 }
 
-/** How long before a running class ends the card switches to the next one; time to start moving. */
+/** How soon the next class must start before it replaces the running class in the card. */
 const ADVANCE_SWITCH_MS = 10 * 60_000;
 /** The card only cares about the next day: classes further out than this never surface. */
 const VISIBILITY_LIMIT_MS = 24 * 3_600_000;
@@ -56,18 +53,16 @@ export function getNextUpSuggestion(entries: NextUpEntry[], now: Date): NextUpSu
    const upcomingVisible = upcoming !== undefined && upcoming.startDate.getTime() - nowTime <= VISIBILITY_LIMIT_MS;
 
    if (running) {
-      const remaining = running.endDate.getTime() - nowTime;
-      // Close to the bell the next class takes over, as long as it is close enough to be worth naming.
-      if (upcomingVisible && remaining <= ADVANCE_SWITCH_MS) {
+      // A class starting soon is more useful than the current one. The current class remains
+      // visible through its final minutes when the next class is still separated by a break.
+      if (upcomingVisible && upcoming.startDate.getTime() - nowTime <= ADVANCE_SWITCH_MS) {
          return getUpcomingSuggestion(upcoming, now);
       }
 
-      const duration = running.endDate.getTime() - running.startDate.getTime();
       return {
          phase: "now",
          target: running,
-         lead: `${getDurationLabel(remaining)} left`,
-         progress: duration > 0 ? clamp((nowTime - running.startDate.getTime()) / duration, 0, 1) : 1,
+         lead: "Now",
       };
    }
 
@@ -79,17 +74,7 @@ function getUpcomingSuggestion(target: NextUpEntry, now: Date): NextUpSuggestion
       phase: "upcoming",
       target,
       lead: getLeadLabel(target.startDate.getTime() - now.getTime(), now),
-      progress: 0,
    };
-}
-
-/** "45 minutes" / "1 hour, 5 minutes"; always at least a minute so an imminent moment never reads as zero. */
-function getDurationLabel(durationMs: number): string {
-   const totalMinutes = Math.max(1, Math.ceil(durationMs / 60_000));
-   if (totalMinutes < 60) return `${totalMinutes} minute${totalMinutes === 1 ? "" : "s"}`;
-   const hours = Math.floor(totalMinutes / 60);
-   const minutes = totalMinutes % 60;
-   return `${hours} hour${hours === 1 ? "" : "s"}${minutes > 0 ? `, ${minutes} minute${minutes === 1 ? "" : "s"}` : ""}`;
 }
 
 /**
