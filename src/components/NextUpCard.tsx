@@ -19,7 +19,6 @@ interface NextUpCardProps {
 const REVEAL_DISTANCE_PX = 130;
 const OPEN_THRESHOLD = 0.35;
 const TAP_SLOP_PX = 6;
-const CLOSED_DROP_PX = 26;
 const CLOSED_SCALE = 0.97;
 
 interface DragState {
@@ -97,7 +96,7 @@ export function NextUpCard({ weeks, timeOverride, isOpen, onChangeOpen, onSelect
 
    if (!suggestion) return null;
 
-   const { phase, target, lead, progress } = suggestion;
+   const { phase, target, lead } = suggestion;
    const schoolClass = target.schoolClass;
    const room = schoolClass.room.trim();
    const location = schoolClass.location.trim();
@@ -105,22 +104,21 @@ export function NextUpCard({ weeks, timeOverride, isOpen, onChangeOpen, onSelect
    const destination = room || location || null;
    const detailsLocation = room && location && room.toLowerCase() !== location.toLowerCase() ? location : "";
    const dayLabel = getNextUpDayLabel(target, now);
-   const details = [dayLabel, `${timeLabel.format(target.startDate)} – ${timeLabel.format(target.endDate)}`, detailsLocation, schoolClass.teacher.trim()]
-      .filter(Boolean)
-      .join(DETAILS_SEPARATOR);
+   const details = [dayLabel, detailsLocation, schoolClass.teacher.trim()].filter(Boolean).join(DETAILS_SEPARATOR);
+   const cardLead = `${phase === "now" ? "Ends" : "Starts"} ${timeLabel.format(phase === "now" ? target.endDate : target.startDate)}`;
    const title = getClassLabel(schoolClass);
-   const cardStyle: CSSProperties | undefined =
+   const nextUpStyle: CSSProperties | undefined =
       dragProgress === null
          ? undefined
          : {
-              transform: `translateY(${((1 - dragProgress) * CLOSED_DROP_PX).toFixed(2)}px) scale(${(CLOSED_SCALE + (1 - CLOSED_SCALE) * dragProgress).toFixed(4)})`,
-              opacity: dragProgress.toFixed(3),
+              transform: `translateY(${((1 - dragProgress) * 100).toFixed(2)}%) translateY(${((1 - dragProgress) * 8).toFixed(2)}px) scale(${(CLOSED_SCALE + (1 - CLOSED_SCALE) * dragProgress).toFixed(4)})`,
            };
+   const cardStyle: CSSProperties | undefined = dragProgress === null ? undefined : { opacity: dragProgress.toFixed(3) };
    // Phase and target identity drive the swap animation; the countdown text itself ticks without animating.
    const swapKey = `${phase}-${schoolClass.id}`;
 
    return (
-      <div className="next-up">
+      <div className="next-up" data-open={isOpen} data-dragging={dragProgress !== null} style={nextUpStyle}>
          <button
             className="next-up__handle"
             type="button"
@@ -161,14 +159,9 @@ export function NextUpCard({ weeks, timeOverride, isOpen, onChangeOpen, onSelect
             onPointerUp={(event) => endDrag(event, true, () => onSelectClass(schoolClass))}
             onPointerCancel={(event) => endDrag(event, false, () => onSelectClass(schoolClass))}
          >
-            {phase === "now" ? (
-               <span className="next-up__elapsed" aria-hidden="true">
-                  <span style={{ width: `${progress * 100}%` }} />
-               </span>
-            ) : null}
             <span className="next-up__content" key={swapKey}>
                <span className="next-up__hero">
-                  <span className="next-up__lead">{lead}</span>
+                  <span className="next-up__lead">{cardLead}</span>
                   {destination ? <span className="next-up__roomchip">{destination}</span> : null}
                </span>
                <span className="next-up__title">

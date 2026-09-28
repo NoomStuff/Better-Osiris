@@ -54,21 +54,20 @@ void describe("next up suggestion", () => {
       assert.equal(suggestion.target.schoolClass.id, "target");
    });
 
-   void it("reports the running class with progress", () => {
+   void it("reports the running class as happening now", () => {
       const entries = collectNextUpEntries([makeWeek([makeClass({ id: "running", start: "2026-06-16T09:00:00", end: "2026-06-16T10:30:00" })])]);
       const suggestion = getNextUpSuggestion(entries, new Date("2026-06-16T10:00:00+02:00"));
       assert.ok(suggestion);
       assert.equal(suggestion.phase, "now");
       assert.equal(suggestion.target.schoolClass.id, "running");
-      assert.equal(suggestion.progress, 2 / 3);
-      assert.equal(suggestion.lead, "30 minutes left");
+      assert.equal(suggestion.lead, "Now");
    });
 
-   void it("switches to the next class ten minutes before the running one ends", () => {
+   void it("lets a class starting within ten minutes replace the running class", () => {
       const entries = collectNextUpEntries([
          makeWeek([
             makeClass({ id: "running", start: "2026-06-16T09:00:00", end: "2026-06-16T10:30:00" }),
-            makeClass({ id: "next", start: "2026-06-16T11:00:00", end: "2026-06-16T12:00:00" }),
+            makeClass({ id: "next", start: "2026-06-16T10:30:00", end: "2026-06-16T11:30:00" }),
          ]),
       ]);
       const stillRunning = getNextUpSuggestion(entries, new Date("2026-06-16T10:15:00+02:00"));
@@ -80,7 +79,20 @@ void describe("next up suggestion", () => {
       assert.ok(movingOn);
       assert.equal(movingOn.phase, "upcoming");
       assert.equal(movingOn.target.schoolClass.id, "next");
-      assert.equal(movingOn.lead, "In 37 minutes");
+      assert.equal(movingOn.lead, "In 7 minutes");
+   });
+
+   void it("keeps the running class through its final minutes when a break follows", () => {
+      const entries = collectNextUpEntries([
+         makeWeek([
+            makeClass({ id: "running", start: "2026-06-16T09:00:00", end: "2026-06-16T10:30:00" }),
+            makeClass({ id: "after-break", start: "2026-06-16T11:00:00", end: "2026-06-16T12:00:00" }),
+         ]),
+      ]);
+      const suggestion = getNextUpSuggestion(entries, new Date("2026-06-16T10:22:00+02:00"));
+      assert.ok(suggestion);
+      assert.equal(suggestion.phase, "now");
+      assert.equal(suggestion.target.schoolClass.id, "running");
    });
 
    void it("keeps the running class when the next one is more than a day out", () => {
@@ -92,7 +104,7 @@ void describe("next up suggestion", () => {
       assert.ok(suggestion);
       assert.equal(suggestion.phase, "now");
       assert.equal(suggestion.target.schoolClass.id, "running");
-      assert.equal(suggestion.lead, "5 minutes left");
+      assert.equal(suggestion.lead, "Now");
    });
 
    void it("keeps showing the running class when nothing follows it", () => {
@@ -101,7 +113,7 @@ void describe("next up suggestion", () => {
       assert.ok(suggestion);
       assert.equal(suggestion.phase, "now");
       assert.equal(suggestion.target.schoolClass.id, "running");
-      assert.equal(suggestion.lead, "5 minutes left");
+      assert.equal(suggestion.lead, "Now");
    });
 
    void it("stays hidden until the next class is within a day", () => {

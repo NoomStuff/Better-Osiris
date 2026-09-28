@@ -1,38 +1,39 @@
-/* The next-up card floats free of both views, parked above the bottom edge (above the mobile
-   bar on phones). The panel rises upward from it, so the pill is the handle from either side:
-   pull up to reveal, pull down on the panel to furl. */
+/* The next-up card floats free of both views. The closed card sits just below the viewport,
+   leaving its handle at the bottom edge. Opening moves both upward and keeps the handle above
+   the card, clear of the card shadow. */
 .next-up {
    position: fixed;
    right: 0;
    bottom: calc(var(--app-padding, 20px) + 2px);
    left: 0;
    z-index: 9;
-   display: flex;
-   justify-content: center;
-   align-items: flex-end;
+   width: min(100% - 28px, 430px);
+   margin-inline: auto;
    pointer-events: none;
-   animation: next-up-enter 320ms var(--ease-out) both;
+   transform: translateY(calc(100% + 8px)) scale(0.97);
+   transform-origin: top center;
+   transition: transform 420ms var(--spring);
 }
 
-@keyframes next-up-enter {
-   from {
-      opacity: 0;
-      transform: translateY(8px);
-   }
+.next-up[data-open="true"] {
+   transform: translateY(0) scale(1);
+}
 
-   to {
-      opacity: 1;
-      transform: translateY(0);
-   }
+.next-up[data-dragging="true"] {
+   transition: none;
 }
 
 .next-up__handle {
-   position: relative;
+   position: absolute;
+   right: 50%;
+   bottom: calc(100% + 8px);
+   z-index: 1;
+   transform: translateX(50%);
    pointer-events: auto;
    display: inline-flex;
    align-items: center;
    gap: 8px;
-   max-width: 100%;
+   max-width: calc(100vw - 28px);
    padding: 6px 13px;
    border: 1px solid var(--line);
    border-radius: 999px;
@@ -71,7 +72,7 @@
 }
 
 /* A changed class borrows the warning accent, matching the grid's changed borders. The live
-   state itself is carried by the red dot and the elapsed bar, never by the text. */
+   state itself is carried by the red dot, never by the text. */
 .next-up__handle[data-status="changed"] .next-up__lead,
 .next-up__card[data-status="changed"] .next-up__lead {
    color: var(--warning);
@@ -149,13 +150,9 @@
 }
 
 .next-up__card {
-   position: absolute;
-   right: 0;
-   bottom: calc(100% + 8px);
-   left: 0;
+   position: relative;
    pointer-events: none;
-   width: min(100% - 28px, 430px);
-   margin-inline: auto;
+   width: 100%;
    display: grid;
    gap: 3px;
    overflow: hidden;
@@ -173,8 +170,8 @@
    touch-action: none;
    visibility: hidden;
    opacity: 0;
-   transform: translateY(26px) scale(0.97);
-   transform-origin: bottom center;
+   transform: translateY(8px) scale(0.985);
+   transform-origin: top center;
    transition:
       transform 420ms var(--spring),
       opacity 220ms ease,
@@ -203,23 +200,6 @@
    visibility: visible;
    pointer-events: none;
    transition: none;
-}
-
-/* While a class runs, its top edge is the elapsed time filling the panel. */
-.next-up__elapsed {
-   position: absolute;
-   top: 0;
-   right: 0;
-   left: 0;
-   height: 3px;
-   background: hsl(from var(--danger) h s l / 0.16);
-}
-
-.next-up__elapsed span {
-   display: block;
-   height: 100%;
-   background: var(--danger);
-   transition: width 1s linear;
 }
 
 .next-up__hero {
@@ -283,10 +263,10 @@
 @media (max-width: 640px) {
    .next-up {
       bottom: calc(var(--mobile-toolbar-clearance, 130px) + 6px);
+      width: min(100% - 20px, 430px);
    }
 
    .next-up__card {
-      width: min(100% - 20px, 430px);
       padding: 12px 14px 11px;
    }
 
@@ -296,8 +276,11 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-   .next-up,
    .next-up__dot {
       animation: none;
+   }
+
+   .next-up {
+      transition: none;
    }
 }
