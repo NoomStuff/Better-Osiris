@@ -59,6 +59,97 @@ test("week navigation and reset show the matching roster data", async ({ page })
    await expect(page.getByRole("heading", { name: /Week 25:/ })).toBeVisible();
 });
 
+test("the week chooser selects whole weeks, jumps months and restores keyboard focus", async ({ page }) => {
+   await page.goto("/");
+   await expect(page.getByRole("button", { name: "Choose week", exact: true })).toHaveCount(0);
+   // Exercise the retained WIP picker without exposing its entry in the shipped UI.
+   await page.locator("[data-week-chooser-entry]").evaluate((element) => element.removeAttribute("hidden"));
+   await page.getByRole("button", { name: "Choose week", exact: true }).click();
+   const chooser = page.getByRole("dialog", { name: "Choose week" });
+   await expect(chooser.locator('[data-monday="2026-06-08"]')).toBeDisabled();
+   await expect(chooser.locator('[data-monday="2026-06-15"]')).toHaveAttribute("aria-pressed", "true");
+   await expect(chooser.locator('[data-monday="2026-06-15"]')).toBeFocused();
+   const calendarHeight = await chooser.evaluate((element) => (element as HTMLElement).offsetHeight);
+   await expect(chooser.locator(".week-date-picker__actions")).toHaveCount(0);
+   await expect(chooser.locator(".week-date-picker__scroll")).toHaveCSS("scroll-snap-type", "y mandatory");
+   await chooser.getByRole("button", { name: "Choose month", exact: true }).click();
+   expect(await chooser.evaluate((element) => (element as HTMLElement).offsetHeight)).toBeCloseTo(calendarHeight, 0);
+   await chooser.getByRole("button", { name: "Next year", exact: true }).click();
+   await chooser.getByRole("button", { name: "Back to weeks", exact: true }).click();
+   await expect(chooser.getByRole("button", { name: "Choose month", exact: true })).toHaveText("June 2026");
+   await chooser.getByRole("button", { name: "Choose month", exact: true }).click();
+   await chooser.getByRole("button", { name: "Dec", exact: true }).click();
+   await chooser.locator(".week-date-picker__scroll").evaluate((element) => {
+      const labels = new Set<string>();
+      const label = document.querySelector(".week-date-picker__month span");
+      if (!label) throw new Error("Missing month label");
+      const observer = new MutationObserver(() => {
+         labels.add(label.textContent.trim());
+         element.setAttribute("data-transition-months", [...labels].join("|"));
+      });
+      observer.observe(label, { childList: true, characterData: true, subtree: true });
+   });
+   await chooser.getByRole("button", { name: "Next month", exact: true }).click();
+   await expect(chooser.getByRole("button", { name: "Choose month", exact: true })).toHaveText("January 2027");
+   await expect
+      .poll(() =>
+         chooser.locator(".week-date-picker__scroll").evaluate((element) => {
+            const rows = [...element.querySelectorAll<HTMLElement>(".week-date-picker__week")];
+            return rows.find((row) => Math.abs(row.offsetTop - element.scrollTop) < 1)?.dataset["monday"];
+         })
+      )
+      .toBe("2026-12-28");
+   await expect(chooser.locator(".week-date-picker__scroll")).toHaveAttribute("data-transition-months", "January 2027");
+   await expect(chooser.locator('[data-monday="2026-12-28"]')).toHaveAttribute("aria-label", /^Week 53:/);
+   await expect(chooser.locator('[data-monday="2027-01-04"]')).toHaveAttribute("aria-label", /^Week 1:/);
+   const scroller = chooser.locator(".week-date-picker__scroll");
+   const rowHeight = await scroller.evaluate((element) => element.clientHeight / 5);
+   expect(await chooser.locator('[data-monday="2026-12-28"]').evaluate((element) => (element as HTMLElement).offsetHeight)).toBeCloseTo(rowHeight, 0);
+   await scroller.hover();
+   await page.mouse.wheel(0, rowHeight * 2.3);
+   await expect
+      .poll(() =>
+         scroller.evaluate((element) => {
+            const rows = [...element.querySelectorAll<HTMLElement>(".week-date-picker__week")];
+            return Math.min(...rows.map((row) => Math.abs(row.offsetTop - element.scrollTop)));
+         })
+      )
+      .toBeLessThan(1);
+   await chooser.getByRole("button", { name: "Choose month", exact: true }).click();
+   await chooser.getByRole("button", { name: "Previous year", exact: true }).click();
+   await chooser.getByRole("button", { name: "Aug", exact: true }).click();
+   const augustWeek = chooser.getByRole("button", { name: /Week 32:/ });
+   await augustWeek.focus();
+   await page.keyboard.press("ArrowDown");
+   await expect(chooser.getByRole("button", { name: /Week 33:/ })).toBeFocused();
+   await page.keyboard.press("ArrowUp");
+   await page.keyboard.press("Enter");
+   await expect(page.getByRole("button", { name: "SOURCE_TITLE_7_1" })).toBeVisible();
+   await expect(page.locator(".weekbar__label")).toHaveText("In 7 weeks");
+   // Safari does not focus buttons on pointer clicks. Exercise keyboard focus restoration explicitly.
+   await page.getByRole("button", { name: "Choose week", exact: true }).focus();
+   await page.keyboard.press("Enter");
+   await page.keyboard.press("Escape");
+   await expect(chooser).toHaveCount(0);
+   await expect(page.getByRole("button", { name: "Choose week", exact: true })).toBeFocused();
+   await page.keyboard.press("Enter");
+   await chooser.locator('[data-monday="2026-06-15"]').click();
+   await expect(page.locator(".weekbar__label")).toHaveText("This week");
+   await page.setViewportSize({ width: 320, height: 360 });
+   await page.getByRole("button", { name: "Choose week", exact: true }).click();
+   const bounds = await chooser.boundingBox();
+   expect(bounds).not.toBeNull();
+   expect(bounds?.y).toBeGreaterThanOrEqual(12);
+   await expect
+      .poll(async () => {
+         const settled = await chooser.boundingBox();
+         return settled ? settled.y + settled.height : Infinity;
+      })
+      .toBeLessThanOrEqual(348);
+   await page.keyboard.press("Escape");
+   await expect(chooser).toHaveCount(0);
+});
+
 test("manual agenda folding stays absolute when the automatic day changes", async ({ page }) => {
    await page.addInitScript(() => {
       localStorage.setItem("roster-devtools-enabled", "true");
@@ -1312,10 +1403,19 @@ test("desktop grid and mobile agenda match their visual baselines", async ({ pag
    await page.goto("/");
    await page.evaluate(() => document.fonts.ready);
    await expect(page).toHaveScreenshot("desktop-grid.png", { animations: "disabled" });
+   await page.locator("[data-week-chooser-entry]").evaluate((element) => element.removeAttribute("hidden"));
+   await page.getByRole("button", { name: "Choose week", exact: true }).click();
+   await expect(page.getByRole("dialog", { name: "Choose week" })).toHaveScreenshot("desktop-week-picker.png", { animations: "disabled" });
+   await page.keyboard.press("Escape");
+   await expect(page.getByRole("dialog", { name: "Choose week" })).toHaveCount(0);
+   await page.locator("[data-week-chooser-entry]").evaluate((element) => element.setAttribute("hidden", ""));
 
    await page.setViewportSize({ width: 390, height: 844 });
    await page.getByRole("button", { name: "Agenda view" }).click();
    await expect(page).toHaveScreenshot("mobile-agenda.png", { animations: "disabled" });
+   await page.locator("[data-week-chooser-entry]").evaluate((element) => element.removeAttribute("hidden"));
+   await page.getByRole("button", { name: "Choose week", exact: true }).click();
+   await expect(page.getByRole("dialog", { name: "Choose week" })).toHaveScreenshot("mobile-week-picker.png", { animations: "disabled" });
 });
 
 test("the mobile hour grid fits the viewport and keeps the next-up handle above its card", async ({ page }) => {

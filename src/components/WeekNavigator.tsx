@@ -16,6 +16,8 @@ interface WeekNavigatorProps {
    onCurrentWeek: () => void;
    canGoPrevious: boolean;
    canGoNext: boolean;
+   onChooseWeek: () => void;
+   canChooseWeek: boolean;
 }
 
 function formatWeekLabel(weekOffset: number) {
@@ -50,6 +52,8 @@ export const WeekNavigator = memo(function WeekNavigator({
    onCurrentWeek,
    canGoPrevious,
    canGoNext,
+   onChooseWeek,
+   canChooseWeek,
 }: WeekNavigatorProps) {
    const label = formatWeekLabel(weekOffset);
    const resetDistance = weekOffset - (homeWeekOffset ?? 0);
@@ -115,6 +119,17 @@ export const WeekNavigator = memo(function WeekNavigator({
             </button>
          </h2>
 
+         {/* Hidden while the week chooser is being revised. It may return if it earns its place. */}
+         <div hidden data-week-chooser-entry>
+            <IconButton
+               icon="fa-regular fa-calendar"
+               label="Choose week"
+               tooltipPlacement="bottom"
+               variant="ghost"
+               onClick={onChooseWeek}
+               disabled={!canChooseWeek}
+            />
+         </div>
          <IconButton
             icon="fa-solid fa-chevron-right"
             label="Next week"

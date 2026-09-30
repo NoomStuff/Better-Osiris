@@ -35,6 +35,7 @@ interface OverlayPanelBaseProps {
    isClosing?: boolean;
    closeOnEscape?: boolean;
    closeOnSwipeDown?: boolean;
+   initialFocusSelector?: string;
    swipeIgnoreSelector?: string;
    onClose: () => void;
    rootProps?: HTMLAttributes<HTMLDivElement>;
@@ -56,6 +57,7 @@ export function OverlayPanel({
    isClosing = false,
    closeOnEscape = true,
    closeOnSwipeDown = false,
+   initialFocusSelector,
    swipeIgnoreSelector,
    onClose,
    rootProps,
@@ -68,7 +70,7 @@ export function OverlayPanel({
    const [tooltipRoot, setTooltipRoot] = useState<HTMLDivElement | null>(null);
    const returnFocusRef = useRef<HTMLElement | null>(document.activeElement instanceof HTMLElement ? document.activeElement : null);
    const touchStartYRef = useRef<number | null>(null);
-   useOverlayLifecycle(overlayId, rootRef, surfaceRef, returnFocusRef, closeOnEscape, onClose);
+   useOverlayLifecycle(overlayId, rootRef, surfaceRef, returnFocusRef, closeOnEscape, onClose, initialFocusSelector);
    useEffect(lockPageScroll, []);
 
    const rootClassName = ["overlay-panel", `overlay-panel--${placement}`, className, rootProps?.className].filter(Boolean).join(" ");
@@ -167,7 +169,8 @@ function useOverlayLifecycle(
    surfaceRef: RefObject<HTMLElement | null>,
    returnFocusRef: RefObject<HTMLElement | null>,
    closeOnEscape: boolean,
-   onClose: () => void
+   onClose: () => void,
+   initialFocusSelector?: string
 ) {
    const onCloseRef = useRef(onClose);
 
@@ -185,7 +188,9 @@ function useOverlayLifecycle(
       syncOverlayInertness();
       const focusFrame = window.requestAnimationFrame(() => {
          const surface = surfaceRef.current;
-         const firstFocusable = surface?.querySelector<HTMLElement>(FOCUSABLE_SELECTOR);
+         const firstFocusable =
+            (initialFocusSelector ? surface?.querySelector<HTMLElement>(initialFocusSelector) : null) ??
+            surface?.querySelector<HTMLElement>(FOCUSABLE_SELECTOR);
          (firstFocusable ?? surface)?.focus({ preventScroll: true });
       });
 
@@ -217,7 +222,7 @@ function useOverlayLifecycle(
             }
          }
       };
-   }, [closeOnEscape, overlayId, returnFocusRef, rootRef, surfaceRef]);
+   }, [closeOnEscape, initialFocusSelector, overlayId, returnFocusRef, rootRef, surfaceRef]);
 }
 
 function syncOverlayInertness() {

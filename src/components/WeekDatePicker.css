@@ -1,0 +1,159 @@
+.week-date-picker {
+   z-index: 60;
+}
+.week-date-picker__backdrop {
+   background: var(--backdrop);
+   animation: panel-fade 180ms ease both;
+}
+.week-date-picker__panel {
+   width: min(380px, calc(100vw - 24px));
+   padding: 18px;
+   border: 1px solid var(--line-strong);
+   border-radius: 18px;
+   background: var(--overlay-surface);
+   box-shadow: var(--shadow);
+   animation: week-picker-enter 180ms var(--ease-out) both;
+}
+.week-date-picker[data-closing="true"] .week-date-picker__panel {
+   animation: week-picker-exit 220ms var(--ease-out) both;
+}
+.week-date-picker[data-closing="true"] .week-date-picker__backdrop {
+   animation: panel-fade-out 220ms ease both;
+}
+.week-date-picker__header {
+   display: grid;
+   grid-template-columns: 36px 1fr 36px;
+   align-items: center;
+   gap: 8px;
+   margin-bottom: 18px;
+}
+.week-date-picker__month {
+   display: flex;
+   justify-content: center;
+   align-items: center;
+   gap: 10px;
+   padding: 10px 4px;
+   border-radius: 8px;
+   color: var(--text-strong);
+   font: inherit;
+   font-weight: 700;
+   cursor: pointer;
+}
+.week-date-picker__month i {
+   color: var(--text-dim);
+   font-size: 0.65rem;
+}
+.week-date-picker__body {
+   height: min(264px, calc(100dvh - 132px));
+   position: relative;
+}
+.week-date-picker__calendar {
+   height: 100%;
+   display: grid;
+   grid-template-rows: 24px minmax(0, 1fr);
+}
+.week-date-picker__scroll {
+   position: relative;
+   overflow-y: auto;
+   overscroll-behavior: contain;
+   scroll-snap-type: y mandatory;
+   scrollbar-width: none;
+}
+.week-date-picker__scroll::-webkit-scrollbar {
+   display: none;
+}
+.week-date-picker__weekdays,
+.week-date-picker__week {
+   display: grid;
+   grid-template-columns: 24px repeat(7, minmax(0, 1fr));
+   align-items: center;
+   text-align: center;
+}
+.week-date-picker__weekdays {
+   padding: 0 4px 8px;
+   color: var(--text-dim);
+   font-size: 0.65rem;
+}
+.week-date-picker__week {
+   width: 100%;
+   height: 20%;
+   padding: 4px;
+   border: 3px solid transparent;
+   background-clip: padding-box;
+   border-radius: 11px;
+   color: var(--text-strong);
+   font: inherit;
+   font-size: 0.85rem;
+   cursor: pointer;
+   scroll-snap-align: start;
+   transition:
+      background 150ms var(--ease-out),
+      color 150ms var(--ease-out),
+      transform 150ms var(--ease-out);
+}
+.week-date-picker__week .week-date-picker__number {
+   font-size: 0.65rem;
+   color: var(--text-dim);
+   border-right: 1px solid var(--line);
+}
+.week-date-picker__week [data-outside="true"] {
+   opacity: 0.4;
+}
+.week-date-picker__week[aria-pressed="true"],
+.week-date-picker__months [aria-pressed="true"] {
+   background-color: hsl(from var(--accent) h s l / 0.15);
+   color: var(--accent);
+}
+.week-date-picker__week:not(:disabled):hover,
+.week-date-picker__months button:not(:disabled):hover,
+.week-date-picker__month:hover {
+   background-color: hsl(from var(--accent) h s l / 0.1);
+}
+.week-date-picker__week:not(:disabled):active {
+   transform: scale(0.985);
+}
+.week-date-picker__week:disabled,
+.week-date-picker__months button:disabled {
+   opacity: 0.3;
+   cursor: default;
+}
+.week-date-picker__months {
+   height: 100%;
+   display: grid;
+   grid-template-columns: repeat(3, 1fr);
+   gap: 8px;
+}
+.week-date-picker__months button {
+   border-radius: 8px;
+   color: var(--text-strong);
+   font: inherit;
+   cursor: pointer;
+   transition: background 150ms var(--ease-out);
+}
+.week-date-picker__body [hidden] {
+   display: none;
+}
+@keyframes week-picker-enter {
+   from {
+      opacity: 0;
+      transform: translateY(8px) scale(0.98);
+   }
+   to {
+      opacity: 1;
+      transform: none;
+   }
+}
+@keyframes week-picker-exit {
+   to {
+      opacity: 0;
+      transform: translateY(8px) scale(0.98);
+   }
+}
+@media (prefers-reduced-motion: reduce) {
+   .week-date-picker__panel,
+   .week-date-picker__backdrop,
+   .week-date-picker[data-closing="true"] .week-date-picker__panel,
+   .week-date-picker[data-closing="true"] .week-date-picker__backdrop {
+      animation: none;
+   }
+}

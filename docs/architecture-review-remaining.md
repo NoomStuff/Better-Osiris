@@ -40,7 +40,7 @@ Completed original entries 1, 2, 3, 4, 5, 7, 8, 9, 11, 12, 37, 57, 80, and 85. A
 23. Make Single folding useful in the selected week and decide whether an ongoing class wins. Align it with Home and next up deliberately. Original 47, 48.
 24. Show simultaneous obligations and make empty versus unavailable weeks understandable. Avoid implying that the app knows which overlapping class to attend. Original 49, 53.
 25. Improve token setup with concise in-app steps and useful paste normalization. Original 55.
-26. Add direct date navigation and restore browsing context through selected-week URL state and per-week scroll position. Original 56.
+26. Restore browsing context through selected-week URL state and per-week scroll position. The custom week chooser is implemented but its entry button is hidden pending further UX review. Original 56.
 
 ## Simplify presentation and interaction
 
@@ -71,16 +71,16 @@ Completed original entries 1, 2, 3, 4, 5, 7, 8, 9, 11, 12, 37, 57, 80, and 85. A
 45. Compare a lighter renderer only after profiling the main flow. Keeping React is my current recommendation. Original 99.
 46. Add development-only state inspection and deterministic event replay for source shifts, account changes, midnight, and races. Use synthetic data and keep credentials out. Original 100.
 
-The second pass implemented warning-only freshness, absolute agenda choices, verified-batch reuse, clocks outside preferences, visibility-aware ticking, mutually exclusive overlays, shared panel closing and styling, and offline app launch. Healthy browsing has no new status label. Offline launch uses versioned public files and leaves API responses out of service-worker caching.
+The second pass implemented warning-only freshness, absolute agenda choices, verified-batch reuse, clocks outside preferences, visibility-aware ticking, mutually exclusive overlays, shared panel closing and styling, direct date navigation, and offline app launch. Healthy browsing has no new status label. Offline launch uses versioned public files and leaves API responses out of service-worker caching.
 
-The third pass separates agenda measurement from progress ticks, keeps content subscriptions stable during refresh, contains swipes to the timetable, respects reduced motion in the theme picker, and preserves upstream retry timing with bounded extra delay.
+The third pass replaces the native date field with a custom month calendar that selects whole weeks immediately. It includes five visible weeks, snapped vertical scrolling, direct month selection, keyboard week navigation, and focused selection on opening. Its entry button is hidden for now. The picker remains in the code for further revision, and the month label updates after scrolling settles. It also separates agenda measurement from progress ticks, keeps content subscriptions stable during refresh, contains swipes to the timetable, respects reduced motion in the theme picker, and preserves upstream retry timing with bounded extra delay.
 
 Cache trust and daylight-saving correctness are the next decisions I would settle. Larger application and repository rewrites still need measured reasons and explicit behavioral rules.
 
 ## Verification after implementation
 
-The third pass passes 183 unit tests and 86 Chromium browser tests. Verification includes formatting, lint, full-project typechecking, production build, and production smoke. Targeted Firefox and WebKit checks cover agenda geometry, swipe containment, reduced-motion themes, token replacement, and both notification delivery paths. The constructor notification test now makes worker failure explicit and removes an unrelated screenshot-only step.
+The third pass passes 183 unit tests and 87 Chromium browser tests. Verification includes formatting, lint, full-project typechecking, production build, and production smoke. Targeted Firefox and WebKit checks cover the custom picker, agenda geometry, swipe containment, reduced-motion themes, token replacement, and both notification delivery paths. The constructor notification test now makes worker failure explicit and removes an unrelated screenshot-only step.
 
 Production smoke launches the app with the server stopped, checks that no API response enters the worker cache, and confirms removed account data stays cleared after offline reload. Static icon and manifest changes now also change the offline cache version. The full compatibility suite was not rerun. Its earlier failures remain recorded in the original review, although the repeatable theme-picker failure and the reminder fixture described there have been addressed.
 
-Browser checks prove that agenda progress no longer measures unchanged class geometry, and repository checks prove stable content references during refresh. No launch-speed improvement is claimed without a runtime benchmark.
+Production CSS is about 145.5 KB, or 29.9 KB gzip. Production JavaScript is 337.43 KB, or 105.16 KB gzip. The custom picker adds about 1 KB of compressed JavaScript over the second pass. Browser checks prove that agenda progress no longer measures unchanged class geometry, and repository checks prove stable content references during refresh. No launch-speed improvement is claimed without a runtime benchmark.

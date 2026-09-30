@@ -10,6 +10,7 @@ import { WarningBanner } from "./components/WarningBanner";
 import { WeekContentState } from "./components/WeekContentState";
 import { SettingsDialog } from "./components/SettingsDialog";
 import { WeekNavigator } from "./components/WeekNavigator";
+import { WeekDatePicker } from "./components/WeekDatePicker";
 import { NextUpCard } from "./components/NextUpCard";
 import { useAppKeyboardShortcuts } from "./hooks/useAppKeyboardShortcuts";
 import { getNextClassDay } from "./lib/agendaPolicy";
@@ -27,7 +28,7 @@ import { useGridZoom } from "./hooks/useGridZoom";
 import { useWeeks } from "./hooks/useWeeks";
 import { useClock } from "./hooks/useClock";
 import { useOnlineStatus } from "./hooks/useOnlineStatus";
-import { dayLabel, monthDayLabel, timeLabel, getIsoWeekday, parseIsoDateToLocal, toDayKey } from "./lib/date";
+import { dayLabel, monthDayLabel, timeLabel, getLocalWeekStartIso, getIsoWeekday, parseIsoDateToLocal, toDayKey } from "./lib/date";
 import { ISO_WEEKDAYS, getHiddenDaysWithClasses, getWeekdaysWithClasses } from "./lib/weekLayout";
 import { countClassesOutsideGridHours, getRequiredGridHours, getSmartGridHours, mergeGridHourRanges } from "./lib/gridHours";
 import { ErrorBoundary } from "./components/ErrorBoundary";
@@ -36,7 +37,7 @@ import type { Class, ViewMode } from "./types/weeks";
 import "./styles/App.css";
 
 type WeekTransitionDirection = "default" | "previous" | "next" | "settled";
-type AppOverlay = { kind: "class"; id: string } | { kind: "settings" } | null;
+type AppOverlay = { kind: "class"; id: string } | { kind: "settings" } | { kind: "week" } | null;
 
 export default function App() {
    const [weekOffset, setWeekOffset] = useState(0);
@@ -350,6 +351,8 @@ export default function App() {
                onCurrentWeek={handleCurrentWeek}
                canGoPrevious={canGoPrevious}
                canGoNext={canGoNext}
+               canChooseWeek={rosterTimeZone.isKnown}
+               onChooseWeek={() => setOverlay({ kind: "week" })}
             />
          </div>
 
@@ -453,6 +456,18 @@ export default function App() {
             </section>
          </main>
 
+         {overlay?.kind === "week" && rosterTimeZone.isKnown ? (
+            <WeekDatePicker
+               anchor={getLocalWeekStartIso(new Date())}
+               selectedOffset={weekOffset}
+               isWeekNavigable={isWeekNavigable}
+               onClose={closeOverlay}
+               onSelect={(offset) => {
+                  setOverlay(null);
+                  updateWeekOffset(offset, offset < weekOffset ? "previous" : "next");
+               }}
+            />
+         ) : null}
          <ClassDrawer schoolClass={selectedClass} onClose={closeOverlay} />
          <SettingsDialog
             isOpen={isSettingsOpen}
