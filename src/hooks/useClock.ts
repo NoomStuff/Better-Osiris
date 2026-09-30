@@ -8,13 +8,15 @@ export function useClock(intervalMs: number, override: Date | null = null) {
       let timer: ReturnType<typeof setTimeout>;
       const update = () => {
          clearTimeout(timer);
+         if (document.visibilityState !== "visible") return;
          setNow(new Date());
          timer = setTimeout(update, intervalMs - (Date.now() % intervalMs));
       };
       const onVisibilityChange = () => {
          if (document.visibilityState === "visible") update();
+         else clearTimeout(timer);
       };
-      timer = setTimeout(update, intervalMs - (Date.now() % intervalMs));
+      update();
       document.addEventListener("visibilitychange", onVisibilityChange);
       return () => {
          clearTimeout(timer);

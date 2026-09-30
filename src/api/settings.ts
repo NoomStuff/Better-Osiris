@@ -1,5 +1,5 @@
-import type { OsirisTokenSettings } from "../../shared/weeks";
-import { parseApiErrorPayload, parseOsirisTokenSettings } from "../../shared/rosterValidation";
+import { MAX_WEEK_LIMIT, type OsirisTokenSettings, type OsirisTokenSaveResult } from "../../shared/weeks";
+import { parseApiErrorPayload, parseOsirisTokenSettings, parseWeekBatch } from "../../shared/rosterValidation";
 import { fetchWithTimeout, readJsonResponse } from "./fetch";
 
 export type { OsirisTokenSettings } from "../../shared/weeks";
@@ -9,7 +9,7 @@ export async function fetchOsirisTokenSettings(): Promise<OsirisTokenSettings> {
    return parseSettingsResponse(response);
 }
 
-export async function saveOsirisToken(token: string): Promise<OsirisTokenSettings> {
+export async function saveOsirisToken(token: string): Promise<OsirisTokenSaveResult> {
    const response = await fetchWithTimeout("/api/settings/osiris-token", {
       method: "PUT",
       headers: {
@@ -18,7 +18,13 @@ export async function saveOsirisToken(token: string): Promise<OsirisTokenSetting
       body: JSON.stringify({ token }),
    });
 
-   return parseSettingsResponse(response);
+   const payload = await readSettingsPayload(response);
+   const settings = parseOsirisTokenSettings(payload);
+   const verifiedBatch = parseWeekBatch((payload as Record<string, unknown>)["verifiedBatch"]);
+   if (verifiedBatch.contextId !== settings.contextId || verifiedBatch.offset !== 0 || verifiedBatch.limit !== MAX_WEEK_LIMIT) {
+      throw new Error("The verified timetable does not match the saved token.");
+   }
+   return { ...settings, verifiedBatch };
 }
 
 export async function clearOsirisToken(): Promise<OsirisTokenSettings> {
@@ -30,6 +36,10 @@ export async function clearOsirisToken(): Promise<OsirisTokenSettings> {
 }
 
 async function parseSettingsResponse(response: Response): Promise<OsirisTokenSettings> {
+   return parseOsirisTokenSettings(await readSettingsPayload(response));
+}
+
+async function readSettingsPayload(response: Response): Promise<unknown> {
    const payload = await readJsonResponse(response, "Settings API");
 
    if (!response.ok) {
@@ -42,7 +52,7 @@ async function parseSettingsResponse(response: Response): Promise<OsirisTokenSet
       );
    }
 
-   return parseOsirisTokenSettings(payload);
+   return payload;
 }
 
 export class OsirisTokenSettingsError extends Error {

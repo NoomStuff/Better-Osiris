@@ -1,4 +1,4 @@
-import { onSessionInvalidated } from "./lib/sessionStore";
+import { onSessionInvalidated, retrySessionSettings } from "./lib/sessionStore";
 import { useCallback, useEffect, useMemo, useRef, useState, type AnimationEvent, type CSSProperties } from "react";
 import { AgendaView } from "./components/AgendaView";
 import { AppToolbar } from "./components/AppToolbar";
@@ -25,7 +25,9 @@ import { useWeekSwipeNavigation } from "./hooks/useWeekSwipeNavigation";
 import { applyDevClassStatusPreview } from "./lib/devStatusPreview";
 import { useGridZoom } from "./hooks/useGridZoom";
 import { useWeeks } from "./hooks/useWeeks";
-import { dayLabel, getIsoWeekday, parseIsoDateToLocal, toDayKey } from "./lib/date";
+import { useClock } from "./hooks/useClock";
+import { useOnlineStatus } from "./hooks/useOnlineStatus";
+import { dayLabel, monthDayLabel, timeLabel, getIsoWeekday, parseIsoDateToLocal, toDayKey } from "./lib/date";
 import { ISO_WEEKDAYS, getHiddenDaysWithClasses, getWeekdaysWithClasses } from "./lib/weekLayout";
 import { countClassesOutsideGridHours, getRequiredGridHours, getSmartGridHours, mergeGridHourRanges } from "./lib/gridHours";
 import { ErrorBoundary } from "./components/ErrorBoundary";
@@ -34,6 +36,7 @@ import type { Class, ViewMode } from "./types/weeks";
 import "./styles/App.css";
 
 type WeekTransitionDirection = "default" | "previous" | "next" | "settled";
+type AppOverlay = { kind: "class"; id: string } | { kind: "settings" } | null;
 
 export default function App() {
    const [weekOffset, setWeekOffset] = useState(0);
@@ -44,11 +47,14 @@ export default function App() {
    const [seekingHome, setSeekingHome] = useState(true);
    const isBarDocked = useDockedMobileBar(appContentRef);
    const { gridZoom, animateGridHeight, changeGridZoom, handleGridHeightTransitionEnd } = useGridZoom(viewMode);
-   const [selectedClassId, setSelectedClassId] = useState<string | null>(null);
-   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+   const [overlay, setOverlay] = useState<AppOverlay>(null);
+   const selectedClassId = overlay?.kind === "class" ? overlay.id : null;
+   const isSettingsOpen = overlay?.kind === "settings";
+   const clearClassSelection = useCallback(() => setOverlay((current) => (current?.kind === "class" ? null : current)), []);
    const [bearerTokenInput, setBearerTokenInput] = useState("");
    const [nextUpOpen, setNextUpOpen] = useNextUpOpenPreference();
-   const perceivedNow = devPreview.perceivedNow;
+   const perceivedNow = useClock(60_000, devPreview.isEnabled ? devPreview.timeOverride : null);
+   const isOnline = useOnlineStatus();
    const rosterTimeZone = useRosterTimeZone();
    const {
       settings: tokenSettings,
@@ -56,6 +62,7 @@ export default function App() {
       isInitialLoading: isTokenSettingsLoading,
       initialLoadError: tokenSettingsLoadError,
       weeksResetKey,
+      verifiedBatch,
       refreshAfterAuthError,
    } = useOsirisTokenSettings();
    useViewportMetrics();
@@ -64,6 +71,7 @@ export default function App() {
       canGoNext,
       canGoPrevious,
       data,
+      fetchedAt,
       error,
       initialWeeks,
       knownWeeks,
@@ -85,6 +93,7 @@ export default function App() {
       clearCache: !isTokenSettingsLoading && !hasBearerToken,
       contextId: tokenSettings?.contextId ?? null,
       resetKey: weeksResetKey,
+      verifiedBatch,
       timeZone: rosterTimeZone.declaredTimeZone,
    });
    const nextClassDay = useMemo(
@@ -185,10 +194,10 @@ export default function App() {
             startViewTransition branch from git history brings the overlap back with it. */
          setWeekTransitionDirection(transitionDirection);
          setWeekOffset(next);
-         setSelectedClassId(null);
+         clearClassSelection();
          resetAgenda();
       },
-      [resetAgenda]
+      [resetAgenda, clearClassSelection]
    );
 
    useEffect(() => {
@@ -211,11 +220,11 @@ export default function App() {
    useEffect(
       () =>
          onSessionInvalidated(() => {
-            setSelectedClassId(null);
+            clearClassSelection();
             updateWeekOffset(0);
             setSeekingHome(true);
          }),
-      [updateWeekOffset]
+      [updateWeekOffset, clearClassSelection]
    );
 
    const selectedClass: Class | null = useMemo(() => {
@@ -232,8 +241,7 @@ export default function App() {
    }, [displayedData, nextUpWeeks, selectedClassId]);
 
    const selectClass = useCallback((schoolClass: Class) => {
-      setIsSettingsOpen(false);
-      setSelectedClassId(schoolClass.id);
+      setOverlay({ kind: "class", id: schoolClass.id });
    }, []);
 
    const goPreviousWeek = useCallback(() => {
@@ -253,15 +261,16 @@ export default function App() {
    }, [nextWeekOffset, updateWeekOffset]);
 
    const handleCurrentWeek = useCallback(() => {
-      setSelectedClassId(null);
+      clearClassSelection();
       if (homeWeekOffset === null) setSeekingHome(true);
       else {
          updateWeekOffset(homeWeekOffset);
          resetAgenda(true);
       }
-   }, [homeWeekOffset, resetAgenda, updateWeekOffset]);
+   }, [homeWeekOffset, resetAgenda, updateWeekOffset, clearClassSelection]);
 
-   useWeekSwipeNavigation(!isSettingsOpen && selectedClass === null, goPreviousWeek, goNextWeek);
+   const hasOpenOverlay = overlay?.kind === "class" ? selectedClass !== null : overlay !== null;
+   useWeekSwipeNavigation(appContentRef, !hasOpenOverlay, goPreviousWeek, goNextWeek);
 
    const handleWeekTransitionEnd = useCallback((event: AnimationEvent<HTMLElement>) => {
       if (event.currentTarget !== event.target) {
@@ -280,16 +289,13 @@ export default function App() {
    );
 
    const openSettings = useCallback(() => {
-      setSelectedClassId(null);
-      setIsSettingsOpen(true);
+      setOverlay({ kind: "settings" });
    }, []);
 
-   const closeClass = useCallback(() => setSelectedClassId(null), []);
-
-   const closeSettings = useCallback(() => setIsSettingsOpen(false), []);
+   const closeOverlay = useCallback(() => setOverlay(null), []);
 
    useAppKeyboardShortcuts({
-      enabled: !isSettingsOpen && selectedClass === null,
+      enabled: !hasOpenOverlay,
       viewMode,
       gridZoom,
       weekOffset,
@@ -327,7 +333,7 @@ export default function App() {
             <AppToolbar
                viewMode={viewMode}
                gridZoom={gridZoom}
-               isRefreshing={refreshing || retrying || (isTokenSettingsLoading && hasDisplayedData)}
+               isRefreshing={refreshing || retrying || (isTokenSettingsLoading && hasDisplayedData && !tokenSettingsLoadError)}
                onChangeView={changeViewMode}
                onChangeGridZoom={changeGridZoom}
                onExpandAllAgenda={expandAllDays}
@@ -348,12 +354,27 @@ export default function App() {
          </div>
 
          <main className="app-content" ref={appContentRef}>
-            {error && displayedData ? (
+            {(error || !isOnline || tokenSettingsLoadError || rosterTimeZone.configError) && displayedData ? (
                <WarningBanner
                   icon="fa-solid fa-cloud-arrow-down"
-                  action={error.isAuthRelated ? { label: "Replace token", onClick: openSettings } : { label: "Try again", onClick: refresh }}
+                  {...(isOnline
+                     ? {
+                          action: error?.isAuthRelated
+                             ? { label: "Replace token", onClick: openSettings }
+                             : {
+                                  label: "Try again",
+                                  onClick: () => {
+                                     if (tokenSettingsLoadError) retrySessionSettings();
+                                     if (rosterTimeZone.configError) rosterTimeZone.retry();
+                                     if (error) refresh();
+                                  },
+                               },
+                       }
+                     : {})}
                >
-                  Fetching your latest roster went wrong: {errorDetail}
+                  Showing your saved timetable
+                  {fetchedAt ? ` from ${monthDayLabel.format(new Date(fetchedAt))} at ${timeLabel.format(new Date(fetchedAt))}` : ""}.{" "}
+                  {isOnline ? (error ? `Fetching your latest roster went wrong: ${errorDetail}` : "Can't check for updates.") : "You're offline."}
                </WarningBanner>
             ) : null}
             {hiddenDays.length > 0 ? <HiddenDaysWarning labels={hiddenDays.map((day) => dayLabel.format(day.date))} onShow={showHiddenDays} /> : null}
@@ -432,10 +453,10 @@ export default function App() {
             </section>
          </main>
 
-         <ClassDrawer schoolClass={selectedClass} onClose={closeClass} />
+         <ClassDrawer schoolClass={selectedClass} onClose={closeOverlay} />
          <SettingsDialog
             isOpen={isSettingsOpen}
-            onClose={closeSettings}
+            onClose={closeOverlay}
             onTokenDraftChange={clearTokenValidationFailure}
             onSaveToken={submitBearerToken}
             isSmartDaysReady={areInitialWeeksLoaded}

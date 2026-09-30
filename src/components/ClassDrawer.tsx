@@ -1,11 +1,11 @@
-import { useCallback, useEffect, useRef, useState } from "react";
 import type { ReactNode } from "react";
 import { fullDayLabel, parseLocalDateTime, timeLabel } from "../lib/date";
 import { CLASS_STATUS_ICONS, normalizeClassField } from "../lib/classFormat";
 import { useOverlayScrollbar } from "../hooks/useOverlayScrollbar";
+import { usePanelClose } from "../hooks/usePanelClose";
 import type { Class } from "../types/weeks";
 import { IconButton } from "./IconButton";
-import { OverlayPanel, PANEL_CLOSE_MS } from "./OverlayPanel";
+import { OverlayPanel } from "./OverlayPanel";
 import "./ClassDrawer.css";
 
 interface ClassDrawerProps {
@@ -14,49 +14,9 @@ interface ClassDrawerProps {
 }
 
 export function ClassDrawer({ schoolClass, onClose }: ClassDrawerProps) {
-   const [displayClass, setDisplayClass] = useState<Class | null>(schoolClass);
-   const [isClosing, setIsClosing] = useState(false);
-   const closeTimerRef = useRef<number | null>(null);
+   const { isClosing, close: closePanel } = usePanelClose(schoolClass?.id ?? null, onClose);
    const detailsRef = useOverlayScrollbar();
-
-   const closePanel = useCallback(() => {
-      if (isClosing) {
-         return;
-      }
-
-      setIsClosing(true);
-      closeTimerRef.current = window.setTimeout(() => {
-         setDisplayClass(null);
-         setIsClosing(false);
-         onClose();
-      }, PANEL_CLOSE_MS);
-   }, [isClosing, onClose]);
-
-   useEffect(() => {
-      if (!schoolClass) {
-         return;
-      }
-
-      if (closeTimerRef.current) {
-         window.clearTimeout(closeTimerRef.current);
-         closeTimerRef.current = null;
-      }
-
-      void Promise.resolve().then(() => {
-         setDisplayClass(schoolClass);
-         setIsClosing(false);
-      });
-   }, [schoolClass]);
-
-   useEffect(() => {
-      return () => {
-         if (closeTimerRef.current) {
-            window.clearTimeout(closeTimerRef.current);
-         }
-      };
-   }, []);
-
-   const activeClass = schoolClass === null && !isClosing ? null : displayClass;
+   const activeClass = schoolClass;
 
    if (!activeClass) {
       return null;
@@ -99,9 +59,9 @@ export function ClassDrawer({ schoolClass, onClose }: ClassDrawerProps) {
    const roomLabelPrevious = locationChanged ? previousLocation || "Not set" : null;
    return (
       <OverlayPanel
-         className="class-panel"
-         surfaceClassName="class-panel__card"
-         backdropClassName="class-panel__backdrop"
+         className="class-panel overlay-panel--sheet"
+         surfaceClassName="class-panel__card overlay-panel__card"
+         backdropClassName="overlay-panel__shade"
          closeLabel="Close class details"
          label="Class details"
          placement="bottom"
@@ -110,7 +70,7 @@ export function ClassDrawer({ schoolClass, onClose }: ClassDrawerProps) {
          swipeIgnoreSelector=".class-panel__content"
          onClose={closePanel}
       >
-         <header className="class-panel__header">
+         <header className="class-panel__header overlay-panel__header">
             <div className="class-panel__identity">
                <div className="class-panel__title-line">
                   <h2>{title || "Untitled class"}</h2>
@@ -120,7 +80,7 @@ export function ClassDrawer({ schoolClass, onClose }: ClassDrawerProps) {
                {previous && previous.title !== activeClass.title ? <PreviousIdentity label="Previous title" value={previous.title} /> : null}
                {previous && previous.subject !== activeClass.subject ? <PreviousIdentity label="Previous subject" value={previous.subject} /> : null}
             </div>
-            <IconButton className="class-panel__close" icon="fa-solid fa-xmark" label="Close" tooltipPlacement="bottom" onClick={closePanel} />
+            <IconButton className="overlay-panel__close" icon="fa-solid fa-xmark" label="Close" tooltipPlacement="bottom" onClick={closePanel} />
          </header>
 
          <div ref={detailsRef} className="class-panel__content">

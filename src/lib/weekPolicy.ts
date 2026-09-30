@@ -14,6 +14,7 @@ export interface WeekEntry {
    retryAt: number;
    retryDelayMs: number;
    updatedAt: number;
+   fetchedAt: number;
 }
 
 export type WeekEntries = Partial<Record<number, WeekEntry>>;
@@ -30,6 +31,7 @@ export function createWeekEntry(data: Week | null, overrides?: Partial<WeekEntry
       retryAt: 0,
       retryDelayMs: 0,
       updatedAt: data ? Date.now() : 0,
+      fetchedAt: 0,
       ...overrides,
    };
 }

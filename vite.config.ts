@@ -1,4 +1,5 @@
 import { iconSubset } from "./scripts/iconSubset.ts";
+import { offlineShell } from "./scripts/offlineShell.ts";
 import { defineConfig, loadEnv } from "vite";
 
 export default defineConfig(({ mode }) => {
@@ -6,7 +7,7 @@ export default defineConfig(({ mode }) => {
    const schoolName = env["SCHOOL_NAME"]?.trim() ?? "";
 
    return {
-      plugins: [iconSubset()],
+      plugins: [iconSubset(), offlineShell()],
       define: {
          "import.meta.env.VITE_SCHOOL_NAME": JSON.stringify(schoolName),
       },

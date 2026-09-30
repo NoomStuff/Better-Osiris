@@ -53,6 +53,14 @@ The frontend runs at `http://localhost:5173` and proxies API requests to the loc
 
 To self-host instead, set the environment variables, run `bun run build`, then `bun run start`.
 
+Production builds save the public app files for offline launch after the first successful visit. Downloaded weeks remain available through the existing account cache. A warning shows the saved timetable's fetch time when updates fail or the browser goes offline. Normal browsing has no freshness label.
+
+Host over HTTPS, except for local development. App updates wait until the previous version's tabs close. The service worker never caches API responses. Removing a token clears that account's saved timetable.
+
+Keep `COOKIE_SECRET` stable across restarts and identical across instances serving the same site. Rotating it makes existing token cookies unreadable, so users must enter their tokens again. Store the secret in your hosting provider's environment settings. The cookie lasts up to one year, but OSIRIS can reject the token earlier.
+
+The upstream cache and rate limits belong to each server process. Separate serverless instances do not share request deduplication or rate-limit counters. Multiple instances need a shared rate limiter if the deployment requires one global limit. Keep authenticated API responses out of reverse-proxy and CDN caches. Set `TRUST_PROXY` only when a trusted proxy supplies the forwarded address.
+
 ---
 
 ## Configuration

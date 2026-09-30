@@ -13,6 +13,10 @@ export interface RosterConfig {
    timeZone: string;
 }
 
+export interface OsirisTokenSaveResult extends OsirisTokenSettings {
+   verifiedBatch: WeekBatch;
+}
+
 export type SourceClassStatus = "scheduled" | "cancelled";
 export type ClassStatus = SourceClassStatus | "added" | "changed";
 

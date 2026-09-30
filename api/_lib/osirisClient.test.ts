@@ -17,6 +17,21 @@ afterEach(() => {
 });
 
 void describe("OSIRIS client", () => {
+   void it("preserves upstream retry timing for rate limits and outages", async () => {
+      process.env["OSIRIS_ROSTER_URL"] = "https://example.test/roster";
+      for (const [status, header] of [
+         [429, "120"],
+         [503, new Date(Date.now() + 120_000).toUTCString()],
+      ] as const) {
+         globalThis.fetch = () => Promise.resolve(new Response(null, { status, headers: { "Retry-After": header } }));
+         await assert.rejects(fetchOsirisRosterWeeks(0, 1, "Bearer test-token"), (error: unknown) => {
+            assert.ok(error instanceof ApiError);
+            assert.equal(error.retryable, true);
+            assert.ok(error.retryAfterMs > 118_000 && error.retryAfterMs <= 120_000);
+            return true;
+         });
+      }
+   });
    void it("does not refill a cleared cache or remove its replacement request", async () => {
       process.env["OSIRIS_ROSTER_URL"] = "https://example.test/roster";
       const pending: ((response: Response) => void)[] = [];

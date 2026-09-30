@@ -69,6 +69,37 @@ void describe("concurrent week requests", () => {
    const configure = (offset: number) =>
       repository.configure({ enabled: true, clearCache: false, contextId: "test", resetKey: 0, timeZone: "Europe/Amsterdam" }, offset);
 
+   void it("keeps content subscriptions stable during refresh and unchanged responses", async () => {
+      configure(0);
+      respond(0, Response.json(batch(0, 0)));
+      respond(5, Response.json(batch(5, 0)));
+      await until(() => repository.getSnapshot().knownWeeks.length === 10);
+      const content = repository.getSnapshot().knownWeeks;
+      repository.refresh();
+      assert.equal(repository.getSnapshot().knownWeeks, content);
+      respond(0, Response.json(batch(0, 0)));
+      await until(() => !repository.getSnapshot().entries[0]?.isFetching);
+      assert.equal(repository.getSnapshot().knownWeeks, content);
+      repository.invalidate();
+      assert.equal(repository.getSnapshot().knownWeeks.length, 0);
+   });
+
+   void it("adopts a verified token batch without requesting it again", () => {
+      const verifiedBatch = batch(0, 0);
+      const options = { enabled: true, clearCache: false, contextId: "test", resetKey: 1, timeZone: "Europe/Amsterdam", verifiedBatch };
+      repository.configure(options, 0);
+      assert.equal(repository.getSnapshot().entries[0]?.data?.week.start, anchor);
+      assert.equal(repository.getSnapshot().lastSuccessfulResetKey, 1);
+      assert.equal(pending.has(0), false);
+      assert.equal(pending.has(5), true);
+      repository.configure(options, 2);
+      assert.equal(pending.has(0), false);
+      repository.invalidate();
+      repository.configure({ ...options, contextId: "other-account" }, 0);
+      assert.equal(repository.getSnapshot().entries[0]?.data, null);
+      assert.equal(pending.has(0), true);
+   });
+
    void it("does not refetch fresh source weeks because an earlier calendar week was omitted", async () => {
       configure(0);
       respond(0, Response.json(batch(0, 1)));

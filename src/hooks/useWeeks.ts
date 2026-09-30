@@ -4,18 +4,17 @@ import { WeekRepository, type WeekRepositoryOptions } from "../lib/weekRepositor
 import { ROSTER_BATCH_SIZE, canNavigateToWeek, getDerivedWeekTitle, getHomeWeek, getAdjacentWeekOffset } from "../lib/weekPolicy";
 import { useClock } from "./useClock";
 import { isRosterTimeZoneKnown } from "../lib/rosterTimeZone";
-import type { Week } from "../types/weeks";
 
 export function useWeeks(offset: number, options: WeekRepositoryOptions) {
    const [repository] = useState(() => new WeekRepository());
-   const { entries, lastSuccessfulResetKey, sourceShift } = useSyncExternalStore(repository.subscribe, repository.getSnapshot);
+   const { entries, knownWeeks: contentWeeks, lastSuccessfulResetKey, sourceShift } = useSyncExternalStore(repository.subscribe, repository.getSnapshot);
    useEffect(() => repository.start(), [repository]);
-   const { enabled, clearCache, contextId, resetKey, timeZone } = options;
+   const { enabled, clearCache, contextId, resetKey, timeZone, verifiedBatch } = options;
    useEffect(
-      () => repository.configure({ enabled, clearCache, contextId, resetKey, timeZone }, offset),
-      [repository, enabled, clearCache, contextId, resetKey, timeZone, offset]
+      () => repository.configure({ enabled, clearCache, contextId, resetKey, timeZone, verifiedBatch: verifiedBatch ?? null }, offset),
+      [repository, enabled, clearCache, contextId, resetKey, timeZone, verifiedBatch, offset]
    );
-   useClassReminders(entries, contextId, enabled && lastSuccessfulResetKey === resetKey);
+   useClassReminders(contentWeeks, contextId, enabled && lastSuccessfulResetKey === resetKey);
    const active = entries[offset];
    const clock = useClock(60_000);
    const home = useMemo(
@@ -39,16 +38,14 @@ export function useWeeks(offset: number, options: WeekRepositoryOptions) {
    const firstOffset = Math.max(0, sourceShift ?? 0);
    const previousWeekOffset = clearCache ? null : getAdjacentWeekOffset(offset, -1, entries, sourceShift);
    const nextWeekOffset = clearCache ? null : getAdjacentWeekOffset(offset, 1, entries, sourceShift);
-   const knownWeeks = useMemo(() => (clearCache ? [] : Object.values(entries).flatMap((entry) => (entry?.data ? [entry.data] : []))), [entries, clearCache]);
+   const knownWeeks = useMemo(() => (clearCache ? [] : contentWeeks), [contentWeeks, clearCache]);
    const initialWeeks = useMemo(
-      () =>
-         clearCache
-            ? []
-            : Array.from({ length: ROSTER_BATCH_SIZE }, (_, index) => entries[firstOffset + index]?.data).filter((week): week is Week => Boolean(week)),
-      [entries, firstOffset, clearCache]
+      () => (clearCache ? [] : knownWeeks.filter((week) => week.week.offset >= firstOffset && week.week.offset < firstOffset + ROSTER_BATCH_SIZE)),
+      [knownWeeks, firstOffset, clearCache]
    );
    return {
       data,
+      fetchedAt: active?.fetchedAt ?? 0,
       error,
       initialWeeks,
       knownWeeks,

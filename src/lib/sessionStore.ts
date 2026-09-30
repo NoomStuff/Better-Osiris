@@ -1,5 +1,5 @@
 import { clearOsirisToken, fetchOsirisTokenSettings, saveOsirisToken } from "../api/settings";
-import type { OsirisTokenSettings } from "../../shared/weeks";
+import type { OsirisTokenSettings, WeekBatch } from "../../shared/weeks";
 import { readBrowserStorage, writeBrowserStorage } from "./browserStorage";
 import { randomId } from "./randomId";
 import { clearWeekBrowserCache } from "./weekCache";
@@ -11,8 +11,9 @@ interface SessionState {
    initialLoadError: string | null;
    isMutating: boolean;
    revision: number;
+   verifiedBatch: WeekBatch | null;
 }
-let state: SessionState = { settings: null, isInitialLoading: true, initialLoadError: null, isMutating: false, revision: 0 };
+let state: SessionState = { settings: null, isInitialLoading: true, initialLoadError: null, isMutating: false, revision: 0, verifiedBatch: null };
 const listeners = new Set<() => void>();
 const invalidators = new Set<() => void>();
 let generation = 0;
@@ -42,7 +43,7 @@ function invalidate() {
    generation += 1;
    clearTimeout(timer);
    invalidators.forEach((listener) => listener());
-   publish({ settings: null, isInitialLoading: true, initialLoadError: null, revision: state.revision + 1 });
+   publish({ settings: null, isInitialLoading: true, initialLoadError: null, revision: state.revision + 1, verifiedBatch: null });
 }
 
 async function loadSettings(delay = 250): Promise<void> {
@@ -114,18 +115,19 @@ export function startSession() {
    };
 }
 
-async function mutate(run: () => Promise<OsirisTokenSettings>) {
+async function mutate(run: () => Promise<OsirisTokenSettings & { verifiedBatch?: WeekBatch }>) {
    if (state.isMutating) throw new Error("A bearer token update is already in progress.");
    // Reads dispatched before the cookie changes must not restore the old credential state.
    generation += 1;
    clearTimeout(timer);
    publish({ isMutating: true });
    try {
-      const settings = await run();
+      const result = await run();
+      const settings: OsirisTokenSettings = { hasCustomToken: result.hasCustomToken, hasBearerToken: result.hasBearerToken, contextId: result.contextId };
       writeBrowserStorage("localStorage", SESSION_EPOCH_KEY, randomId());
       clearWeekBrowserCache();
       invalidate();
-      publish({ settings, isInitialLoading: false, initialLoadError: null });
+      publish({ settings, verifiedBatch: result.verifiedBatch ?? null, isInitialLoading: false, initialLoadError: null });
       return settings;
    } finally {
       publish({ isMutating: false });

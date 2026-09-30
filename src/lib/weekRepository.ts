@@ -27,9 +27,11 @@ export interface WeekRepositoryOptions {
    clearCache: boolean;
    contextId: string | null;
    resetKey: number;
+   verifiedBatch?: WeekBatch | null;
 }
 interface Snapshot {
    entries: WeekEntries;
+   knownWeeks: Week[];
    lastSuccessfulResetKey: number | null;
    sourceShift: number | null;
 }
@@ -50,7 +52,7 @@ const REFRESH_MS = 5 * 60_000;
 
 /** Owns asynchronous work and date-keyed raw data. React only subscribes to snapshots. */
 export class WeekRepository {
-   private snapshot: Snapshot = { entries: {}, lastSuccessfulResetKey: null, sourceShift: null };
+   private snapshot: Snapshot = { entries: {}, knownWeeks: [], lastSuccessfulResetKey: null, sourceShift: null };
    // OSIRIS offset zero can advance before the calendar week ends.
    private sourceShift: number | null = null;
    private sourceFetchedAt = 0;
@@ -69,6 +71,7 @@ export class WeekRepository {
    private resetKey = 0;
    private didNotify = false;
    private successRevision = 0;
+   private adoptedBatch: WeekBatch | null = null;
    private readonly weekSuccessRevisions = new Map<string, number>();
    private readonly pendingCancellations = new Map<string, SessionClassDiff>();
 
@@ -102,7 +105,10 @@ export class WeekRepository {
       };
    };
    private publish(entries: WeekEntries, successfulKey = this.snapshot.lastSuccessfulResetKey) {
-      this.snapshot = { entries, lastSuccessfulResetKey: successfulKey, sourceShift: this.sourceShift };
+      const weeks = Object.values(entries).flatMap((entry) => (entry?.data ? [entry.data] : []));
+      const previous = this.snapshot.knownWeeks;
+      const knownWeeks = weeks.length === previous.length && weeks.every((week, index) => week === previous[index]) ? previous : weeks;
+      this.snapshot = { entries, knownWeeks, lastSuccessfulResetKey: successfulKey, sourceShift: this.sourceShift };
       this.listeners.forEach((listener) => listener());
    }
    private abort() {
@@ -124,6 +130,7 @@ export class WeekRepository {
       this.sourceFetchedAt = 0;
       this.enabled = false;
       this.didNotify = false;
+      this.adoptedBatch = null;
       this.publish({}, null);
    };
 
@@ -152,6 +159,27 @@ export class WeekRepository {
          return;
       }
       this.rollover();
+      if (options.verifiedBatch && options.verifiedBatch !== this.adoptedBatch && options.verifiedBatch.contextId === this.contextId) {
+         const payload = options.verifiedBatch;
+         this.adoptedBatch = payload;
+         const offsets = getBatchOffsets(0);
+         this.snapshot = { ...this.snapshot, entries: { ...this.snapshot.entries, ...Object.fromEntries(offsets.map((key) => [key, createWeekEntry(null)])) } };
+         this.receiveBatch(
+            {
+               start: 0,
+               offsets,
+               controller: new AbortController(),
+               generation: this.generation,
+               epoch: getSessionEpoch(),
+               anchor: this.anchor,
+               successesAtDispatch: this.successRevision,
+               requestOffset: 0,
+               requestLimit: ROSTER_BATCH_SIZE,
+               passive: false,
+            },
+            payload
+         );
+      }
       this.loadActive();
    }
 
@@ -187,7 +215,7 @@ export class WeekRepository {
       this.anchor = anchor;
       this.sourceShift = null;
       this.sourceFetchedAt = 0;
-      this.snapshot = { entries: {}, lastSuccessfulResetKey: null, sourceShift: null };
+      this.snapshot = { entries: {}, knownWeeks: [], lastSuccessfulResetKey: null, sourceShift: null };
       this.prune();
       this.publishWeeks(true);
       this.persist();
@@ -222,6 +250,7 @@ export class WeekRepository {
             data,
             isHydrated: hydrated || (!fetchedDates.has(date) && Boolean(previous?.isHydrated)),
             updatedAt: this.stored.get(date)?.changedAt ?? Date.now(),
+            fetchedAt: this.stored.get(date)?.fetchedAt ?? 0,
          });
       });
       this.publish(entries, successfulKey);
@@ -408,19 +437,22 @@ export class WeekRepository {
          (offset) =>
             offset >= -1 && offset <= MAX_WEEK_OFFSET && (this.weekSuccessRevisions.get(shiftCalendarDate(anchor, offset * 7)) ?? 0) <= successesAtDispatch
       );
-      const delay =
+      const minimumDelay =
          loadError.retryable && !passive && failedOffsets.length > 0
             ? Math.max(
                  loadError.retryAfterMs ?? 0,
                  Math.min(Math.max(...failedOffsets.map((offset) => entries[offset]?.retryDelayMs ?? 0), 1000) * 2, REFRESH_MS)
               )
             : 0;
+      // Spread clients after an outage, never retrying earlier than upstream requested.
+      const delay = minimumDelay ? minimumDelay + Math.floor(Math.random() * Math.min(1000, minimumDelay * 0.2)) : 0;
       failedOffsets.forEach((offset) => {
          const old = entries[offset];
          if (passive && !old?.data) return;
          entries[offset] = createWeekEntry(old?.data ?? null, {
             error: loadError,
             updatedAt: old?.updatedAt ?? 0,
+            fetchedAt: old?.fetchedAt ?? 0,
             retryDelayMs: delay,
             retryAt: delay ? Date.now() + delay : 0,
          });

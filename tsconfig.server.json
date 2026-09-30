@@ -19,5 +19,5 @@
       "noFallthroughCasesInSwitch": true
    },
    "include": ["server.ts", "server/**/*.ts", "api/**/*.ts", "shared/**/*.ts", "scripts/**/*.ts"],
-   "exclude": ["**/*.test.ts"]
+   "exclude": ["**/*.test.ts", "scripts/smokeProduction.ts"]
 }

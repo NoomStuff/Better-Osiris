@@ -61,6 +61,7 @@ void describe("/api/settings/osiris-token", () => {
    void it("reports a default bearer token without copying it into a browser cookie", async () => {
       process.env["COOKIE_SECRET"] = TEST_SECRET;
       process.env["BEARER_TOKEN"] = "Bearer default-token";
+      process.env["OSIRIS_ROSTER_URL"] = TEST_OSIRIS_ROSTER_URL;
 
       const response = await callSettingsHandler({ method: "GET" });
       const payload = JSON.parse(response.body) as { hasCustomToken?: boolean; hasBearerToken?: boolean; contextId?: string };
@@ -76,6 +77,7 @@ void describe("/api/settings/osiris-token", () => {
    void it("fails closed when cookies cannot be encrypted", async () => {
       process.env["COOKIE_SECRET"] = "";
       process.env["BEARER_TOKEN"] = "Bearer default-token";
+      process.env["OSIRIS_ROSTER_URL"] = TEST_OSIRIS_ROSTER_URL;
 
       const response = await callSettingsHandler({ method: "GET" });
       const payload = JSON.parse(response.body) as { hasCustomToken?: boolean; hasBearerToken?: boolean; contextId?: string };
@@ -145,6 +147,7 @@ void describe("/api/settings/osiris-token", () => {
    void it("restores the default token when the custom token is cleared", async () => {
       process.env["COOKIE_SECRET"] = TEST_SECRET;
       process.env["BEARER_TOKEN"] = "Bearer default-token";
+      process.env["OSIRIS_ROSTER_URL"] = TEST_OSIRIS_ROSTER_URL;
 
       const response = await callSettingsHandler({ method: "DELETE" });
       const payload = JSON.parse(response.body) as { hasCustomToken?: boolean; hasBearerToken?: boolean; contextId?: string };

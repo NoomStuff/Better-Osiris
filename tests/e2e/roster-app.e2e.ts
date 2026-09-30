@@ -59,6 +59,24 @@ test("week navigation and reset show the matching roster data", async ({ page })
    await expect(page.getByRole("heading", { name: /Week 25:/ })).toBeVisible();
 });
 
+test("manual agenda folding stays absolute when the automatic day changes", async ({ page }) => {
+   await page.addInitScript(() => {
+      localStorage.setItem("roster-devtools-enabled", "true");
+      localStorage.setItem("roster-devtools-time-override", "2026-06-16T09:45:00+02:00");
+   });
+   await page.goto("/");
+   await page.getByRole("button", { name: "Agenda view" }).click();
+   const tuesday = page.locator('.day-group[data-day="2026-06-16"] .day-group__header');
+   await expect(tuesday).toHaveAttribute("aria-expanded", "true");
+   await tuesday.click();
+   await expect(tuesday).toHaveAttribute("aria-expanded", "false");
+   await page.getByRole("button", { name: "Open settings" }).click();
+   await page.getByLabel("Fake date").fill("2026-06-17");
+   await page.getByRole("dialog", { name: "Preferences" }).getByRole("button", { name: "Close settings" }).click();
+   await expect(page.getByRole("dialog", { name: "Preferences" })).toBeHidden();
+   await expect(tuesday).toHaveAttribute("aria-expanded", "false");
+});
+
 test("shared easing keeps toolbar entrance and agenda folding animated", async ({ page }) => {
    await page.goto("/");
    await expect(page.locator(".action-group")).not.toHaveCSS("animation-name", "none");
@@ -177,6 +195,32 @@ test("week swipe plays the same content transition", async ({ page }) => {
    await expect
       .poll(() => page.evaluate(() => document.getAnimations().map((animation) => (animation instanceof CSSAnimation ? animation.animationName : ""))))
       .toEqual(expect.arrayContaining(["view-enter-from-left"]));
+});
+
+test("week swipes stay inside the timetable and leave next-up gestures alone", async ({ page }) => {
+   await page.goto("/");
+   await expect(page.locator(".grid-class").first()).toBeVisible();
+   await swipeWeek(page, "next", ".next-up");
+   await swipeWeek(page, "next", ".app-toolbar");
+   await page.evaluate(() => {
+      const target = document.querySelector(".app-content-frame");
+      if (!target) throw new Error("Missing timetable");
+      const dispatch = (name: string, x: number, y: number, identifier: number) => {
+         const event = new Event(name, { bubbles: true });
+         Object.defineProperty(event, name === "touchend" ? "changedTouches" : "touches", { value: [{ identifier, target, clientX: x, clientY: y }] });
+         target.dispatchEvent(event);
+      };
+      // A scroll that later drifts sideways must stay a scroll.
+      dispatch("touchstart", 320, 300, 1);
+      dispatch("touchmove", 310, 350, 1);
+      dispatch("touchend", 120, 350, 1);
+      // A different finger cannot finish the original gesture.
+      dispatch("touchstart", 320, 300, 1);
+      dispatch("touchend", 120, 300, 2);
+   });
+   await expect(page.locator(".weekbar__label")).toHaveText("This week");
+   await swipeWeek(page, "next");
+   await expect(page.locator(".weekbar__label")).toHaveText("Next week");
 });
 
 test("shift and an arrow moves by one roster batch", async ({ page }) => {
@@ -553,8 +597,8 @@ test("saving a replacement token refreshes roster data without reloading the pag
          rosterRequestCount += 1;
       }
    });
-   await page.route("**/api/roster/weeks?*", async (route) => {
-      if (holdReplacementRequest) {
+   await page.route("**/api/settings/osiris-token", async (route) => {
+      if (route.request().method() === "PUT" && holdReplacementRequest) {
          await replacementRequestGate;
       }
       await route.fallback();
@@ -572,15 +616,15 @@ test("saving a replacement token refreshes roster data without reloading the pag
    await expect(tokenInput).toHaveValue("Bearer replacement-token");
    await expect(saveButton).toBeEnabled();
    holdReplacementRequest = true;
-   const weekRefresh = page.waitForResponse((response) => response.url().includes("/api/roster/weeks?") && response.request().method() === "GET");
+   const tokenSave = page.waitForResponse((response) => response.url().includes("/api/settings/osiris-token") && response.request().method() === "PUT");
    await saveButton.click();
 
    await expect(settings.getByRole("button", { name: "Verifying..." })).toBeDisabled();
    await expect(tokenInput).toHaveValue("Bearer replacement-token");
    releaseReplacementRequest();
-   await weekRefresh;
+   await tokenSave;
 
-   await expect.poll(() => rosterRequestCount).toBeGreaterThan(initialRequestCount);
+   await expect.poll(() => rosterRequestCount).toBe(initialRequestCount + 1);
    await expect(settings).toBeVisible();
    await expect(tokenInput).toHaveValue("");
    await expect(page.locator(".grid-class", { hasText: "SOURCE_TITLE_0_1" })).toBeVisible();
@@ -628,7 +672,12 @@ test("an expired saved token shows the expired-token screen until a fresh one is
       await route.fulfill({
          status: 200,
          contentType: "application/json",
-         body: JSON.stringify({ hasCustomToken, hasBearerToken: hasCustomToken, contextId: hasCustomToken ? "test-context" : null }),
+         body: JSON.stringify({
+            hasCustomToken,
+            hasBearerToken: hasCustomToken,
+            contextId: hasCustomToken ? "test-context" : null,
+            ...(route.request().method() === "PUT" ? { verifiedBatch: createRosterBatch(0, 5) } : {}),
+         }),
       });
    });
    await page.route("**/api/roster/weeks?*", async (route) => {
@@ -702,7 +751,22 @@ test("an aborted credential request cannot restore stale roster data", async ({ 
       await route.fulfill({
          status: 200,
          contentType: "application/json",
-         body: JSON.stringify({ hasCustomToken: tokenVersion > 0, hasBearerToken: tokenVersion > 0, contextId: tokenVersion > 0 ? "test-context" : null }),
+         body: JSON.stringify({
+            hasCustomToken: tokenVersion > 0,
+            hasBearerToken: tokenVersion > 0,
+            contextId: tokenVersion > 0 ? "test-context" : null,
+            ...(method === "PUT"
+               ? {
+                    verifiedBatch: {
+                       ...createRosterBatch(0, 5),
+                       weeks: createRosterBatch(0, 5).weeks.map((week) => ({
+                          ...week,
+                          classes: week.classes.map((item, index) => ({ ...item, title: index === 0 ? `TOKEN_${tokenVersion}_TITLE` : item.title })),
+                       })),
+                    },
+                 }
+               : {}),
+         }),
       });
    });
 
@@ -739,9 +803,7 @@ test("an aborted credential request cannot restore stale roster data", async ({ 
    await tokenInput.fill("Bearer fresh-token");
    await expect(tokenInput).toHaveValue("Bearer fresh-token");
    await expect(saveButton).toBeEnabled();
-   const freshRosterResponse = waitForRosterResponseTitle(page, "TOKEN_2_TITLE");
    await saveButton.click();
-   await freshRosterResponse;
    await expect(page.locator(".grid-class", { hasText: "TOKEN_2_TITLE" })).toBeVisible({ timeout: 10_000 });
    await settings.getByRole("button", { name: "Close settings" }).click();
 
@@ -945,11 +1007,17 @@ test("keeps token entry open until OSIRIS accepts the token", async ({ page }) =
             return;
          }
          hasToken = true;
+         await rosterGate;
       }
       await route.fulfill({
          status: 200,
          contentType: "application/json",
-         body: JSON.stringify({ hasCustomToken: hasToken, hasBearerToken: hasToken, contextId: hasToken ? "test-context" : null }),
+         body: JSON.stringify({
+            hasCustomToken: hasToken,
+            hasBearerToken: hasToken,
+            contextId: hasToken ? "test-context" : null,
+            ...(route.request().method() === "PUT" ? { verifiedBatch: createRosterBatch(0, 5) } : {}),
+         }),
       });
    });
    await page.route("**/api/roster/weeks?*", async (route) => {
@@ -1135,6 +1203,30 @@ test("time indicators are visible and positioned for the fixed current time", as
    const top = await gridNowLine.evaluate((element) => Number.parseFloat((element as HTMLElement).style.top));
    expect(top).toBeGreaterThan(17);
    expect(top).toBeLessThan(18);
+});
+
+test("agenda progress ticks without measuring unchanged class geometry", async ({ page }) => {
+   await page.goto("/");
+   await page.getByRole("button", { name: "Agenda view" }).click();
+   const progress = page.locator(".agenda-current-indicator__progress");
+   await expect(page.locator(".agenda-current-indicator")).toHaveAttribute("data-visible", "true");
+   await expect(page.locator(".app-content-frame")).toHaveAttribute("data-week-transition", "settled");
+   await page.evaluate(async () => {
+      await document.fonts.ready;
+      await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+   });
+   const before = await progress.evaluate((element) => element.getAttribute("style"));
+   await page.evaluate(() => {
+      // eslint-disable-next-line @typescript-eslint/unbound-method -- The wrapper passes its own receiver with call.
+      const original = Element.prototype.getBoundingClientRect;
+      Element.prototype.getBoundingClientRect = function () {
+         if (this.matches(".day-group__body-inner, [data-current-segment]")) localStorage.setItem("test-geometry-measured", "true");
+         return original.call(this);
+      };
+      (Date as DateConstructor & { setTestTime: (iso: string) => void }).setTestTime("2026-06-16T10:00:00+02:00");
+   });
+   await expect.poll(() => progress.evaluate((element) => element.getAttribute("style"))).not.toBe(before);
+   expect(await page.evaluate(() => localStorage.getItem("test-geometry-measured"))).toBeNull();
 });
 
 test("timeline zoom supports radio-group arrow navigation", async ({ page }) => {
@@ -1376,6 +1468,9 @@ async function installFixedClock(page: Page) {
          | [number, number, number | undefined, number | undefined, number | undefined, number | undefined, number];
 
       class MockDate extends RealDate {
+         static setTestTime(iso: string) {
+            timestamp = new RealDate(iso).getTime();
+         }
          constructor(...args: DateConstructorArgs) {
             if (args.length === 0) {
                super(fixedNow());
@@ -1396,7 +1491,7 @@ async function installFixedClock(page: Page) {
       }
 
       Object.setPrototypeOf(MockDate, RealDate);
-      globalThis.Date = MockDate as DateConstructor;
+      globalThis.Date = MockDate as unknown as DateConstructor;
    }, FIXED_NOW_ISO);
 }
 
@@ -1422,20 +1517,24 @@ async function installCachedLastWeek(page: Page) {
    );
 }
 
-async function swipeWeek(page: Page, direction: "previous" | "next") {
-   await page.evaluate((swipeDirection) => {
-      const target = document.body;
-      const startX = swipeDirection === "next" ? 320 : 120;
-      const endX = swipeDirection === "next" ? 120 : 320;
-      const start = { identifier: 1, target, clientX: startX, clientY: 300 };
-      const end = { identifier: 1, target, clientX: endX, clientY: 300 };
-      const startEvent = new Event("touchstart");
-      const endEvent = new Event("touchend");
-      Object.defineProperty(startEvent, "touches", { value: [start] });
-      Object.defineProperty(endEvent, "changedTouches", { value: [end] });
-      window.dispatchEvent(startEvent);
-      window.dispatchEvent(endEvent);
-   }, direction);
+async function swipeWeek(page: Page, direction: "previous" | "next", selector = ".app-content-frame") {
+   await page.evaluate(
+      ({ swipeDirection, selector }) => {
+         const target = document.querySelector(selector);
+         if (!target) throw new Error(`Missing swipe target ${selector}`);
+         const startX = swipeDirection === "next" ? 320 : 120;
+         const endX = swipeDirection === "next" ? 120 : 320;
+         const start = { identifier: 1, target, clientX: startX, clientY: 300 };
+         const end = { identifier: 1, target, clientX: endX, clientY: 300 };
+         const startEvent = new Event("touchstart", { bubbles: true });
+         const endEvent = new Event("touchend", { bubbles: true });
+         Object.defineProperty(startEvent, "touches", { value: [start] });
+         Object.defineProperty(endEvent, "changedTouches", { value: [end] });
+         target.dispatchEvent(startEvent);
+         target.dispatchEvent(endEvent);
+      },
+      { swipeDirection: direction, selector }
+   );
 }
 
 async function mockAppApis(page: Page) {
@@ -1460,7 +1559,12 @@ async function mockAppApis(page: Page) {
       await route.fulfill({
          status: 200,
          contentType: "application/json",
-         body: JSON.stringify({ hasCustomToken, hasBearerToken: hasCustomToken, contextId: hasCustomToken ? "test-context" : null }),
+         body: JSON.stringify({
+            hasCustomToken,
+            hasBearerToken: hasCustomToken,
+            contextId: hasCustomToken ? "test-context" : null,
+            ...(method === "PUT" ? { verifiedBatch: createRosterBatch(0, 5) } : {}),
+         }),
       });
    });
 
@@ -1550,24 +1654,23 @@ function toIsoDate(date: Date) {
    return date.toISOString().slice(0, 10);
 }
 
-function waitForRosterResponseTitle(page: Page, expectedTitle: string) {
-   return page.waitForResponse(async (response) => {
-      if (!response.url().includes("/api/roster/weeks?") || response.request().method() !== "GET") {
-         return false;
-      }
-
-      const payload = (await response.json()) as { weeks?: { classes?: { title?: string }[] }[] };
-      return payload.weeks?.[0]?.classes?.[0]?.title === expectedTitle;
-   });
-}
-
 test("switching credentials in another tab discards account data and diff history", async ({ page, context }) => {
    await page.unroute("**/api/settings/osiris-token");
    await page.unroute("**/api/roster/weeks?*");
    let account = "A";
    await context.route("**/api/settings/osiris-token", async (route) => {
       if (route.request().method() === "PUT") account = (route.request().postDataJSON() as { token: string }).token.endsWith("-b") ? "B" : "A";
-      await route.fulfill({ json: { hasCustomToken: true, hasBearerToken: true, contextId: account } });
+      const batch = createRosterBatch(0, 5);
+      batch.contextId = account;
+      batch.weeks.forEach((week) =>
+         week.classes.forEach((item) => {
+            item.id = account + item.id;
+            item.title = account + item.title;
+         })
+      );
+      await route.fulfill({
+         json: { hasCustomToken: true, hasBearerToken: true, contextId: account, ...(route.request().method() === "PUT" ? { verifiedBatch: batch } : {}) },
+      });
    });
    await context.route("**/api/roster/config", (route) => route.fulfill({ json: { timeZone: "Europe/Amsterdam" } }));
    await context.route("**/api/roster/weeks?*", async (route) => {
@@ -2128,7 +2231,7 @@ test("reminder number field supports editing, cancellation, bounds and persisten
    await page.screenshot({ path: "test-results/reminder-settings-mobile.png", animations: "disabled" });
 });
 
-test("class reminders deliver once independently of change alerts", async ({ page }) => {
+test("constructor reminders deliver once independently of change alerts when worker delivery is unavailable", async ({ page }) => {
    await page.addInitScript(() => {
       localStorage.setItem("test-clock", "2026-06-16T10:55:00+02:00");
       localStorage.setItem("roster-class-reminders", "true");
@@ -2150,6 +2253,13 @@ test("class reminders deliver once independently of change alerts", async ({ pag
          }
       }
       Object.defineProperty(window, "Notification", { configurable: true, value: MockNotification });
+      Object.defineProperty(navigator, "serviceWorker", {
+         configurable: true,
+         value: {
+            register: () => Promise.reject(new Error("Worker notifications unavailable")),
+            getRegistration: () => Promise.resolve(undefined),
+         },
+      });
    });
    await page.goto("/");
    const messages = () => page.evaluate(() => JSON.parse(localStorage.getItem("test-reminder-messages") ?? "[]") as string[]);
@@ -2196,9 +2306,6 @@ test("class reminders deliver once independently of change alerts", async ({ pag
    ]);
    await expect.poll(() => page.evaluate(() => localStorage.getItem("test-closed-notification")), { timeout: 8_000 }).toContain("devtools-expires:");
    await expect(page.getByRole("group", { name: "Toast tests", exact: true }).getByRole("button")).toHaveCount(3);
-   await page.setViewportSize({ width: 390, height: 844 });
-   await notifications.scrollIntoViewIfNeeded();
-   await page.screenshot({ path: "test-results/devtools-notifications-mobile.png", animations: "disabled" });
 });
 
 for (const mode of ["smart", "single"] as const)

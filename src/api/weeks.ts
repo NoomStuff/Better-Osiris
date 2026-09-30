@@ -1,6 +1,8 @@
 import type { WeekBatch } from "../types/weeks";
 import { parseApiErrorPayload, parseWeekBatch } from "../../shared/rosterValidation";
 import { fetchWithTimeout, tryReadJson } from "./fetch";
+import { readRetryAfter } from "../../shared/retryAfter";
+export { readRetryAfter } from "../../shared/retryAfter";
 
 export async function fetchWeeks(offset: number, limit: number, signal?: AbortSignal): Promise<WeekBatch> {
    const response = await fetchWithTimeout(`/api/roster/weeks?offset=${offset}&limit=${limit}`, signal ? { signal } : undefined);
@@ -52,10 +54,4 @@ export class WeekRequestError extends Error {
 
 function isRetryableStatus(status: number) {
    return status === 408 || status === 429 || status >= 500;
-}
-
-export function readRetryAfter(value: string | null): number {
-   if (!value) return 0;
-   const delay = /^\d+$/.test(value) ? Number(value) * 1000 : Date.parse(value) - Date.now();
-   return Number.isFinite(delay) ? Math.min(Math.max(delay, 0), 24 * 60 * 60_000) : 0;
 }

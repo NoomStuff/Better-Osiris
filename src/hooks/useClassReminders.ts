@@ -1,12 +1,12 @@
 import { useEffect } from "react";
 import { getNextReminderCheckDelay, getReminderMinutes, notifyUpcomingClasses } from "../lib/classReminders";
-import type { WeekEntries } from "../lib/weekPolicy";
+import type { Week } from "../types/weeks";
 
-export function useClassReminders(entries: WeekEntries, contextId: string | null, enabled: boolean) {
+export function useClassReminders(weeks: readonly Week[], contextId: string | null, enabled: boolean) {
    useEffect(() => {
       if (!enabled || !contextId) return;
       let active = true;
-      const classes = Object.values(entries).flatMap((entry) => entry?.data?.classes ?? []);
+      const classes = weeks.flatMap((week) => week.classes);
       let timer: ReturnType<typeof setTimeout>;
       const check = () => {
          clearTimeout(timer);
@@ -30,5 +30,5 @@ export function useClassReminders(entries: WeekEntries, contextId: string | null
          window.removeEventListener("pageshow", check);
          document.removeEventListener("visibilitychange", check);
       };
-   }, [entries, enabled, contextId]);
+   }, [weeks, enabled, contextId]);
 }

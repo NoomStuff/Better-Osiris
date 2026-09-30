@@ -480,3 +480,16 @@
       width: 72px;
    }
 }
+
+@media (prefers-reduced-motion: reduce) {
+   .theme-picker--animate .theme-picker__option,
+   .theme-picker__option:is(:hover, :focus-visible) .theme-picker__swatch i {
+      animation: none;
+   }
+   .theme-picker__surface {
+      transition: none;
+   }
+   .theme-picker__option:is(:hover, :focus-visible, :active) .theme-picker__surface {
+      transform: none;
+   }
+}

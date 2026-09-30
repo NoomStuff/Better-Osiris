@@ -1,4 +1,5 @@
 import crypto from "node:crypto";
+import { readRetryAfter } from "../../shared/retryAfter.js";
 import { ApiError } from "./errors.js";
 import { getOsirisRosterUrl } from "./osirisConfig.js";
 import { parseOsirisRosterResponse, type OsirisRosterResponse } from "./osirisSchema.js";
@@ -101,6 +102,7 @@ async function fetchOsirisRosterWeeksFromEndpoint(rosterUrl: string, offset: num
          code: isAuthRejection ? "UPSTREAM_AUTH_FAILED" : "UPSTREAM_REQUEST_FAILED",
          status: isAuthRejection ? response.status : 502,
          retryable: response.status === 408 || response.status === 429 || response.status >= 500,
+         retryAfterMs: isAuthRejection ? 0 : readRetryAfter(response.headers.get("Retry-After")),
       });
    }
 

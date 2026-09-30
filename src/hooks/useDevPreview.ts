@@ -2,8 +2,6 @@ import { useCallback, useEffect, useState } from "react";
 import { isDevClassStatusPreviewMode, type DevClassStatusPreviewMode } from "../lib/devStatusPreview";
 import { readBrowserStorage, removeBrowserStorage, writeBrowserStorage } from "../lib/browserStorage";
 
-import { useClock } from "./useClock";
-
 const ENABLED_KEY = "roster-devtools-enabled";
 const TIME_KEY = "roster-devtools-time-override";
 const STATUS_KEY = "roster-devtools-status-preview";
@@ -28,7 +26,6 @@ function getInitialStatus(): DevClassStatusPreviewMode {
 }
 
 export function useDevPreview() {
-   const clockNow = useClock(60_000);
    const [isEnabled, setIsEnabled] = useState(getInitialEnabled);
    const [timeOverride, setTimeOverride] = useState<Date | null>(getInitialTimeOverride);
    const [statusPreviewMode, setStatusPreviewMode] = useState<DevClassStatusPreviewMode>(getInitialStatus);
@@ -58,7 +55,6 @@ export function useDevPreview() {
 
    return {
       isEnabled,
-      perceivedNow: isEnabled && timeOverride ? timeOverride : clockNow,
       statusPreviewMode,
       timeOverride,
       toggle,

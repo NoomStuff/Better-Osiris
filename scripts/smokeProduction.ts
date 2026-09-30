@@ -3,6 +3,7 @@ import { spawn } from "node:child_process";
 import { createServer } from "node:net";
 import path from "node:path";
 import { parseOsirisTokenSettings, parseWeekBatch } from "../shared/rosterValidation";
+import { chromium, expect } from "@playwright/test";
 
 const probe = createServer();
 await new Promise<void>((resolve) => probe.listen(0, "127.0.0.1", resolve));
@@ -33,6 +34,13 @@ child.stdout.on("data", (chunk: Buffer) => {
 child.stderr.on("data", (chunk: Buffer) => {
    logs += chunk.toString();
 });
+
+async function stopServer() {
+   if (child.exitCode !== null || child.signalCode !== null) return;
+   const stopped = new Promise<void>((resolve) => child.once("exit", () => resolve()));
+   child.kill();
+   await stopped;
+}
 try {
    let ready = false;
    for (let attempt = 0; attempt < 100 && !ready; attempt += 1) {
@@ -66,7 +74,11 @@ try {
       body: JSON.stringify({ token }),
    });
    assert.equal(saved.status, 200);
-   const settings = parseOsirisTokenSettings(await saved.json());
+   const savedPayload = (await saved.json()) as Record<string, unknown>;
+   const settings = parseOsirisTokenSettings(savedPayload);
+   const verified = parseWeekBatch(savedPayload["verifiedBatch"]);
+   assert.equal(verified.contextId, settings.contextId);
+   assert.equal(verified.weeks[0]?.classes[0]?.title, "Smoke class");
    assert.ok(settings.contextId);
    const cookie = saved.headers.get("set-cookie");
    assert.ok(cookie);
@@ -83,8 +95,52 @@ try {
    assert.equal(second.fetchedAt, batch.fetchedAt, "A server cache hit must retain the upstream fetch time");
    assert.ok(!logs.includes(token));
    assert.match(logs, /"requestId":"[^"]+".*"status":400.*"durationMs":/);
-   console.log("Production smoke passed: static assets, private headers, request IDs, invalid JSON, encrypted cookie, and synthetic OSIRIS round trip.");
+   const browser = await chromium.launch();
+   try {
+      const context = await browser.newContext();
+      const page = await context.newPage();
+      await page.goto(base);
+      await page.getByLabel("Bearer token", { exact: true }).fill(token);
+      await page.getByRole("button", { name: "Load roster", exact: true }).click();
+      await expect(page.locator(".grid-class").first()).toContainText("Smoke class");
+      await page.waitForFunction(() => navigator.serviceWorker.controller !== null);
+      const urls = await page.evaluate(async () => {
+         const names = await caches.keys();
+         const requests = await Promise.all(
+            names.filter((name) => name.startsWith("osiris-shell-")).map(async (name) => (await (await caches.open(name)).keys()).map((request) => request.url))
+         );
+         return requests.flat();
+      });
+      assert.ok(urls.length > 0);
+      assert.ok(
+         urls.every((url) => !new URL(url).pathname.startsWith("/api/")),
+         "The worker must never cache credentialed API responses"
+      );
+      await context.setOffline(false);
+      await page.reload();
+      await page.getByRole("button", { name: "Open settings" }).click();
+      await page.getByRole("region", { name: "Roster access" }).getByRole("button", { name: "Remove" }).click();
+      await page.getByRole("button", { name: "Remove token", exact: true }).click();
+      await expect(page.getByText("No bearer token is set.")).toBeVisible();
+      await context.setOffline(true);
+      await page.reload();
+      await expect(page.locator(".grid-class")).toHaveCount(0);
+      await context.setOffline(false);
+      await page.reload();
+      await page.getByLabel("Bearer token", { exact: true }).fill(token);
+      await page.getByRole("button", { name: "Load roster", exact: true }).click();
+      await expect(page.locator(".grid-class").first()).toContainText("Smoke class");
+      await stopServer();
+      await page.reload();
+      await expect(page.locator(".grid-class").first()).toContainText("Smoke class");
+      await expect(page.locator(".warning-banner")).toContainText("Showing your saved timetable");
+      await expect(page.locator(".warning-banner")).toContainText("Can't check for updates.");
+   } finally {
+      await browser.close();
+   }
+   console.log(
+      "Production smoke passed: serving, private API contracts, verified token batch, offline launch, public-only worker cache, and cleared-account privacy."
+   );
 } finally {
-   child.kill();
-   await new Promise<void>((resolve) => (child.exitCode !== null ? resolve() : child.once("exit", () => resolve())));
+   await stopServer();
 }

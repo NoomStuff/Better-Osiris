@@ -1,4 +1,4 @@
-import { Fragment, useCallback, useLayoutEffect, useRef, useState, type RefObject } from "react";
+import { Fragment, useEffect, useRef, useState, type RefObject } from "react";
 import { dayLabel, monthDayLabel, timeLabel, toDayKey } from "../lib/date";
 import { getClassDetailsLabel, getClassLabel } from "../lib/classFormat";
 import { getBreakIcon, getEmptyTodayMessage } from "../lib/flavor";
@@ -27,7 +27,6 @@ interface CurrentIndicatorPlacement {
    visible: boolean;
    top: number;
    height: number;
-   progress: number;
 }
 
 function AgendaCurrentIndicator({
@@ -42,67 +41,66 @@ function AgendaCurrentIndicator({
    timeOverride: Date | null;
 }) {
    const now = useClock(1000, timeOverride);
+   const activeDayKey = toDayKey(now);
+   const activeSegment = getCurrentAgendaSegment(days, now);
+   const segmentKey = activeSegment?.key ?? null;
+   const segmentType = activeSegment?.type ?? null;
+   const todayExpanded = expandedDays.has(activeDayKey);
+   const anchor = activeSegment ? null : getTodayProgressAnchor(days, now);
+   const anchorId = anchor?.schoolClass.id ?? null;
+   const anchorPosition = anchor?.position ?? null;
    const [indicatorPlacement, setIndicatorPlacement] = useState<CurrentIndicatorPlacement | null>(null);
-   const measureIndicator = useCallback(() => {
-      const agendaElement = agendaRef.current;
-      if (!agendaElement) {
-         return;
-      }
+   useEffect(() => {
+      const measureIndicator = () => {
+         const agendaElement = agendaRef.current;
+         if (!agendaElement) {
+            return;
+         }
 
-      const activeDayKey = toDayKey(now);
-      const todayBodyElement = agendaElement.querySelector<HTMLElement>(`[data-day="${CSS.escape(activeDayKey)}"] .day-group__body-inner`);
-      const activeSegment = getCurrentAgendaSegment(days, now);
-      const todayExpanded = expandedDays.has(activeDayKey);
-      const selector = activeSegment ? `[data-current-segment="${CSS.escape(activeSegment.key)}"]` : null;
-      const targetElement = selector && todayBodyElement ? todayBodyElement.querySelector<HTMLElement>(selector) : null;
-      const progress = getSegmentProgress(activeSegment, now);
+         const todayBodyElement = agendaElement.querySelector<HTMLElement>(`[data-day="${CSS.escape(activeDayKey)}"] .day-group__body-inner`);
+         const selector = segmentKey ? `[data-current-segment="${CSS.escape(segmentKey)}"]` : null;
+         const targetElement = selector && todayBodyElement ? todayBodyElement.querySelector<HTMLElement>(selector) : null;
 
-      if (activeSegment && targetElement && todayBodyElement && todayExpanded) {
-         const bodyRect = todayBodyElement.getBoundingClientRect();
-         const targetRect = targetElement.getBoundingClientRect();
-         const inset = activeSegment.type === "break" ? CURRENT_INDICATOR_BREAK_INSET : CURRENT_INDICATOR_CLASS_INSET;
-         const height = Math.max(CURRENT_INDICATOR_MIN_HEIGHT, Math.min(CURRENT_INDICATOR_MAX_HEIGHT, targetRect.height - inset));
-         const top = targetRect.top - bodyRect.top + (targetRect.height - height) / 2;
+         if (segmentKey && targetElement && todayBodyElement && todayExpanded) {
+            const bodyRect = todayBodyElement.getBoundingClientRect();
+            const targetRect = targetElement.getBoundingClientRect();
+            const inset = segmentType === "break" ? CURRENT_INDICATOR_BREAK_INSET : CURRENT_INDICATOR_CLASS_INSET;
+            const height = Math.max(CURRENT_INDICATOR_MIN_HEIGHT, Math.min(CURRENT_INDICATOR_MAX_HEIGHT, targetRect.height - inset));
+            const top = targetRect.top - bodyRect.top + (targetRect.height - height) / 2;
 
-         setIndicatorPlacement({ visible: true, top, height, progress });
-         return;
-      }
+            setIndicatorPlacement({ visible: true, top, height });
+            return;
+         }
 
-      const anchor = getTodayProgressAnchor(days, now);
-      const anchorClass = anchor?.schoolClass;
-      const anchorElement =
-         anchorClass && todayBodyElement ? todayBodyElement.querySelector<HTMLElement>(`[data-current-segment="${CSS.escape(anchorClass.id)}"]`) : null;
+         const anchorElement =
+            anchorId && todayBodyElement ? todayBodyElement.querySelector<HTMLElement>(`[data-current-segment="${CSS.escape(anchorId)}"]`) : null;
 
-      if (anchorElement && todayBodyElement && todayExpanded) {
-         const bodyRect = todayBodyElement.getBoundingClientRect();
-         const anchorRect = anchorElement.getBoundingClientRect();
-         const height = Math.max(CURRENT_INDICATOR_MIN_HEIGHT, Math.min(CURRENT_INDICATOR_MAX_HEIGHT, anchorRect.height - CURRENT_INDICATOR_CLASS_INSET));
-         const top = anchor?.position === "before-first" ? anchorRect.top - bodyRect.top - height - 8 : anchorRect.bottom - bodyRect.top + 8;
+         if (anchorElement && todayBodyElement && todayExpanded) {
+            const bodyRect = todayBodyElement.getBoundingClientRect();
+            const anchorRect = anchorElement.getBoundingClientRect();
+            const height = Math.max(CURRENT_INDICATOR_MIN_HEIGHT, Math.min(CURRENT_INDICATOR_MAX_HEIGHT, anchorRect.height - CURRENT_INDICATOR_CLASS_INSET));
+            const top = anchorPosition === "before-first" ? anchorRect.top - bodyRect.top - height - 8 : anchorRect.bottom - bodyRect.top + 8;
 
-         setIndicatorPlacement({ visible: false, top, height, progress: 0 });
-         return;
-      }
+            setIndicatorPlacement({ visible: false, top, height });
+            return;
+         }
 
-      setIndicatorPlacement((current) => (current ? { ...current, visible: false, progress: 0 } : null));
-   }, [agendaRef, expandedDays, days, now]);
-
-   const measureRef = useRef(measureIndicator);
-   useLayoutEffect(() => {
-      measureRef.current = measureIndicator;
-      measureIndicator();
-   }, [measureIndicator]);
-   useLayoutEffect(() => {
+         setIndicatorPlacement((current) => (current?.visible ? { ...current, visible: false } : current));
+      };
       const element = agendaRef.current;
       if (!element) return;
-      const measure = () => measureRef.current();
-      const observer = new ResizeObserver(measure);
+      measureIndicator();
+      const observer = new ResizeObserver(measureIndicator);
       observer.observe(element);
-      window.addEventListener("resize", measure);
+      const body = element.querySelector(`[data-day="${CSS.escape(activeDayKey)}"] .day-group__body-inner`);
+      if (body) {
+         observer.observe(body);
+         for (const segment of body.querySelectorAll("[data-current-segment]")) observer.observe(segment);
+      }
       return () => {
          observer.disconnect();
-         window.removeEventListener("resize", measure);
       };
-   }, [agendaRef]);
+   }, [activeDayKey, agendaRef, anchorId, anchorPosition, days, segmentKey, segmentType, todayExpanded]);
    if (!indicatorPlacement) return null;
    return (
       <span
@@ -111,7 +109,7 @@ function AgendaCurrentIndicator({
          data-visible={indicatorPlacement.visible}
          style={{ top: `${indicatorPlacement.top}px`, height: `${indicatorPlacement.height}px` }}
       >
-         <span className="agenda-current-indicator__progress" style={{ height: `${indicatorPlacement.progress * 100}%` }} />
+         <span className="agenda-current-indicator__progress" style={{ height: `${getSegmentProgress(activeSegment, now) * 100}%` }} />
       </span>
    );
 }

@@ -7,6 +7,7 @@ import { notifyError, notifySuccess, notifyWarning } from "../lib/notyf";
 import type { SessionClassDiff } from "../lib/classDiffs";
 import type { ClassSnapshot } from "../types/weeks";
 import { usePreferences } from "../hooks/preferences";
+import { useClock } from "../hooks/useClock";
 import { ActionButtons, ActionSelector } from "./ActionGroup";
 import { Button } from "./Button";
 import { IconButton } from "./IconButton";
@@ -52,7 +53,8 @@ type NotificationTest = (typeof NOTIFICATION_TEST_GROUPS)[number]["types"][numbe
 
 export function DevToolsSettings() {
    const { devPreview } = usePreferences();
-   const { isEnabled, perceivedNow, statusPreviewMode, timeOverride } = devPreview;
+   const { isEnabled, statusPreviewMode, timeOverride } = devPreview;
+   const perceivedNow = useClock(60_000, isEnabled ? timeOverride : null);
    const isLive = timeOverride === null;
    const perceivedMinutes = perceivedNow.getHours() * 60 + perceivedNow.getMinutes();
 

@@ -37,3 +37,15 @@ ReactDOM.createRoot(rootElement).render(
       </ErrorBoundary>
    </React.StrictMode>
 );
+
+if (import.meta.env.PROD && "serviceWorker" in navigator) {
+   window.addEventListener(
+      "load",
+      () => {
+         void navigator.serviceWorker.register("/notifications-sw.js").catch(() => {
+            // Offline launch is optional when this browser cannot install the public app shell.
+         });
+      },
+      { once: true }
+   );
+}

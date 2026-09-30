@@ -1,18 +1,19 @@
 import { NotificationSettings } from "./NotificationSettings";
 import { RosterAccessSettings } from "./RosterAccessSettings";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback } from "react";
 import type { OsirisTokenValidationStatus } from "../types/osirisToken";
 import type { IsoWeekday } from "../lib/date";
 import { DEFAULT_GRID_HOURS, formatGridHour, GRID_HOUR_MAX, GRID_HOUR_MIN, type GridHourRange } from "../lib/gridHours";
 import type { AgendaFoldingMode } from "../lib/agendaPolicy";
 import { usePreferences } from "../hooks/preferences";
 import { useOverlayScrollbar } from "../hooks/useOverlayScrollbar";
+import { usePanelClose } from "../hooks/usePanelClose";
 import { DEFAULT_SHOWN_WEEKDAYS, ISO_WEEKDAYS } from "../lib/weekLayout";
 import { ActionButtons, ActionSelector, type ActionOption } from "./ActionGroup";
 import { Button } from "./Button";
 import { DevToolsSettings } from "./DevToolsSettings";
 import { IconButton } from "./IconButton";
-import { OverlayPanel, PANEL_CLOSE_MS } from "./OverlayPanel";
+import { OverlayPanel } from "./OverlayPanel";
 import { RangeSlider } from "./RangeSlider";
 import { ThemePicker } from "./ThemePicker";
 import "./SettingsDialog.css";
@@ -57,29 +58,10 @@ export function SettingsDialog({
 }: SettingsDialogProps) {
    const { agendaFoldingMode, gridHours, setAgendaFoldingMode, setGridHours, setShownWeekdays, shownWeekdays } = usePreferences();
    const contentRef = useOverlayScrollbar();
-   const [isClosing, setIsClosing] = useState(false);
-   const closeTimerRef = useRef<number | null>(null);
-
-   const closeSettings = useCallback(() => {
-      if (isClosing) {
-         return;
-      }
-
-      setIsClosing(true);
-      closeTimerRef.current = window.setTimeout(() => {
-         onTokenDraftChange();
-         setIsClosing(false);
-         onClose();
-      }, PANEL_CLOSE_MS);
-   }, [isClosing, onClose, onTokenDraftChange]);
-
-   useEffect(() => {
-      return () => {
-         if (closeTimerRef.current) {
-            window.clearTimeout(closeTimerRef.current);
-         }
-      };
-   }, []);
+   const { isClosing, close: closeSettings } = usePanelClose(isOpen, () => {
+      onTokenDraftChange();
+      onClose();
+   });
 
    const toggleWeekday = useCallback(
       (weekday: IsoWeekday) => {
@@ -106,9 +88,9 @@ export function SettingsDialog({
 
    return (
       <OverlayPanel
-         className="settings-dialog class-panel"
-         backdropClassName="class-panel__backdrop"
-         surfaceClassName="settings-dialog__panel class-panel__card"
+         className="settings-dialog overlay-panel--sheet"
+         backdropClassName="overlay-panel__shade"
+         surfaceClassName="settings-dialog__panel overlay-panel__card"
          closeLabel="Close settings"
          labelledBy="settings-title"
          placement="bottom"
@@ -117,12 +99,12 @@ export function SettingsDialog({
          swipeIgnoreSelector=".settings-dialog__content"
          onClose={closeSettings}
       >
-         <header className="settings-dialog__header class-panel__header">
-            <div className="class-panel__title">
+         <header className="settings-dialog__header overlay-panel__header">
+            <div>
                <p className="eyebrow">Settings</p>
                <h2 id="settings-title">Preferences</h2>
             </div>
-            <IconButton className="class-panel__close" icon="fa-solid fa-xmark" label="Close settings" tooltipPlacement="bottom" onClick={closeSettings} />
+            <IconButton className="overlay-panel__close" icon="fa-solid fa-xmark" label="Close settings" tooltipPlacement="bottom" onClick={closeSettings} />
          </header>
 
          <div ref={contentRef} className="settings-dialog__content">

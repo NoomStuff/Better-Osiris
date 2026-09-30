@@ -25,9 +25,6 @@ const FOCUSABLE_SELECTOR = [
    '[tabindex]:not([tabindex="-1"])',
 ].join(",");
 
-/** Slightly above the 220ms closing animations in the panel CSS, so the panel is unmounted only after it fully closed. */
-export const PANEL_CLOSE_MS = 240;
-
 interface OverlayPanelBaseProps {
    children: ReactNode;
    className?: string;

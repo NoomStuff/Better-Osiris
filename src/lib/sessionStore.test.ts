@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { afterEach, beforeEach, describe, it } from "node:test";
 import { checkSessionAfterAuthError, getSessionSnapshot, refreshSession, saveSessionToken, SESSION_EPOCH_KEY } from "./sessionStore";
+import { isoWeekNumber, shiftCalendarDate } from "../../shared/calendar";
 
 const originalFetch = globalThis.fetch;
 const pending: ((response: Response) => void)[] = [];
@@ -8,7 +9,22 @@ const pending: ((response: Response) => void)[] = [];
 function respond(contextId: string) {
    const resolve = pending.shift();
    assert.ok(resolve, "Expected a settings request");
-   resolve(Response.json({ hasBearerToken: true, hasCustomToken: true, contextId }));
+   const start = "2026-06-15";
+   resolve(
+      Response.json({
+         hasBearerToken: true,
+         hasCustomToken: true,
+         contextId,
+         verifiedBatch: {
+            contextId,
+            offset: 0,
+            limit: 5,
+            timeZone: "Europe/Amsterdam",
+            fetchedAt: Date.now(),
+            weeks: [{ week: { offset: 0, start, end: shiftCalendarDate(start, 6), number: isoWeekNumber(start) }, classes: [] }],
+         },
+      })
+   );
 }
 
 void describe("session request ordering", () => {
@@ -58,6 +74,7 @@ void describe("session request ordering", () => {
       await saving;
       assert.equal(getSessionSnapshot().settings?.contextId, "new-account");
       assert.equal(getSessionSnapshot().isMutating, false);
+      assert.equal(getSessionSnapshot().verifiedBatch?.contextId, "new-account");
    });
 
    void it("ignores an auth check when another tab changed credentials", async () => {
