@@ -9,6 +9,7 @@ import "./GridView.css";
 import { ClassStatusMarker } from "./ClassStatusMarker";
 
 interface GridViewProps {
+   inert?: boolean;
    days: Day[];
    zoom: GridZoom;
    hours: GridHourRange;
@@ -29,7 +30,7 @@ const COMPACT_HEIGHT_PX = 85;
 const TINY_HEIGHT_PX = 64;
 type GridStyle = CSSProperties & { "--grid-day-count": number };
 
-export function GridView({ days, zoom: zoomId, hours, now, onSelectClass }: GridViewProps) {
+export function GridView({ inert, days, zoom: zoomId, hours, now, onSelectClass }: GridViewProps) {
    const [animateZoom, setAnimateZoom] = useState(false);
    const [contentHeight, setContentHeight] = useState(0);
    const previousZoomRef = useRef<GridZoom | null>(null);
@@ -74,7 +75,7 @@ export function GridView({ days, zoom: zoomId, hours, now, onSelectClass }: Grid
    }, []);
 
    return (
-      <div className="grid-shell" role="region" aria-label="Weekly timetable grid">
+      <div className="grid-shell" inert={inert} role="region" aria-label="Weekly timetable grid">
          <div className="grid-header" style={{ "--grid-day-count": days.length } as GridStyle}>
             <div className="grid-header__time" />
             {days.map((group) => (

@@ -489,7 +489,7 @@ test("only the topmost dialog handles Escape and focus stays contained", async (
 });
 
 test("a confirming dialog stays topmost while its parent updates", async ({ page }) => {
-   let releaseReset = () => undefined;
+   let releaseReset: () => void = () => undefined;
    const resetGate = new Promise<void>((resolve) => {
       releaseReset = resolve;
    });
@@ -544,7 +544,7 @@ test("class change notifications are an explicit saved preference", async ({ pag
 test("saving a replacement token refreshes roster data without reloading the page", async ({ page }) => {
    let rosterRequestCount = 0;
    let holdReplacementRequest = false;
-   let releaseReplacementRequest = () => undefined;
+   let releaseReplacementRequest: () => void = () => undefined;
    const replacementRequestGate = new Promise<void>((resolve) => {
       releaseReplacementRequest = resolve;
    });
@@ -686,7 +686,7 @@ test("an expired saved token shows the expired-token screen until a fresh one is
 
 test("an aborted credential request cannot restore stale roster data", async ({ page }) => {
    let tokenVersion = 1;
-   let releaseInitialRequest = () => undefined;
+   let releaseInitialRequest: () => void = () => undefined;
    const initialRequestGate = new Promise<void>((resolve) => {
       releaseInitialRequest = resolve;
    });
@@ -915,6 +915,7 @@ test("missing bearer token shows an entry overlay without requesting roster data
    await page.goto("/");
 
    await expect(page.getByRole("heading", { name: "Bearer token required" })).toBeVisible();
+   await expect(page.locator(".grid-shell")).toHaveAttribute("inert", "");
    await expect(page.getByRole("link", { name: "Learn how to get your bearer token" })).toHaveAttribute("href", OSIRIS_BEARER_TOKEN_HELP_URL);
    const tokenInput = page.getByLabel("Bearer token");
    const saveTokenButton = page.getByRole("button", { name: "Load roster" });
@@ -926,7 +927,7 @@ test("missing bearer token shows an entry overlay without requesting roster data
 });
 
 test("keeps token entry open until OSIRIS accepts the token", async ({ page }) => {
-   let releaseRoster = () => undefined;
+   let releaseRoster: () => void = () => undefined;
    const rosterGate = new Promise<void>((resolve) => {
       releaseRoster = resolve;
    });
@@ -1068,15 +1069,15 @@ test("theme swatches stay independent of the active palette and expose their mot
       // The contrast test separately clicks every theme through the picker.
       const palettes = await swatches.evaluateAll((elements, themes) => {
          const root = document.documentElement;
-         const selected = root.dataset.theme;
+         const selected = root.dataset["theme"];
          const palettes = themes.map((theme) => {
-            root.dataset.theme = theme.id;
+            root.dataset["theme"] = theme.id;
             return elements.map((element) => {
                const style = getComputedStyle(element);
                return [style.backgroundColor, style.color];
             });
          });
-         root.dataset.theme = selected;
+         root.dataset["theme"] = selected;
          return palettes;
       }, themes);
       for (const colors of palettes) expect(colors).toEqual(initialColors);
@@ -1101,7 +1102,7 @@ test("derived theme colors follow their source and the default palette survives 
       const root = document.documentElement;
       const color = (name: string) => getComputedStyle(root).getPropertyValue(name);
       const original = color("--class-surface-raised");
-      root.dataset.theme = "frost";
+      root.dataset["theme"] = "frost";
       const border = color("--class-border");
       root.style.setProperty("--accent", "hsl(120 100% 50%)");
       const changedBorder = color("--class-border");
@@ -1109,7 +1110,7 @@ test("derived theme colors follow their source and the default palette survives 
       const restoredBorder = color("--class-border");
       root.removeAttribute("data-theme");
       const fallback = color("--class-surface-raised");
-      root.dataset.theme = "dark";
+      root.dataset["theme"] = "dark";
       return { original, border, changedBorder, restoredBorder, fallback, restored: color("--class-surface-raised") };
    });
    expect(result.changedBorder).not.toEqual(result.border);
@@ -1265,6 +1266,63 @@ test("the mobile hour grid fits the viewport and keeps the next-up handle above 
    await page.mouse.up();
 });
 
+test("next-up cancellation and lost capture discard the gesture without activating", async ({ page }) => {
+   await page.goto("/");
+   const handle = page.locator(".next-up__handle");
+   await expect(handle).toHaveAttribute("aria-expanded", "false");
+   await page.evaluate(() => {
+      const target = document.querySelector(".next-up__handle");
+      if (!(target instanceof HTMLElement)) throw new Error("Missing next-up handle");
+      target.setPointerCapture = () => undefined;
+      target.releasePointerCapture = () => undefined;
+   });
+   await handle.dispatchEvent("pointerdown", { pointerId: 1, clientY: 300 });
+   await handle.dispatchEvent("pointercancel", { pointerId: 1 });
+   await expect(handle).toHaveAttribute("aria-expanded", "false");
+   await handle.dispatchEvent("pointerdown", { pointerId: 2, clientY: 300 });
+   await handle.dispatchEvent("pointermove", { pointerId: 2, clientY: 220 });
+   await expect(page.locator(".next-up")).toHaveAttribute("data-dragging", "true");
+   await handle.dispatchEvent("lostpointercapture", { pointerId: 2 });
+   await expect(page.locator(".next-up")).toHaveAttribute("data-dragging", "false");
+   await expect(handle).toHaveAttribute("aria-expanded", "false");
+   await handle.focus();
+   await page.keyboard.press("Enter");
+   await expect(handle).toHaveAttribute("aria-expanded", "true");
+});
+
+test("unused browser shortcuts and composing or handled keys remain unclaimed", async ({ page }) => {
+   await page.goto("/");
+   await expect(page.locator(".grid-class").first()).toBeVisible();
+   expect(
+      await page.evaluate(() => {
+         const events = [
+            new KeyboardEvent("keydown", { key: "9", ctrlKey: true, cancelable: true }),
+            new KeyboardEvent("keydown", { key: "ArrowRight", isComposing: true, cancelable: true }),
+            new KeyboardEvent("keydown", { key: "ArrowRight", cancelable: true }),
+         ];
+         events[2]?.preventDefault();
+         return events.map((event) => {
+            window.dispatchEvent(event);
+            return event.defaultPrevented;
+         });
+      })
+   ).toEqual([false, false, true]);
+   await expect(page.locator(".weekbar__label")).toHaveText("This week");
+});
+
+test("a complete short roster enables Smart preferences", async ({ page }) => {
+   await page.route("**/api/roster/weeks?*", (route) => {
+      const url = new URL(route.request().url());
+      const batch = createShiftedRosterBatch(Number(url.searchParams.get("offset")), Number(url.searchParams.get("limit")), 0);
+      batch.weeks = batch.weeks.slice(0, 1);
+      return route.fulfill({ json: batch });
+   });
+   await page.goto("/");
+   await expect(page.locator(".grid-class").first()).toBeVisible();
+   await page.getByRole("button", { name: "Open settings" }).click();
+   await expect(page.getByRole("region", { name: "Grid hours" }).getByRole("button", { name: "Smart", exact: true })).toBeEnabled();
+});
+
 test("the desktop app fills the viewport", async ({ page }) => {
    await page.setViewportSize({ width: 1280, height: 720 });
    await page.goto("/");
@@ -1332,7 +1390,7 @@ async function installFixedClock(page: Page) {
             super(args[0], args[1], args[2] ?? 1, args[3] ?? 0, args[4] ?? 0, args[5] ?? 0, args[6] ?? 0);
          }
 
-         static now() {
+         static override now() {
             return fixedNow();
          }
       }

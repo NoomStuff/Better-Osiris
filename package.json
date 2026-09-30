@@ -7,8 +7,9 @@
       "dev": "bun scripts/ensureDevCookieSecret.ts && concurrently --kill-others-on-fail \"cross-env NODE_ENV=development bun --watch server.ts\" \"bunx vite\"",
       "server": "bun scripts/ensureDevCookieSecret.ts && cross-env NODE_ENV=development bun server.ts",
       "build": "bunx tsc -p tsconfig.json && bunx tsc -p tsconfig.server.json && bunx vite build",
-      "icons": "node --experimental-strip-types scripts/generateIcons.ts",
+      "icons": "bun scripts/generateIcons.ts",
       "lint": "eslint . --max-warnings 0",
+      "check": "bunx tsc -p tsconfig.eslint.json",
       "test": "concurrently \"bun run test:unit\" \"bun run test:e2e\"",
       "test:unit": "bun test",
       "test:production": "bun scripts/smokeProduction.ts",
@@ -18,7 +19,7 @@
       "start": "cross-env NODE_ENV=production bun server.ts",
       "format": "prettier --write .",
       "format:check": "prettier --check .",
-      "verify": "bun run format:check && concurrently \"bun run lint\" \"bun run test\" \"bun run build\""
+      "verify": "bun run format:check && concurrently \"bun run lint\" \"bun run check\" \"bun run test\" \"bun run build\" && bun run test:production"
    },
    "devDependencies": {
       "@eslint/js": "^10.0.1",

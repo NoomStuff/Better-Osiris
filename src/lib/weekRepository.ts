@@ -242,7 +242,7 @@ export class WeekRepository {
    };
    ensureWeek = (offset: number) => {
       const entry = this.snapshot.entries[offset];
-      if (!entry?.data && !entry?.isFetching && !entry?.error) this.load(getBatchStart(offset));
+      if (!entry?.data && !entry?.isFetching && !entry?.error && !entry?.isOmitted) this.load(getBatchStart(offset));
    };
 
    private load(start: number, force = false, passive = false) {
@@ -253,6 +253,7 @@ export class WeekRepository {
          if (this.sourceShift !== null && offset < this.sourceShift) return false;
          const date = shiftCalendarDate(this.anchor, offset * 7);
          const entry = this.snapshot.entries[offset];
+         if (entry?.isOmitted) return false;
          return !entry?.data || entry.isHydrated || Date.now() - (this.stored.get(date)?.checkedAt ?? 0) >= REFRESH_MS;
       });
       if (!force && !stale) return;
@@ -458,6 +459,7 @@ export class WeekRepository {
          this.activeOffset <= MAX_WEEK_OFFSET + this.sourceShift &&
          !active?.data &&
          !active?.error &&
+         !active?.isOmitted &&
          !active?.isFetching
       )
          this.load(getBatchStart(this.activeOffset));

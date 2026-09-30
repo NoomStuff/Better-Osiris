@@ -3,7 +3,7 @@ import type { IncomingMessage, ServerResponse } from "node:http";
 import { sendJson, sendMethodNotAllowed } from "../_lib/http.js";
 import { getRosterConfigRoute } from "../_lib/apiRoutes.js";
 import { enforceRateLimit } from "../_lib/rateLimit.js";
-import { toApiError, toApiErrorPayload } from "../_lib/errors.js";
+import { toApiError, toApiErrorPayload, errorHeaders } from "../_lib/errors.js";
 
 export default function handler(req: IncomingMessage, res: ServerResponse) {
    observeApiRequest(req, res, "/api/roster/config");
@@ -18,6 +18,6 @@ export default function handler(req: IncomingMessage, res: ServerResponse) {
       sendJson(res, response.statusCode, response.payload, response.headers ? { headers: response.headers } : undefined);
    } catch (error) {
       const apiError = toApiError(error, "The roster configuration request could not be completed.");
-      sendJson(res, apiError.status, toApiErrorPayload(apiError));
+      sendJson(res, apiError.status, toApiErrorPayload(apiError), { headers: errorHeaders(apiError) });
    }
 }

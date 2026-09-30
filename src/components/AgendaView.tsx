@@ -9,6 +9,7 @@ import { ClassStatusMarker } from "./ClassStatusMarker";
 import "./AgendaView.css";
 
 interface AgendaViewProps {
+   inert?: boolean;
    days: Day[];
    expandedDays: Set<string>;
    animate: boolean;
@@ -115,11 +116,11 @@ function AgendaCurrentIndicator({
    );
 }
 
-export function AgendaView({ days, expandedDays, animate, now, timeOverride, onToggleDay, onSelectClass }: AgendaViewProps) {
+export function AgendaView({ inert, days, expandedDays, animate, now, timeOverride, onToggleDay, onSelectClass }: AgendaViewProps) {
    const agendaRef = useRef<HTMLElement | null>(null);
    const todayKey = toDayKey(now);
    return (
-      <section className="agenda-view" ref={agendaRef} aria-label="Weekly agenda">
+      <section className="agenda-view" inert={inert} ref={agendaRef} aria-label="Weekly agenda">
          {days.map((group) => {
             const expanded = expandedDays.has(group.key);
             const timeline = getDayTimeline(group.classes);

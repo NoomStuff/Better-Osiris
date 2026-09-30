@@ -76,13 +76,13 @@ export function getHomeWeek(entries: WeekEntries, sourceShift: number | null, no
    for (let offset = 0; offset <= 1; offset += 1) {
       const entry = entries[offset];
       if (!entry?.data) {
-         if (sourceShift !== null && offset < sourceShift) continue;
+         if (entry?.isOmitted || (sourceShift !== null && offset < sourceShift)) continue;
          return { offset: null, pendingOffset: offset };
       }
       if (entry.data.classes.some((item) => isActiveClass(item) && parseLocalDateTime(item.end) > now)) return { offset, pendingOffset: null };
    }
    const fallback = Math.max(0, sourceShift ?? 0);
-   if (fallback > MAX_WEEK_OFFSET) return { offset: null, pendingOffset: null };
+   if (fallback > MAX_WEEK_OFFSET || entries[fallback]?.isOmitted) return { offset: null, pendingOffset: null };
    return entries[fallback]?.data ? { offset: fallback, pendingOffset: null } : { offset: null, pendingOffset: fallback };
 }
 
@@ -121,6 +121,15 @@ export function isSameWeekData(left: Week | null | undefined, right: Week) {
          return false;
       }
 
-      return schoolClass.id === nextClass.id && schoolClass.status === nextClass.status && isSameClassDetails(schoolClass, nextClass);
+      return (
+         schoolClass.id === nextClass.id &&
+         schoolClass.status === nextClass.status &&
+         isSameClassDetails(schoolClass, nextClass) &&
+         (schoolClass.previous && nextClass.previous
+            ? schoolClass.previous.id === nextClass.previous.id &&
+              schoolClass.previous.status === nextClass.previous.status &&
+              isSameClassDetails(schoolClass.previous, nextClass.previous)
+            : schoolClass.previous === nextClass.previous)
+      );
    });
 }

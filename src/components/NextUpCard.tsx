@@ -66,6 +66,11 @@ export function NextUpCard({ weeks, timeOverride, isOpen, onChangeOpen, onSelect
          // Capture may already be implicitly released on pointer up or cancel.
       }
 
+      if (!commit) {
+         setDragProgress(null);
+         return;
+      }
+
       if (!drag.moved) {
          // A press and release without movement is a tap. It activates on pointerup because the
          // browser can withhold the synthesized click entirely after a swipe gesture.
@@ -73,7 +78,7 @@ export function NextUpCard({ weeks, timeOverride, isOpen, onChangeOpen, onSelect
          return;
       }
 
-      if (commit && dragProgress !== null) {
+      if (dragProgress !== null) {
          const open = dragProgress >= OPEN_THRESHOLD;
          setDragProgress(null);
          if (open !== isOpen) onChangeOpen(open);
@@ -130,6 +135,7 @@ export function NextUpCard({ weeks, timeOverride, isOpen, onChangeOpen, onSelect
             onPointerMove={moveDrag}
             onPointerUp={(event) => endDrag(event, true, toggleOpen)}
             onPointerCancel={(event) => endDrag(event, false, toggleOpen)}
+            onLostPointerCapture={(event) => endDrag(event, false, toggleOpen)}
          >
             <span className="next-up__text" key={swapKey}>
                {phase === "now" ? <span className="next-up__dot" aria-hidden="true" /> : <i className="fa-regular fa-clock" aria-hidden="true" />}
@@ -158,6 +164,7 @@ export function NextUpCard({ weeks, timeOverride, isOpen, onChangeOpen, onSelect
             onPointerMove={moveDrag}
             onPointerUp={(event) => endDrag(event, true, () => onSelectClass(schoolClass))}
             onPointerCancel={(event) => endDrag(event, false, () => onSelectClass(schoolClass))}
+            onLostPointerCapture={(event) => endDrag(event, false, () => onSelectClass(schoolClass))}
          >
             <span className="next-up__content" key={swapKey}>
                <span className="next-up__hero">

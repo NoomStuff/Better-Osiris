@@ -81,7 +81,7 @@ void describe("concurrent week requests", () => {
    });
 
    void it("marks calendar weeks a truncated batch does not cover as omitted", async () => {
-      configure(0);
+      configure(3);
       const truncated = batch(0, 0);
       truncated.weeks = truncated.weeks.slice(0, 2);
       respond(0, Response.json(truncated));
@@ -92,6 +92,14 @@ void describe("concurrent week requests", () => {
       assert.equal(repository.getSnapshot().entries[4]?.isOmitted, true);
       assert.equal(repository.getSnapshot().entries[3]?.data ?? null, null);
       assert.equal(repository.getSnapshot().entries[3]?.isFetching ?? false, false);
+      await until(() => !repository.getSnapshot().entries[0]?.isFetching);
+      await new Promise((resolve) => setTimeout(resolve, 5));
+      assert.equal(pending.has(0), false, "An omitted selected week must not refetch itself");
+      repository.ensureWeek(3);
+      configure(1);
+      assert.equal(pending.has(0), false, "Home seeking and navigation must accept a settled omission");
+      repository.refresh();
+      assert.equal(pending.has(0), true, "Explicit refresh must still allow the horizon to grow");
    });
 
    void it("does not stamp an overlapping failure on a week refreshed by another request", async () => {

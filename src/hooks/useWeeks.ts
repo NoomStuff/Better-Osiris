@@ -59,7 +59,10 @@ export function useWeeks(offset: number, options: WeekRepositoryOptions) {
       lastSuccessfulResetKey,
       isWeekNavigable,
       weekNotReturned,
-      areInitialWeeksLoaded: initialWeeks.length === ROSTER_BATCH_SIZE,
+      areInitialWeeksLoaded:
+         !clearCache &&
+         initialWeeks.length > 0 &&
+         Array.from({ length: ROSTER_BATCH_SIZE }, (_, index) => entries[firstOffset + index]).every((entry) => Boolean(entry?.data) || entry?.isOmitted),
       canGoPrevious: previousWeekOffset !== null,
       canGoNext: nextWeekOffset !== null,
       loading: enabled && !data && !error && (!weekNotReturned || Boolean(active?.isFetching)),

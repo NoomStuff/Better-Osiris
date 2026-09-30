@@ -60,6 +60,21 @@ void describe("OSIRIS roster normalizer", () => {
       assert.equal(firstClass.description, sourceDescription);
       assert.equal(firstClass.start, "2026-06-16T09:00:00");
       assert.equal(firstClass.teacher, sourceTeacher);
+
+      const entry = rawResponse.items[0]?.dagen[0]?.rooster[0];
+      assert.ok(entry);
+      entry.docenten = [];
+      entry.locatie = "";
+      entry.locatie_adres = "";
+      entry.tijd_vanaf = "9:00:15";
+      entry.tijd_tm = "10:30:45";
+      const normalized = normalizeWeeksResponse(rawResponse, 3)[0]?.classes[0];
+      assert.ok(normalized);
+      assert.equal(normalized.teacher, "");
+      assert.equal(normalized.room, "");
+      assert.equal(normalized.location, "");
+      assert.equal(normalized.start, "2026-06-16T09:00:15");
+      assert.equal(normalized.end, "2026-06-16T10:30:45");
    });
 
    void it("reads the date part of full timestamps in the configured roster time zone", () => {

@@ -13,19 +13,14 @@ export const isActiveClass = (item: Class) => item.status !== "cancelled";
 export function getDayTimeline(classes: readonly PositionedClass[]) {
    const active = classes.filter(isActiveClass).sort((a, b) => a.startDate.getTime() - b.startDate.getTime());
    const breaksBefore = new Map<string, TimelineSegment>();
-   const conflicts: [string, string][] = [];
    let occupiedUntil: PositionedClass | undefined;
-   active.forEach((item, index) => {
+   active.forEach((item) => {
       if (occupiedUntil && occupiedUntil.endDate < item.startDate) {
          breaksBefore.set(item.id, { type: "break", key: `${occupiedUntil.id}--${item.id}`, startDate: occupiedUntil.endDate, endDate: item.startDate });
       }
-      for (let other = index - 1; other >= 0; other -= 1) {
-         const previous = active[other];
-         if (previous && previous.endDate > item.startDate) conflicts.push([previous.id, item.id]);
-      }
       if (!occupiedUntil || item.endDate > occupiedUntil.endDate) occupiedUntil = item;
    });
-   return { active, breaksBefore, conflicts };
+   return { active, breaksBefore };
 }
 
 export function getBreaktimeLabel(segment: TimelineSegment) {

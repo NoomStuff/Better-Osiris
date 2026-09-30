@@ -57,21 +57,25 @@ To self-host instead, set the environment variables, run `bun run build`, then `
 
 ## Configuration
 
-| Variable                    | Description                                                                                                           |
-| --------------------------- | --------------------------------------------------------------------------------------------------------------------- |
-| `COOKIE_SECRET`*            | Long random value used to encrypt bearer tokens in browser cookies.                                                   |
-| `OSIRIS_ROSTER_URL`*        | Full weekly roster endpoint, such as `https://mborijnland.osiris-student.nl/student/osiris/student/rooster/per_week`. |
-| `BEARER_TOKEN`              | Shared fallback token. Leave this unset on a public deployment so every user supplies their own token.                |
-| `ALLOW_SHARED_BEARER_TOKEN` | Must be `true` to acknowledge use of `BEARER_TOKEN` in production.                                                    |
+| Variable                    | Description                                                                                                                              |
+| --------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
+| `COOKIE_SECRET`*            | Long random value used to encrypt bearer tokens in browser cookies.                                                                      |
+| `OSIRIS_ROSTER_URL`*        | Full weekly roster endpoint, such as `https://mborijnland.osiris-student.nl/student/osiris/student/rooster/per_week`.                    |
+| `BEARER_TOKEN`              | Shared fallback token. Leave this unset on a public deployment so every user supplies their own token.                                   |
+| `ALLOW_SHARED_BEARER_TOKEN` | Must be `true` to acknowledge use of `BEARER_TOKEN` in production.                                                                       |
+| `ROSTER_TIME_ZONE`          | IANA time zone for roster dates and times. Defaults to `Europe/Amsterdam`.                                                               |
+| `SCHOOL_NAME`               | Optional school name displayed above the app title. Set this before building.                                                            |
+| `TRUST_PROXY`               | Set to `true` only behind a trusted reverse proxy. Uses the last forwarded address for rate limiting. Vercel enables this automatically. |
 
 ---
 
 ## Commands
 
-| Command          | Description                              |
-| ---------------- | ---------------------------------------- |
-| `bun run dev`    | Start the frontend and API in watch mode |
-| `bun run build`  | Type-check and build the production app  |
-| `bun run start`  | Serve the built app                      |
-| `bun run format` | Format code                              |
-| `bun run verify` | Run all tests & checks                   |
+| Command                   | Description                                                                           |
+| ------------------------- | ------------------------------------------------------------------------------------- |
+| `bun run dev`             | Start the frontend and API in watch mode                                              |
+| `bun run build`           | Type-check and build the production app                                               |
+| `bun run start`           | Serve the built app                                                                   |
+| `bun run format`          | Format code                                                                           |
+| `bun run verify`          | Check formatting, lint, unit and Chromium browser tests, build, then production smoke |
+| `bun run test:e2e:compat` | Run Firefox and WebKit browser tests                                                  |

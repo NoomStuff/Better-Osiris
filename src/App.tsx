@@ -386,6 +386,7 @@ export default function App() {
                {rosterTimeZone.isKnown && viewMode === "agenda" ? (
                   <ErrorBoundary variant="view">
                      <AgendaView
+                        inert={hasOverlayUnderlay}
                         days={visibleDays}
                         expandedDays={visibleExpandedDays}
                         animate={animateAgenda}
@@ -397,7 +398,14 @@ export default function App() {
                   </ErrorBoundary>
                ) : rosterTimeZone.isKnown ? (
                   <ErrorBoundary variant="view">
-                     <GridView days={visibleDays} hours={gridHours} zoom={visibleGridZoom} now={perceivedNow} onSelectClass={selectClass} />
+                     <GridView
+                        inert={hasOverlayUnderlay}
+                        days={visibleDays}
+                        hours={gridHours}
+                        zoom={visibleGridZoom}
+                        now={perceivedNow}
+                        onSelectClass={selectClass}
+                     />
                   </ErrorBoundary>
                ) : null}
                <WeekContentState

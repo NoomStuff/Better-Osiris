@@ -106,7 +106,7 @@ export function useAppKeyboardShortcuts(options: AppKeyboardShortcutOptions) {
          disabled: !options.isWeekNavigable(Number(key)),
          onPress: () => options.goToWeek(Number(key)),
       })),
-      ...FUTURE_WEEK_KEYS.map<KeyboardShortcut>((key) => ({
+      ...FUTURE_WEEK_KEYS.slice(0, options.viewMode === "agenda" ? 2 : GRID_ZOOM_ORDER.length).map<KeyboardShortcut>((key) => ({
          id: `toolbar-action-${key}`,
          ctrlKey: true,
          key,

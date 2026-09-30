@@ -37,10 +37,6 @@ void describe("occupied day intervals", () => {
       ]);
       assert.deepEqual([...timeline.breaksBefore.keys()], ["next"]);
       assert.equal(timeline.breaksBefore.get("next")?.startDate.getTime(), parseLocalDateTime("2026-06-16T12:00:00").getTime());
-      assert.deepEqual(timeline.conflicts, [
-         ["long", "short"],
-         ["long", "third"],
-      ]);
    });
    void it("excludes cancelled classes from occupied time and current-class selection", () => {
       setRosterTimeZone("Europe/Amsterdam");

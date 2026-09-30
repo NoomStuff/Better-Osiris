@@ -120,10 +120,11 @@ function readString(value: unknown, path: string) {
 
 function readTime(value: unknown, path: string) {
    const time = readString(value, path);
-   const match = /^(\d{1,2}):(\d{2})(?::\d{2})?$/.exec(time);
+   const match = /^(\d{1,2}):(\d{2})(?::(\d{2}))?$/.exec(time);
    const hours = Number(match?.[1]);
    const minutes = Number(match?.[2]);
-   if (!match || hours > 23 || minutes > 59) {
+   const seconds = Number(match?.[3] ?? 0);
+   if (!match || hours > 23 || minutes > 59 || seconds > 59) {
       throw invalidResponse(`${path} must be a valid 24-hour time.`);
    }
    return time;

@@ -13,13 +13,12 @@ export default async function handler(req: IncomingMessage, res: ServerResponse)
       return;
    }
 
-   if (req.method === "GET") {
-      enforceRateLimit(req, "token-settings-read", 120, 60_000);
-      sendRouteResponse(res, getTokenSettingsRoute(req.headers.cookie));
-      return;
-   }
-
    try {
+      if (req.method === "GET") {
+         enforceRateLimit(req, "token-settings-read", 120, 60_000);
+         sendRouteResponse(res, getTokenSettingsRoute(req.headers.cookie));
+         return;
+      }
       assertSameOrigin(req);
       enforceTokenRateLimit(req);
       const response = req.method === "DELETE" ? clearTokenSettingsRoute() : await saveTokenSettingsRoute(await readJsonBody(req));

@@ -2,8 +2,8 @@ import type { RosterConfig } from "../../shared/weeks";
 import { parseApiErrorPayload, parseRosterConfig } from "../../shared/rosterValidation";
 import { fetchWithTimeout, readJsonResponse } from "./fetch";
 
-export async function fetchRosterConfig(): Promise<RosterConfig> {
-   const response = await fetchWithTimeout("/api/roster/config");
+export async function fetchRosterConfig(signal?: AbortSignal): Promise<RosterConfig> {
+   const response = await fetchWithTimeout("/api/roster/config", signal ? { signal } : {});
    const payload = await readJsonResponse(response, "Roster config API");
 
    if (!response.ok) {

@@ -16,22 +16,26 @@ export function useRosterTimeZone() {
       let stale = false;
       let timer: ReturnType<typeof setTimeout>;
       let delay = 2000;
+      let controller: AbortController | undefined;
       const load = async () => {
+         controller?.abort();
+         const request = new AbortController();
+         controller = request;
          try {
-            const config = await fetchRosterConfig();
-            if (stale) return;
+            const config = await fetchRosterConfig(request.signal);
+            if (stale || request.signal.aborted) return;
             setRosterTimeZone(config.timeZone);
             setDeclaredTimeZone(config.timeZone);
             setConfigError(null);
          } catch (error) {
-            if (stale) return;
+            if (stale || request.signal.aborted) return;
             setConfigError(error instanceof Error ? error.message : "Roster configuration could not be loaded.");
             timer = setTimeout(() => {
                void load();
             }, delay);
             delay = Math.min(delay * 2, 60_000);
          } finally {
-            if (!stale) setIsInitialLoading(false);
+            if (!stale && !request.signal.aborted) setIsInitialLoading(false);
          }
       };
       const online = () => {
@@ -42,6 +46,7 @@ export function useRosterTimeZone() {
       void load();
       return () => {
          stale = true;
+         controller?.abort();
          clearTimeout(timer);
          window.removeEventListener("online", online);
       };

@@ -15,22 +15,6 @@ function splitSubject(rawSubject: string) {
    const subject = parts[1] ?? title;
    const description = parts.slice(2).join(" - ") || subject;
 
-   if (parts.length >= 3) {
-      return {
-         title,
-         subject,
-         description,
-      };
-   }
-
-   if (parts.length === 2) {
-      return {
-         title,
-         subject,
-         description: subject,
-      };
-   }
-
    return {
       title,
       subject,
@@ -56,10 +40,11 @@ function getDatePart(dateIso: string) {
 
 function toLocalDateTime(dayIso: string, timeValue: string) {
    const dateOnly = getDatePart(dayIso);
-   const [hoursText = "0", minutesText = "0"] = timeValue.split(":");
+   const [hoursText = "0", minutesText = "0", secondsText = "0"] = timeValue.split(":");
    const hours = String(Number(hoursText)).padStart(2, "0");
    const minutes = String(Number(minutesText)).padStart(2, "0");
-   return `${dateOnly}T${hours}:${minutes}:00`;
+   const seconds = String(Number(secondsText)).padStart(2, "0");
+   return `${dateOnly}T${hours}:${minutes}:${seconds}`;
 }
 
 function toLocalDateOnly(dayIso: string) {
@@ -85,9 +70,12 @@ function normalizeClass(item: OsirisRosterEntry): SourceClass {
       subject: parsed.subject,
       start,
       end,
-      teacher: item.docenten.map((teacher) => teacher.naam).join(", ") || "Unknown",
-      room: item.locatie || "Unknown",
-      location: item.locatie_adres || item.locatie || "Unknown",
+      teacher: item.docenten
+         .map((teacher) => teacher.naam.trim())
+         .filter(Boolean)
+         .join(", "),
+      room: item.locatie.trim(),
+      location: item.locatie_adres.trim() || item.locatie.trim(),
       description: item.subonderwerp.trim() || parsed.description,
       status,
    };

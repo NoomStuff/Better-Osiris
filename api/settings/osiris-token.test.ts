@@ -4,6 +4,7 @@ import { Readable } from "node:stream";
 import { afterEach, describe, it } from "node:test";
 import { readOsirisTokenFromCookie } from "../_lib/osirisTokenCookie.js";
 import handler from "./osiris-token.js";
+import { clearRateLimitEntries } from "../_lib/rateLimit.js";
 import type { IncomingMessage, ServerResponse } from "node:http";
 
 const TEST_SECRET = "settings-secret-that-is-at-least-32-characters";
@@ -37,6 +38,7 @@ class MockResponse {
 }
 
 afterEach(() => {
+   clearRateLimitEntries();
    globalThis.fetch = originalFetch;
    delete process.env["COOKIE_SECRET"];
    delete process.env["BEARER_TOKEN"];
@@ -44,6 +46,18 @@ afterEach(() => {
 });
 
 void describe("/api/settings/osiris-token", () => {
+   void it("returns a structured private error and retry header when reads are rate limited", async () => {
+      process.env["COOKIE_SECRET"] = TEST_SECRET;
+      clearRateLimitEntries();
+      for (let request = 0; request < 120; request += 1) {
+         assert.equal((await callSettingsHandler({ method: "GET" })).statusCode, 200);
+      }
+      const response = await callSettingsHandler({ method: "GET" });
+      assert.equal(response.statusCode, 429);
+      assert.equal(response.headers.get("cache-control"), "private, no-store, max-age=0");
+      assert.ok(Number(response.headers.get("retry-after")) > 0);
+      assert.equal((JSON.parse(response.body) as { retryable: boolean }).retryable, true);
+   });
    void it("reports a default bearer token without copying it into a browser cookie", async () => {
       process.env["COOKIE_SECRET"] = TEST_SECRET;
       process.env["BEARER_TOKEN"] = "Bearer default-token";

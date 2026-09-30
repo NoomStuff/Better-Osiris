@@ -3,7 +3,16 @@ import { describe, it } from "node:test";
 import { isoWeekNumber, shiftCalendarDate } from "../../shared/calendar";
 import type { Class, Week } from "../types/weeks";
 import { setRosterTimeZone } from "./rosterTimeZone";
-import { canNavigateToWeek, createWeekEntry, getHomeWeek, getAdjacentWeekOffset, getBatchOffsets, getBatchStart, type WeekEntries } from "./weekPolicy";
+import {
+   canNavigateToWeek,
+   createWeekEntry,
+   getHomeWeek,
+   getAdjacentWeekOffset,
+   getBatchOffsets,
+   getBatchStart,
+   isSameWeekData,
+   type WeekEntries,
+} from "./weekPolicy";
 
 setRosterTimeZone("Europe/Amsterdam");
 void describe("roster week batch policy", () => {
@@ -40,6 +49,17 @@ function lesson(date: string, status: "scheduled" | "cancelled" = "scheduled"): 
    };
 }
 void describe("upcoming week selection", () => {
+   void it("settles on an empty current week when the next week is omitted", () => {
+      const entries = { 0: createWeekEntry(week(0)), 1: createWeekEntry(null, { isOmitted: true }) };
+      assert.deepEqual(getHomeWeek(entries, 0, new Date("2026-06-16T09:30:00+02:00")), { offset: 0, pendingOffset: null });
+   });
+   void it("updates displayed change history even when current details are identical", () => {
+      const current = { ...lesson("2026-06-16"), status: "scheduled" as const };
+      const left = week(0, [{ ...current, status: "changed", previous: { ...current, room: "A" } }]);
+      const right = week(0, [{ ...current, status: "changed", previous: { ...current, room: "B" } }]);
+      assert.equal(isSameWeekData(left, right), false);
+      assert.equal(isSameWeekData(left, structuredClone(left)), true);
+   });
    void it("keeps an ongoing class and advances when its week has no remaining classes", () => {
       const entries = { 0: createWeekEntry(week(0, [lesson("2026-06-16")])), 1: createWeekEntry(week(1, [lesson("2026-06-23")])) };
       assert.equal(getHomeWeek(entries, 0, new Date("2026-06-16T09:30:00+02:00")).offset, 0);
