@@ -28,7 +28,7 @@
    right: 50%;
    bottom: calc(100% + 8px);
    z-index: 1;
-   transform: translateX(50%);
+   translate: 50%;
    pointer-events: auto;
    display: inline-flex;
    align-items: center;
