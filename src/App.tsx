@@ -22,6 +22,7 @@ import { useDockedMobileBar } from "./hooks/useDockedMobileBar";
 import { useNextUpOpenPreference } from "./hooks/useNextUpOpenPreference";
 import { useWeekDays } from "./hooks/useWeekDays";
 import { useViewportMetrics } from "./hooks/useViewportMetrics";
+import { useWeekScrollRestoration } from "./hooks/useWeekScrollRestoration";
 import { useWeekSwipeNavigation } from "./hooks/useWeekSwipeNavigation";
 import { applyDevClassStatusPreview } from "./lib/devStatusPreview";
 import { useGridZoom } from "./hooks/useGridZoom";
@@ -31,6 +32,7 @@ import { useOnlineStatus } from "./hooks/useOnlineStatus";
 import { dayLabel, monthDayLabel, timeLabel, getLocalWeekStartIso, getIsoWeekday, parseIsoDateToLocal, toDayKey } from "./lib/date";
 import { ISO_WEEKDAYS, getHiddenDaysWithClasses, getWeekdaysWithClasses } from "./lib/weekLayout";
 import { countClassesOutsideGridHours, getRequiredGridHours, getSmartGridHours, mergeGridHourRanges } from "./lib/gridHours";
+import { formatWeekLabel } from "./lib/weekPolicy";
 import { ErrorBoundary } from "./components/ErrorBoundary";
 import { useTokenValidation } from "./hooks/useTokenValidation";
 import type { Class, ViewMode } from "./types/weeks";
@@ -107,6 +109,21 @@ export default function App() {
       () => applyDevClassStatusPreview(data, devPreview.isEnabled ? devPreview.statusPreviewMode : "none"),
       [data, devPreview.isEnabled, devPreview.statusPreviewMode]
    );
+   useWeekScrollRestoration(`${viewMode}-${weekOffset}`, displayedData !== null);
+   const [weekAnnouncement, setWeekAnnouncement] = useState("");
+   const lastAnnouncedWeek = useRef<string | null>(null);
+   useEffect(() => {
+      if (loading) {
+         return;
+      }
+      const announcementKey = `${weekOffset}:${title}`;
+      if (lastAnnouncedWeek.current === null || lastAnnouncedWeek.current === announcementKey) {
+         lastAnnouncedWeek.current = announcementKey;
+         return;
+      }
+      lastAnnouncedWeek.current = announcementKey;
+      setWeekAnnouncement(`${formatWeekLabel(weekOffset)}, ${title}`);
+   }, [loading, title, weekOffset]);
    const nextUpWeeks = useMemo(
       () => knownWeeks.flatMap((week) => (devPreview.isEnabled ? (applyDevClassStatusPreview(week, devPreview.statusPreviewMode) ?? []) : [week])),
       [knownWeeks, devPreview.isEnabled, devPreview.statusPreviewMode]
@@ -179,13 +196,13 @@ export default function App() {
    }, [expandedGridHours, setGridHours]);
 
    const updateWeekOffset = useCallback(
-      (updater: number | ((current: number) => number), transitionDirection: WeekTransitionDirection = "default") => {
+      (updater: number | ((current: number) => number), transitionDirection: WeekTransitionDirection = "default"): boolean => {
          setSeekingHome(false);
          const current = weekOffsetRef.current;
          const next = typeof updater === "function" ? updater(current) : updater;
 
          if (next === current) {
-            return;
+            return false;
          }
 
          weekOffsetRef.current = next;
@@ -197,6 +214,7 @@ export default function App() {
          setWeekOffset(next);
          clearClassSelection();
          resetAgenda();
+         return true;
       },
       [resetAgenda, clearClassSelection]
    );
@@ -247,18 +265,18 @@ export default function App() {
 
    const goPreviousWeek = useCallback(() => {
       if (previousWeekOffset === null) {
-         return;
+         return false;
       }
 
-      updateWeekOffset(previousWeekOffset, "previous");
+      return updateWeekOffset(previousWeekOffset, "previous");
    }, [previousWeekOffset, updateWeekOffset]);
 
    const goNextWeek = useCallback(() => {
       if (nextWeekOffset === null) {
-         return;
+         return false;
       }
 
-      updateWeekOffset(nextWeekOffset, "next");
+      return updateWeekOffset(nextWeekOffset, "next");
    }, [nextWeekOffset, updateWeekOffset]);
 
    const handleCurrentWeek = useCallback(() => {
@@ -480,6 +498,9 @@ export default function App() {
             successfulTokenValidationKey={successfulTokenValidationKey}
             tokenValidationStatus={tokenValidationStatus}
          />
+         <div role="status" className="visually-hidden">
+            {weekAnnouncement}
+         </div>
       </div>
    );
 }

@@ -1,7 +1,9 @@
 import { memo, useId, type FocusEvent } from "react";
 import { useDelayedTooltip } from "../hooks/useDelayedTooltip";
+import { useHoldRepeat } from "../hooks/useHoldRepeat";
 import { useShortcutActivation } from "../hooks/useShortcutActivation";
 import { APP_SHORTCUT_LABELS } from "../lib/appShortcuts";
+import { formatWeekLabel } from "../lib/weekPolicy";
 import { getTooltipAnchorName } from "../lib/tooltipAnchor";
 import { TooltipContent } from "./Tooltip";
 import { IconButton } from "./IconButton";
@@ -20,29 +22,6 @@ interface WeekNavigatorProps {
    canChooseWeek: boolean;
 }
 
-function formatWeekLabel(weekOffset: number) {
-   if (weekOffset === 0) {
-      return "This week";
-   }
-
-   if (weekOffset === 1) {
-      return "Next week";
-   }
-
-   if (weekOffset === -1) {
-      return "Last week";
-   }
-
-   const absoluteWeeks = Math.abs(weekOffset);
-   const suffix = absoluteWeeks === 1 ? "week" : "weeks";
-
-   if (weekOffset > 0) {
-      return `In ${absoluteWeeks} ${suffix}`;
-   }
-
-   return `${absoluteWeeks} ${suffix} ago`;
-}
-
 export const WeekNavigator = memo(function WeekNavigator({
    title,
    weekOffset,
@@ -59,6 +38,8 @@ export const WeekNavigator = memo(function WeekNavigator({
    const resetDistance = weekOffset - (homeWeekOffset ?? 0);
    const isHomeWeek = resetDistance === 0;
    const weekPosition = resetDistance < 0 ? "past" : resetDistance > 0 ? "future" : "current";
+   const previousHoldProps = useHoldRepeat(onPreviousWeek);
+   const nextHoldProps = useHoldRepeat(onNextWeek);
    const tooltipId = useId();
    const anchorName = getTooltipAnchorName(tooltipId);
    const { hideTooltip, isTooltipEnabled, isTooltipOpen, showTooltip, showTooltipForFocus } = useDelayedTooltip();
@@ -77,6 +58,8 @@ export const WeekNavigator = memo(function WeekNavigator({
    return (
       <section className="weekbar">
          <IconButton
+            {...previousHoldProps}
+            className="weekbar__step"
             icon="fa-solid fa-chevron-left"
             label="Previous week"
             shortcut={APP_SHORTCUT_LABELS.previousWeek}
@@ -84,7 +67,6 @@ export const WeekNavigator = memo(function WeekNavigator({
             tooltipPlacement="bottom"
             variant="ghost"
             hoverEffect="nudge-left"
-            onClick={onPreviousWeek}
             disabled={!canGoPrevious}
          />
 
@@ -131,6 +113,8 @@ export const WeekNavigator = memo(function WeekNavigator({
             />
          </div>
          <IconButton
+            {...nextHoldProps}
+            className="weekbar__step"
             icon="fa-solid fa-chevron-right"
             label="Next week"
             shortcut={APP_SHORTCUT_LABELS.nextWeek}
@@ -138,7 +122,6 @@ export const WeekNavigator = memo(function WeekNavigator({
             tooltipPlacement="bottom"
             variant="ghost"
             hoverEffect="nudge-right"
-            onClick={onNextWeek}
             disabled={!canGoNext}
          />
       </section>

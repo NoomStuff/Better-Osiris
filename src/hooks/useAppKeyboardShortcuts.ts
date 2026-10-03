@@ -74,7 +74,6 @@ export function useAppKeyboardShortcuts(options: AppKeyboardShortcutOptions) {
          onPress: options.goCurrentWeek,
       },
       { id: "current-week-0", key: "0", activationTargetId: "current-week", onPress: options.goCurrentWeek },
-      { id: "current-week-space", key: " ", activationTargetId: "current-week", onPress: options.goCurrentWeek },
       {
          id: "agenda-view",
          ...APP_SHORTCUTS.agendaView,

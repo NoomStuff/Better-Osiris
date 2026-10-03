@@ -8,6 +8,15 @@
    padding-bottom: 8px;
 }
 
+/* Held chevrons repeat: the press owns the gesture, so scrolling, selection and the
+   long-press menu must all stay out of the way. */
+.weekbar__step {
+   touch-action: none;
+   -webkit-user-select: none;
+   user-select: none;
+   -webkit-touch-callout: none;
+}
+
 .weekbar__heading {
    margin: 0;
    min-width: 0;

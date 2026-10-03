@@ -1,4 +1,5 @@
 import { OverlayPanel } from "./OverlayPanel";
+import { usePanelClose } from "../hooks/usePanelClose";
 import { Button } from "./Button";
 import "./ConfirmDialog.css";
 
@@ -25,7 +26,11 @@ export function ConfirmDialog({
    onCancel,
    onConfirm,
 }: ConfirmDialogProps) {
-   if (!isOpen) {
+   // Every close path, including a hardware back, plays the same closing animation the other
+   // panels use before the parent state clears.
+   const { isClosing, close: closePanel } = usePanelClose(isOpen, onCancel);
+
+   if (!isOpen && !isClosing) {
       return null;
    }
 
@@ -37,7 +42,8 @@ export function ConfirmDialog({
          closeLabel={cancelLabel}
          labelledBy="confirm-dialog-title"
          dialogRole="alertdialog"
-         onClose={onCancel}
+         isClosing={isClosing}
+         onClose={closePanel}
       >
          <div className="confirm-dialog__content">
             <header className="confirm-dialog__header">
@@ -46,7 +52,7 @@ export function ConfirmDialog({
             </header>
 
             <div className="confirm-dialog__actions">
-               <Button disabled={isConfirming} onClick={onCancel}>
+               <Button disabled={isConfirming} onClick={closePanel}>
                   {cancelLabel}
                </Button>
                <Button variant={variant === "danger" ? "danger" : "primary"} disabled={isConfirming} onClick={onConfirm}>

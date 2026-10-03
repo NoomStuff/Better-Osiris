@@ -79,11 +79,6 @@ export function useKeyboardShortcuts(shortcuts: readonly KeyboardShortcut[], ena
             return;
          }
 
-         // Space activates whatever control is focused, so never claim it for a shortcut.
-         if (event.key === " " && isInteractiveTarget(event.target)) {
-            return;
-         }
-
          const shortcut = shortcutsRef.current.find((candidate) => !candidate.disabled && matchesShortcut(event, candidate));
          if (!shortcut) {
             return;
@@ -149,10 +144,4 @@ function isEditableTarget(target: EventTarget | null) {
    }
 
    return target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement || target instanceof HTMLSelectElement;
-}
-
-const INTERACTIVE_TARGET_SELECTOR = "button, a, select, summary, label, [role='button'], [role='radio'], [role='checkbox'], [role='switch']";
-
-function isInteractiveTarget(target: EventTarget | null) {
-   return target instanceof HTMLElement && Boolean(target.closest(INTERACTIVE_TARGET_SELECTOR));
 }

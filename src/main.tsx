@@ -4,6 +4,7 @@ import App from "./App";
 import { ErrorBoundary } from "./components/ErrorBoundary";
 import { PreferencesProvider } from "./hooks/PreferencesProvider";
 import { notifyError } from "./lib/notyf";
+import { discardStaleOverlayHistoryEntry } from "./lib/overlayHistory";
 import { attachOverlayScrollbar } from "./lib/overlayScrollbar";
 import { applyTheme, getStoredTheme } from "./lib/theme";
 import "@fontsource-variable/quicksand/index.css";
@@ -27,6 +28,7 @@ if (!rootElement) {
 
 applyTheme(getStoredTheme());
 attachOverlayScrollbar(document.body);
+discardStaleOverlayHistoryEntry();
 
 ReactDOM.createRoot(rootElement).render(
    <React.StrictMode>

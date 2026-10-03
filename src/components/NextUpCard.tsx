@@ -2,6 +2,7 @@ import { useId, useMemo, useRef, useState, type CSSProperties, type MouseEvent, 
 import { clamp } from "../lib/clamp";
 import { DETAILS_SEPARATOR, getClassLabel } from "../lib/classFormat";
 import { timeLabel } from "../lib/date";
+import { haptic } from "../lib/haptics";
 import { collectNextUpEntries, getNextUpDayLabel, getNextUpSuggestion } from "../lib/nextUp";
 import { useClock } from "../hooks/useClock";
 import { ClassStatusMarker } from "./ClassStatusMarker";
@@ -40,6 +41,12 @@ export function NextUpCard({ weeks, timeOverride, isOpen, onChangeOpen, onSelect
    const cardId = useId();
    const [dragProgress, setDragProgress] = useState<number | null>(null);
    const dragRef = useRef<DragState | null>(null);
+
+   const changeOpen = (open: boolean) => {
+      if (open === isOpen) return;
+      haptic();
+      onChangeOpen(open);
+   };
 
    const startDrag = (event: PointerEvent<HTMLElement>) => {
       if (event.pointerType === "mouse" && event.button !== 0) return;
@@ -81,13 +88,13 @@ export function NextUpCard({ weeks, timeOverride, isOpen, onChangeOpen, onSelect
       if (dragProgress !== null) {
          const open = dragProgress >= OPEN_THRESHOLD;
          setDragProgress(null);
-         if (open !== isOpen) onChangeOpen(open);
+         if (open !== isOpen) changeOpen(open);
          return;
       }
       setDragProgress(null);
    };
 
-   const toggleOpen = () => onChangeOpen(!isOpen);
+   const toggleOpen = () => changeOpen(!isOpen);
    const handleToggleClick = (event: MouseEvent<HTMLButtonElement>) => {
       // Pointer taps already activated on pointerup; keyboard and assistive activation arrive as a
       // click without a pointer sequence, which reports detail 0.

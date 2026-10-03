@@ -1,4 +1,5 @@
 import { useCallback, useLayoutEffect, useRef, type RefObject } from "react";
+import { haptic } from "../lib/haptics";
 
 const MIN_DISTANCE_PX = 56;
 const MAX_VERTICAL_DRIFT_PX = 72;
@@ -9,7 +10,7 @@ interface SwipeStart {
    y: number;
 }
 
-export function useWeekSwipeNavigation(regionRef: RefObject<HTMLElement | null>, enabled: boolean, goPrevious: () => void, goNext: () => void) {
+export function useWeekSwipeNavigation(regionRef: RefObject<HTMLElement | null>, enabled: boolean, goPrevious: () => boolean, goNext: () => boolean) {
    const startRef = useRef<SwipeStart | null>(null);
 
    const handleStart = useCallback((event: TouchEvent) => {
@@ -35,8 +36,8 @@ export function useWeekSwipeNavigation(regionRef: RefObject<HTMLElement | null>,
          const absY = Math.abs(deltaY);
          if (absX < MIN_DISTANCE_PX || absY > MAX_VERTICAL_DRIFT_PX || absX < absY * 1.2) return;
 
-         if (deltaX < 0) goNext();
-         else goPrevious();
+         // Only a swipe that actually moves the week ticks; hitting an edge stays silent.
+         if (deltaX < 0 ? goNext() : goPrevious()) haptic();
       },
       [goNext, goPrevious]
    );

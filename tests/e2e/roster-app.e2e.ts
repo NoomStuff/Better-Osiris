@@ -52,9 +52,7 @@ test("week navigation and reset show the matching roster data", async ({ page })
    await expect(page.getByRole("button", { name: "Previous week" })).toBeEnabled();
    await expect(page.getByRole("button", { name: "SOURCE_TITLE_1_1" })).toBeVisible();
 
-   // Space must not be stolen from focused controls, so blur the week button before using the jump shortcut.
-   await page.evaluate(() => (document.activeElement instanceof HTMLElement ? document.activeElement.blur() : undefined));
-   await page.keyboard.press("Space");
+   await page.keyboard.press("r");
    await expect(page.locator(".weekbar__label")).toHaveText("This week");
    await expect(page.getByRole("heading", { name: /Week 25:/ })).toBeVisible();
 });
@@ -911,7 +909,7 @@ test("week swipe navigation is disabled while an overlay is open", async ({ page
    await expect(page.locator(".weekbar__label")).toHaveText("This week");
 });
 
-test("space activates a focused schoolClass instead of jumping to the current week", async ({ page }) => {
+test("space activates a focused schoolClass without moving the week", async ({ page }) => {
    await page.goto("/");
    const schoolClass = page.getByRole("button", { name: /SOURCE_TITLE_0_1/ });
    await schoolClass.focus();
@@ -2016,7 +2014,7 @@ test("startup and reset choose the upcoming roster and exclude uncached omitted 
    await page.keyboard.press("ArrowLeft");
    await swipeWeek(page, "previous");
    await expect(page.locator(".weekbar__label")).toHaveText("Next week");
-   for (const key of ["Space", "r", "0"]) {
+   for (const key of ["r", "0"]) {
       await page.keyboard.press("5");
       await expect(page.getByRole("button", { name: "SOURCE_TITLE_5_1" })).toBeVisible();
       await expect(page.locator(".weekbar__content")).toHaveAttribute("data-week-position", "future");
@@ -2037,8 +2035,7 @@ test("an empty weekend opens next week while the saved current week stays browsa
    await page.getByRole("button", { name: "Previous week" }).click();
    await expect(page.getByRole("button", { name: "SOURCE_TITLE_0_1" })).toBeVisible();
    await expect(page.locator(".weekbar__content")).toHaveAttribute("data-week-position", "past");
-   await page.evaluate(() => (document.activeElement instanceof HTMLElement ? document.activeElement.blur() : undefined));
-   await page.keyboard.press("Space");
+   await page.keyboard.press("r");
    await expect(page.getByRole("button", { name: "SOURCE_TITLE_1_1" })).toBeVisible();
    await page.reload();
    await expect(page.getByRole("button", { name: "SOURCE_TITLE_1_1" })).toBeVisible();
@@ -2102,7 +2099,7 @@ test("startup and reset keep an empty vacation week instead of jumping to distan
    await expect(page.locator(".grid-class")).toHaveCount(0);
    await page.keyboard.press("3");
    await expect(page.locator(".weekbar__label")).toHaveText("In 3 weeks");
-   await page.keyboard.press("Space");
+   await page.keyboard.press("r");
    await expect(page.locator(".weekbar__label")).toHaveText("This week");
    await expect(page.getByRole("heading", { name: /Week 25:/ })).toBeVisible();
 });
@@ -2248,7 +2245,7 @@ test("reset can return to today's classes if a later response restores that week
    await response;
    await expect(page.getByRole("button", { name: "Previous week" })).toBeEnabled();
    await expect(page.locator(".weekbar__label")).toHaveText("Next week");
-   await page.keyboard.press("Space");
+   await page.keyboard.press("r");
    await expect(page.getByRole("button", { name: "SOURCE_TITLE_0_1" })).toBeVisible();
    await expect(page.locator(".grid-now-line")).toBeVisible();
 });
@@ -2501,4 +2498,97 @@ test("worker reminders replace earlier reminders, expire on resume and clear whe
    await page.getByRole("button", { name: "Open settings" }).click();
    await page.getByRole("switch", { name: "Notify me before class starts" }).click();
    await expect.poll(count).toBe("0");
+});
+
+test("the browser back button closes overlays and UI closes hand the history back", async ({ page }) => {
+   await page.goto("/");
+   await expect(page.getByRole("heading", { name: /Week 25:/ })).toBeVisible();
+   const baseHistoryLength = await page.evaluate(() => history.length);
+
+   // Opening an overlay claims one history entry, and back spends it on closing the drawer.
+   await page.getByRole("button", { name: /SOURCE_TITLE_0_1/ }).click();
+   const drawer = page.getByRole("dialog", { name: "Class details" });
+   await expect(drawer).toBeVisible();
+   await expect.poll(() => page.evaluate(() => history.length)).toBe(baseHistoryLength + 1);
+
+   await page.goBack();
+   await expect(drawer).toBeHidden();
+   await expect(page.locator(".weekbar__label")).toHaveText("This week");
+
+   // Stacked dialogs close one per back press, newest first.
+   await page.getByRole("button", { name: "Open settings" }).click();
+   const settings = page.getByRole("dialog", { name: "Preferences" });
+   await expect(settings).toBeVisible();
+   await settings.getByRole("region", { name: "Roster access" }).getByRole("button", { name: "Remove" }).click();
+   const confirmation = page.getByRole("alertdialog", { name: "Remove bearer token?" });
+   await expect(confirmation).toBeVisible();
+   await expect.poll(() => page.evaluate(() => history.length)).toBe(baseHistoryLength + 2);
+
+   await page.goBack();
+   await expect(confirmation).toBeHidden();
+   await expect(settings).toBeVisible();
+
+   await page.goBack();
+   await expect(settings).toBeHidden();
+   await expect(page.locator(".weekbar__label")).toHaveText("This week");
+
+   // Closing through the UI must give its entry back too, so the next back leaves the page.
+   await page.getByRole("button", { name: /SOURCE_TITLE_0_1/ }).click();
+   await expect(drawer).toBeVisible();
+   await drawer.getByRole("button", { name: "Close", exact: true }).click();
+   await expect(drawer).toBeHidden();
+   await page.goBack();
+   await expect(page).toHaveURL("about:blank");
+});
+
+test("a reload with an overlay open does not swallow the next back press", async ({ page }) => {
+   await page.goto("/");
+   await expect(page.getByRole("heading", { name: /Week 25:/ })).toBeVisible();
+   await page.getByRole("button", { name: /SOURCE_TITLE_0_1/ }).click();
+   await expect(page.getByRole("dialog", { name: "Class details" })).toBeVisible();
+
+   await page.reload();
+   await expect(page.getByRole("heading", { name: /Week 25:/ })).toBeVisible();
+
+   // Startup handed the dead overlay entry back, so back immediately leaves the page again.
+   await page.goBack();
+   await expect(page).toHaveURL("about:blank");
+});
+
+test("returning to a week restores its reading position", async ({ page }) => {
+   await page.setViewportSize({ width: 375, height: 400 });
+   await page.addInitScript(() => {
+      localStorage.setItem("roster-view-mode", "agenda");
+   });
+   await page.goto("/");
+   await expect(page.locator(".day-group").first()).toBeVisible();
+
+   await page.getByRole("button", { name: "Next week" }).click();
+   await expect(page.getByRole("heading", { name: /Week 26:/ })).toBeVisible();
+   await expect.poll(() => page.evaluate(() => window.scrollY), "a fresh week starts at the top").toBe(0);
+
+   await page.getByRole("button", { name: "Previous week" }).click();
+   await expect(page.getByRole("heading", { name: /Week 25:/ })).toBeVisible();
+   const scrolledTo = await page.evaluate(() => {
+      window.scrollTo(0, 400);
+      return window.scrollY;
+   });
+   expect(scrolledTo).toBeGreaterThan(0);
+
+   await page.getByRole("button", { name: "Next week" }).click();
+   await expect(page.getByRole("heading", { name: /Week 26:/ })).toBeVisible();
+   await page.getByRole("button", { name: "Previous week" }).click();
+   await expect(page.getByRole("heading", { name: /Week 25:/ })).toBeVisible();
+   await expect.poll(() => page.evaluate(() => window.scrollY)).toBe(scrolledTo);
+});
+
+test("week navigation is announced to screen readers", async ({ page }) => {
+   await page.goto("/");
+   await expect(page.getByRole("heading", { name: /Week 25:/ })).toBeVisible();
+
+   await page.getByRole("button", { name: "Next week", exact: true }).click();
+   await expect(page.getByRole("status")).toHaveText("Next week, Week 26: 22 Jun - 28 Jun");
+
+   await page.getByRole("button", { name: "Next week", exact: true }).click();
+   await expect(page.getByRole("status")).toHaveText("In 2 weeks, Week 27: 29 Jun - 5 Jul");
 });

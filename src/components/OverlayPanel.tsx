@@ -10,11 +10,19 @@ import {
    type TouchEvent,
 } from "react";
 import { lockPageScroll } from "../lib/pageScrollLock";
+import {
+   abandonOverlayHistoryEntry,
+   beginOverlayHistoryEntry,
+   endOverlayHistoryEntry,
+   getTopmostOverlayId,
+   pushOverlayId,
+   removeOverlayId,
+   shouldOverlayCloseOnPopState,
+} from "../lib/overlayHistory";
 import { createPortal } from "react-dom";
 import { TooltipPortalProvider } from "./Tooltip";
 import "./OverlayPanel.css";
 
-const overlayStack: string[] = [];
 const overlayRoots = new Map<string, HTMLElement>();
 const FOCUSABLE_SELECTOR = [
    "a[href]",
@@ -71,6 +79,7 @@ export function OverlayPanel({
    const returnFocusRef = useRef<HTMLElement | null>(document.activeElement instanceof HTMLElement ? document.activeElement : null);
    const touchStartYRef = useRef<number | null>(null);
    useOverlayLifecycle(overlayId, rootRef, surfaceRef, returnFocusRef, closeOnEscape, onClose, initialFocusSelector);
+   useOverlayHistoryEntry(overlayId, onClose);
    useEffect(lockPageScroll, []);
 
    const rootClassName = ["overlay-panel", `overlay-panel--${placement}`, className, rootProps?.className].filter(Boolean).join(" ");
@@ -180,7 +189,7 @@ function useOverlayLifecycle(
 
    useEffect(() => {
       const previouslyFocused = returnFocusRef.current;
-      overlayStack.push(overlayId);
+      pushOverlayId(overlayId);
       const root = rootRef.current;
       if (root) {
          overlayRoots.set(overlayId, root);
@@ -195,7 +204,7 @@ function useOverlayLifecycle(
       });
 
       const handleKeyDown = (event: KeyboardEvent) => {
-         const isTopmost = overlayStack.at(-1) === overlayId;
+         const isTopmost = getTopmostOverlayId() === overlayId;
          if (!isTopmost || !closeOnEscape || event.key !== "Escape" || event.defaultPrevented || event.isComposing) {
             return;
          }
@@ -209,10 +218,7 @@ function useOverlayLifecycle(
       return () => {
          window.cancelAnimationFrame(focusFrame);
          document.removeEventListener("keydown", handleKeyDown);
-         const stackIndex = overlayStack.lastIndexOf(overlayId);
-         if (stackIndex >= 0) {
-            overlayStack.splice(stackIndex, 1);
-         }
+         removeOverlayId(overlayId);
          overlayRoots.delete(overlayId);
          syncOverlayInertness();
          if (previouslyFocused?.isConnected) {
@@ -225,8 +231,35 @@ function useOverlayLifecycle(
    }, [closeOnEscape, initialFocusSelector, overlayId, returnFocusRef, rootRef, surfaceRef]);
 }
 
+function useOverlayHistoryEntry(overlayId: string, onClose: () => void) {
+   const onCloseRef = useRef(onClose);
+
+   useEffect(() => {
+      onCloseRef.current = onClose;
+   }, [onClose]);
+
+   useEffect(() => {
+      beginOverlayHistoryEntry(overlayId);
+
+      const handlePopState = (event: PopStateEvent) => {
+         if (!shouldOverlayCloseOnPopState(overlayId, event)) {
+            return;
+         }
+
+         abandonOverlayHistoryEntry(overlayId);
+         onCloseRef.current();
+      };
+      window.addEventListener("popstate", handlePopState);
+
+      return () => {
+         window.removeEventListener("popstate", handlePopState);
+         endOverlayHistoryEntry(overlayId);
+      };
+   }, [overlayId]);
+}
+
 function syncOverlayInertness() {
-   const topmostId = overlayStack.at(-1);
+   const topmostId = getTopmostOverlayId();
    const appRoot = document.getElementById("app");
    if (appRoot) {
       appRoot.inert = Boolean(topmostId);

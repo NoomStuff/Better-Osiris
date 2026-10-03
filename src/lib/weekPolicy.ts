@@ -21,6 +21,29 @@ export type WeekEntries = Partial<Record<number, WeekEntry>>;
 
 export const ROSTER_BATCH_SIZE = 5;
 
+export function formatWeekLabel(weekOffset: number) {
+   if (weekOffset === 0) {
+      return "This week";
+   }
+
+   if (weekOffset === 1) {
+      return "Next week";
+   }
+
+   if (weekOffset === -1) {
+      return "Last week";
+   }
+
+   const absoluteWeeks = Math.abs(weekOffset);
+   const suffix = absoluteWeeks === 1 ? "week" : "weeks";
+
+   if (weekOffset > 0) {
+      return `In ${absoluteWeeks} ${suffix}`;
+   }
+
+   return `${absoluteWeeks} ${suffix} ago`;
+}
+
 export function createWeekEntry(data: Week | null, overrides?: Partial<WeekEntry>): WeekEntry {
    return {
       data,
