@@ -66,6 +66,11 @@ export async function notifyClassDiffs(diffs: SessionClassDiff[], contextId: str
          const keyed = keys.flatMap((key) => {
             const pending = pendingChanges.get(key);
             if (!pending) return [];
+            const expiresAt = parseLocalDateTime(pending.diff.schoolClass.end).getTime();
+            if (!(expiresAt > Date.now())) {
+               pendingChanges.delete(key);
+               return [];
+            }
             const state = notificationState(toClassSnapshot(pending.diff.schoolClass));
             if (state === (ledger.getState(key) ?? notificationState(pending.before))) {
                pendingChanges.delete(key);
@@ -76,15 +81,16 @@ export async function notifyClassDiffs(diffs: SessionClassDiff[], contextId: str
                status: pending.diff.status === "added" && pending.before ? "changed" : pending.diff.status,
                ...(pending.before ? { previousClass: pending.before } : {}),
             };
-            return [{ key, pending, state, diff }];
+            return [{ key, pending, state, diff, expiresAt }];
          });
          for (const status of ["added", "changed", "cancelled"] as const) {
-            const group = keyed.filter((item) => item.diff.status === status);
+            const group = keyed.filter((item) => item.diff.status === status && item.expiresAt > Date.now());
             if (!group.length) continue;
             const body = getClassNotificationBodies(group.map((item) => item.diff))[0];
             const current = () => isCurrent() && group.every((item) => pendingChanges.get(item.key) === item.pending);
             if (!body || !current()) continue;
-            if (!(await deliverNotification(body, `class-change:${randomId()}`, current))) continue;
+            const expiresAt = Math.min(...group.map((item) => item.expiresAt));
+            if (!(await deliverNotification(body, `class-change:${randomId()}`, current, expiresAt))) continue;
             group.forEach((item) => {
                ledger.markDelivered(item.key, item.state);
                const latest = pendingChanges.get(item.key);

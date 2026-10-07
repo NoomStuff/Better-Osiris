@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { afterEach, beforeEach, describe, it } from "node:test";
 import { WeekRepository } from "./weekRepository";
-import { getLocalWeekStartIso } from "./date";
+import { dayLabel, getLocalWeekStartIso, parseLocalDateTime, timeLabel, toDayKey } from "./date";
 import { setRosterTimeZone } from "./rosterTimeZone";
 import { isoWeekNumber, shiftCalendarDate } from "../../shared/calendar";
 import type { WeekBatch } from "../types/weeks";
@@ -208,7 +208,7 @@ void describe("concurrent week requests", () => {
       const current = batch(0, 0);
       const currentWeek = current.weeks[0];
       assert.ok(currentWeek);
-      const day = shiftCalendarDate(anchor, 1);
+      const day = toDayKey(new Date());
       const moving = {
          id: "moving",
          title: "Moving class",
@@ -217,8 +217,8 @@ void describe("concurrent week requests", () => {
          room: "",
          location: "",
          description: "",
-         start: `${day}T09:00:00`,
-         end: `${day}T10:00:00`,
+         start: `${day}T00:00:00`,
+         end: `${day}T23:59:59`,
          status: "scheduled" as const,
       };
       const staying = { ...moving, id: "staying", title: "Staying class" };
@@ -252,6 +252,7 @@ void describe("concurrent week requests", () => {
       repository.refresh();
       respond(0, Response.json(batch(0, 0)));
       await until(() => deliveries.length > 0);
-      assert.deepEqual(deliveries, ["Staying class was cancelled: Tuesday 09:00"]);
+      const start = parseLocalDateTime(staying.start);
+      assert.deepEqual(deliveries, [`Staying class was cancelled: ${dayLabel.format(start)} ${timeLabel.format(start)}`]);
    });
 });

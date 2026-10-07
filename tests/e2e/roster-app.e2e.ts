@@ -1936,6 +1936,7 @@ test("notification delivery uses a worker and deduplicates a change across tabs"
       localStorage.setItem("roster-class-notifications", "true");
    });
    let changed = false;
+   let firstEnded = false;
    const second = await context.newPage();
    await installFixedClock(second);
    await mockAppApis(second);
@@ -1945,6 +1946,11 @@ test("notification delivery uses a worker and deduplicates a change across tabs"
          const batch = createRosterBatch(Number(url.searchParams.get("offset")), Number(url.searchParams.get("limit")));
          const first = batch.weeks[0]?.classes[0];
          if (changed && first) first.room = "NEW_ROOM";
+         if (firstEnded && first) {
+            first.status = "cancelled";
+            const next = batch.weeks[0]?.classes[1];
+            if (next) next.room = "LATEST_ROOM";
+         }
          return route.fulfill({ json: batch });
       });
       await tab.goto("/");
@@ -1954,6 +1960,15 @@ test("notification delivery uses a worker and deduplicates a change across tabs"
    await Promise.all([page, second].map((tab) => tab.evaluate(() => window.dispatchEvent(new Event("online")))));
    for (const tab of [page, second]) await expect(tab.locator(".grid-class.status-changed")).toHaveCount(1);
    await expect.poll(() => deliveries).toEqual(["SOURCE_TITLE_0_1 changed: SOURCE_ROOM → NEW_ROOM"]);
+   firstEnded = true;
+   for (const tab of [page, second]) {
+      await tab.evaluate(() => {
+         (Date as DateConstructor & { setTestTime: (iso: string) => void }).setTestTime("2026-06-16T10:30:00+02:00");
+      });
+   }
+   await Promise.all([page, second].map((tab) => tab.evaluate(() => window.dispatchEvent(new Event("online")))));
+   for (const tab of [page, second]) await expect(tab.locator(".grid-class.status-cancelled")).toHaveCount(1);
+   await expect.poll(() => deliveries).toEqual(["SOURCE_TITLE_0_1 changed: SOURCE_ROOM → NEW_ROOM", "SOURCE_TITLE_0_2 changed: SOURCE_ROOM → LATEST_ROOM"]);
    await second.close();
 });
 

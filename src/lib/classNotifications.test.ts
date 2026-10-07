@@ -4,6 +4,7 @@ import { getClassNotificationBodies, notifyClassDiffs } from "./classNotificatio
 import { setRosterTimeZone } from "./rosterTimeZone.js";
 import type { SessionClassDiff } from "./classDiffs.js";
 import type { Class, ClassSnapshot } from "../types/weeks";
+import { runNotificationQueue } from "./notificationDelivery";
 
 void describe("roster desktop notification messages", () => {
    beforeEach(() => {
@@ -79,8 +80,13 @@ function createClass(overrides: Partial<Class> = {}): Class {
 
 void describe("class notification delivery history", () => {
    let messages: string[];
+   let now: number;
+   const savedNow = Date.now;
    const savedWindow = Object.getOwnPropertyDescriptor(globalThis, "window");
    beforeEach(() => {
+      setRosterTimeZone("Europe/Amsterdam");
+      now = Date.parse("2026-06-16T09:45:00+02:00");
+      Date.now = () => now;
       messages = [];
       const storage = new Map<string, string>([["roster-class-notifications", "true"]]);
       class TestNotification {
@@ -106,8 +112,43 @@ void describe("class notification delivery history", () => {
       });
    });
    afterEach(() => {
+      Date.now = savedNow;
       if (savedWindow) Object.defineProperty(globalThis, "window", savedWindow);
       else Reflect.deleteProperty(globalThis, "window");
+   });
+   void it("suppresses additions, changes and cancellations once the class has ended", async () => {
+      const end = "2026-06-16T09:45:00";
+      await notifyClassDiffs(
+         [
+            { schoolClass: createClass({ id: "added", status: "added", end }), status: "added" },
+            createDiff("changed", { id: "changed", room: "C04", end }),
+            createDiff("cancelled", { id: "cancelled", end: "2026-06-15T12:00:00+02:00" }),
+         ],
+         crypto.randomUUID()
+      );
+      assert.deepEqual(messages, []);
+   });
+   void it("excludes finished classes from grouped alerts and still alerts for ongoing classes", async () => {
+      await notifyClassDiffs(
+         [
+            createDiff("cancelled", { id: "past", end: "2026-06-16T09:00:00+02:00" }),
+            createDiff("cancelled", { id: "ongoing", start: "2026-06-16T09:00:00+02:00" }),
+         ],
+         crypto.randomUUID()
+      );
+      assert.deepEqual(messages, ["Web Development was cancelled: Tuesday 09:00"]);
+   });
+   void it("discards a change when the class ends while waiting in the delivery queue", async () => {
+      let release: (() => void) | undefined;
+      const gate = new Promise<void>((resolve) => {
+         release = resolve;
+      });
+      const blocking = runNotificationQueue(() => gate);
+      const notification = notifyClassDiffs([createDiff("cancelled")], crypto.randomUUID());
+      now = Date.parse("2026-06-16T12:00:00+02:00");
+      release?.();
+      await Promise.all([blocking, notification]);
+      assert.deepEqual(messages, []);
    });
    void it("delivers A to B to A to B, but suppresses duplicate observations", async () => {
       const context = crypto.randomUUID();
@@ -141,5 +182,38 @@ void describe("class notification delivery history", () => {
       await notifyClassDiffs([addition], context);
       await notifyClassDiffs([cancellation], context);
       assert.deepEqual(messages, ["Web Development was added: Tuesday 10:30", "Web Development was cancelled: Tuesday 10:30"]);
+   });
+   void it("does not show an alert if the class ends while the notification worker activates", async () => {
+      const savedWorker = Object.getOwnPropertyDescriptor(navigator, "serviceWorker");
+      let release: (() => void) | undefined;
+      let activating: (() => void) | undefined;
+      const started = new Promise<void>((resolve) => {
+         activating = resolve;
+      });
+      const ready = new Promise<unknown>((resolve) => {
+         release = () => resolve({ showNotification: () => messages.push("Worker alert") });
+      });
+      Object.defineProperty(navigator, "serviceWorker", {
+         configurable: true,
+         value: {
+            register: () => {
+               activating?.();
+               return Promise.resolve({});
+            },
+            ready,
+         },
+      });
+      try {
+         const delivery = notifyClassDiffs([createDiff("cancelled")], crypto.randomUUID());
+         await started;
+         now = Date.parse("2026-06-16T12:00:00+02:00");
+         release?.();
+         await delivery;
+         assert.deepEqual(messages, []);
+      } finally {
+         release?.();
+         if (savedWorker) Object.defineProperty(navigator, "serviceWorker", savedWorker);
+         else Reflect.deleteProperty(navigator, "serviceWorker");
+      }
    });
 });
