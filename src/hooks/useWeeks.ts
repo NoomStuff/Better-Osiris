@@ -1,3 +1,4 @@
+import { DEFAULT_SHOWN_WEEKDAYS } from "../lib/weekLayout";
 import { useClassReminders } from "./useClassReminders";
 import { useCallback, useEffect, useMemo, useState, useSyncExternalStore } from "react";
 import { WeekRepository, type WeekRepositoryOptions } from "../lib/weekRepository";
@@ -9,17 +10,17 @@ export function useWeeks(offset: number, options: WeekRepositoryOptions) {
    const [repository] = useState(() => new WeekRepository());
    const { entries, knownWeeks: contentWeeks, lastSuccessfulResetKey, sourceShift } = useSyncExternalStore(repository.subscribe, repository.getSnapshot);
    useEffect(() => repository.start(), [repository]);
-   const { enabled, clearCache, contextId, resetKey, timeZone, verifiedBatch } = options;
+   const { enabled, clearCache, contextId, resetKey, timeZone, verifiedBatch, shownWeekdays = DEFAULT_SHOWN_WEEKDAYS } = options;
    useEffect(
-      () => repository.configure({ enabled, clearCache, contextId, resetKey, timeZone, verifiedBatch: verifiedBatch ?? null }, offset),
-      [repository, enabled, clearCache, contextId, resetKey, timeZone, verifiedBatch, offset]
+      () => repository.configure({ enabled, clearCache, contextId, resetKey, timeZone, shownWeekdays, verifiedBatch: verifiedBatch ?? null }, offset),
+      [repository, enabled, clearCache, contextId, resetKey, timeZone, verifiedBatch, shownWeekdays, offset]
    );
    useClassReminders(contentWeeks, contextId, enabled && lastSuccessfulResetKey === resetKey);
    const active = entries[offset];
    const clock = useClock(60_000);
    const home = useMemo(
-      () => (!clearCache && isRosterTimeZoneKnown() ? getHomeWeek(entries, sourceShift, clock) : null),
-      [entries, sourceShift, clock, clearCache]
+      () => (!clearCache && isRosterTimeZoneKnown() ? getHomeWeek(entries, sourceShift, clock, shownWeekdays) : null),
+      [entries, sourceShift, clock, clearCache, shownWeekdays]
    );
    useEffect(() => {
       if (enabled && home?.pendingOffset !== null && home?.pendingOffset !== undefined) repository.ensureWeek(home.pendingOffset);

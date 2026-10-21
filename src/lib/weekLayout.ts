@@ -6,6 +6,11 @@ export const ISO_WEEKDAYS: readonly IsoWeekday[] = [1, 2, 3, 4, 5, 6, 7];
 
 export const DEFAULT_SHOWN_WEEKDAYS: readonly IsoWeekday[] = [1, 2, 3, 4, 5];
 
+/** Loading underlays show every day; loaded weeks follow the visibility setting. */
+export function getDisplayedWeekdays(week: Week | null, shownWeekdays: readonly IsoWeekday[]): readonly IsoWeekday[] {
+   return !week ? ISO_WEEKDAYS : shownWeekdays;
+}
+
 /** The weekdays the views render. Visual only: every class stays grouped into its day in the data. */
 export function getVisibleDays(days: Day[], shownWeekdays: readonly IsoWeekday[]): Day[] {
    return days.filter((day) => shownWeekdays.includes(getIsoWeekday(day.key)));

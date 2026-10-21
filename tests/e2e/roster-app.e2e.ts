@@ -1896,7 +1896,10 @@ test("Sunday changes remain in the previous week after a Monday reload", async (
       });
       return route.fulfill({ json: batch });
    });
-   await page.addInitScript(() => localStorage.setItem("test-clock", localStorage.getItem("test-clock") ?? "2026-06-21T23:55:00+02:00"));
+   await page.addInitScript(() => {
+      localStorage.setItem("test-clock", localStorage.getItem("test-clock") ?? "2026-06-21T23:55:00+02:00");
+      localStorage.setItem("roster-shown-weekdays", "1,2,3,4,5,6,7");
+   });
    await page.goto("/");
    await expect(page.getByRole("button", { name: "SOURCE_TITLE_0_1" })).toBeVisible();
    removed = true;
@@ -1905,8 +1908,6 @@ test("Sunday changes remain in the previous week after a Monday reload", async (
    monday = true;
    await page.evaluate(() => localStorage.setItem("test-clock", "2026-06-22T00:05:00+02:00"));
    await page.reload();
-   await expect(page.getByRole("heading", { name: /Week 27:/ })).toBeVisible();
-   await page.getByRole("button", { name: "Previous week" }).click();
    await expect(page.getByRole("heading", { name: /Week 26:/ })).toBeVisible();
    await expect(page.locator(".grid-class")).toHaveCount(0);
    await page.getByRole("button", { name: "Previous week" }).click();
@@ -2042,7 +2043,7 @@ test("startup and reset choose the upcoming roster and exclude uncached omitted 
    await expect(page.getByRole("heading", { name: "Week not returned" })).toHaveCount(0);
 });
 
-test("an empty weekend opens next week while the saved current week stays browsable", async ({ page }) => {
+test("hidden weekend days open next week while the saved current week stays browsable", async ({ page }) => {
    await page.addInitScript(() => localStorage.setItem("test-clock", "2026-06-21T12:00:00+02:00"));
    await page.goto("/");
    await expect(page.getByRole("button", { name: "SOURCE_TITLE_1_1" })).toBeVisible();
@@ -2058,27 +2059,29 @@ test("an empty weekend opens next week while the saved current week stays browsa
    await expect(page.getByRole("button", { name: "SOURCE_TITLE_0_1" })).toBeVisible();
 });
 
-test("a remaining weekend class keeps this week as the reset destination even when weekends are hidden", async ({ page }) => {
-   await page.addInitScript(() => {
-      localStorage.setItem("test-clock", "2026-06-21T08:00:00+02:00");
-      localStorage.setItem("roster-shown-weekdays", "1,2,3,4,5");
+for (const showSunday of [false, true]) {
+   test(`a weekend class follows day visibility for startup and reset, Sunday visible ${String(showSunday)}`, async ({ page }) => {
+      await page.addInitScript((visible) => {
+         localStorage.setItem("test-clock", "2026-06-21T08:00:00+02:00");
+         localStorage.setItem("roster-shown-weekdays", visible ? "1,2,3,4,5,6,7" : "1,2,3,4,5");
+      }, showSunday);
+      await page.route("**/api/roster/weeks?*", (route) => {
+         const url = new URL(route.request().url());
+         const batch = createRosterBatch(Number(url.searchParams.get("offset")), Number(url.searchParams.get("limit")));
+         const current = batch.weeks.find((week) => week.week.offset === 0);
+         if (current) current.classes = current.classes.slice(0, 1).map((item) => ({ ...item, start: "2026-06-21T09:00:00", end: "2026-06-21T10:00:00" }));
+         return route.fulfill({ json: batch });
+      });
+      await page.goto("/");
+      const homeLabel = showSunday ? "This week" : "Next week";
+      await expect(page.locator(".weekbar__label")).toHaveText(homeLabel);
+      await expect(page.locator(".weekbar__content")).toHaveAttribute("data-week-position", "current");
+      await page.keyboard.press("3");
+      await expect(page.locator(".weekbar__label")).toHaveText("In 3 weeks");
+      await page.locator(".weekbar__content").click();
+      await expect(page.locator(".weekbar__label")).toHaveText(homeLabel);
    });
-   await page.route("**/api/roster/weeks?*", (route) => {
-      const url = new URL(route.request().url());
-      const batch = createRosterBatch(Number(url.searchParams.get("offset")), Number(url.searchParams.get("limit")));
-      const current = batch.weeks.find((week) => week.week.offset === 0);
-      if (current) current.classes = current.classes.slice(0, 1).map((item) => ({ ...item, start: "2026-06-21T09:00:00", end: "2026-06-21T10:00:00" }));
-      return route.fulfill({ json: batch });
-   });
-   await page.goto("/");
-   await expect(page.getByRole("button", { name: "Show Sunday" })).toBeVisible();
-   await expect(page.locator(".weekbar__label")).toHaveText("This week");
-   await expect(page.locator(".weekbar__content")).toHaveAttribute("data-week-position", "current");
-   await page.getByRole("button", { name: "Next week", exact: true }).click();
-   await page.locator(".weekbar__content").click();
-   await expect(page.locator(".weekbar__label")).toHaveText("This week");
-   await expect(page.getByRole("button", { name: "Show Sunday" })).toBeVisible();
-});
+}
 
 test("previous-week cache remains reachable across an omitted uncached current week", async ({ page }) => {
    await installCachedLastWeek(page);
@@ -2099,25 +2102,34 @@ test("previous-week cache remains reachable across an omitted uncached current w
    expect(offsets.every((offset) => offset >= 0)).toBe(true);
 });
 
-test("startup and reset keep an empty vacation week instead of jumping to distant classes", async ({ page }) => {
-   await page.route("**/api/roster/weeks?*", (route) => {
-      const url = new URL(route.request().url());
-      const batch = createRosterBatch(Number(url.searchParams.get("offset")), Number(url.searchParams.get("limit")));
-      batch.weeks.forEach((week) => {
-         if (week.week.offset < 7) week.classes = [];
+for (const weekendVisible of [false, true]) {
+   test(`empty vacation weeks follow day visibility on startup and reset, weekends visible ${String(weekendVisible)}`, async ({ page }) => {
+      await page.addInitScript((visible) => {
+         localStorage.setItem("test-clock", "2026-06-21T12:00:00+02:00");
+         localStorage.setItem("roster-shown-weekdays", visible ? "1,2,3,4,5,6,7" : "1,2,3,4,5");
+      }, weekendVisible);
+      await page.route("**/api/roster/weeks?*", (route) => {
+         const url = new URL(route.request().url());
+         const batch = createRosterBatch(Number(url.searchParams.get("offset")), Number(url.searchParams.get("limit")));
+         batch.weeks.forEach((week) => {
+            if (week.week.offset < 7) week.classes = [];
+         });
+         return route.fulfill({ json: batch });
       });
-      return route.fulfill({ json: batch });
+      await page.goto("/");
+      const homeLabel = weekendVisible ? "This week" : "Next week";
+      const weekTitle = weekendVisible ? /Week 25:/ : /Week 26:/;
+      await expect(page.locator(".weekbar__label")).toHaveText(homeLabel);
+      await expect(page.getByRole("heading", { name: weekTitle })).toBeVisible();
+      await expect(page.locator(".grid-header__day")).toHaveCount(weekendVisible ? 7 : 5);
+      await expect(page.locator(".grid-class")).toHaveCount(0);
+      await page.keyboard.press("3");
+      await expect(page.locator(".weekbar__label")).toHaveText("In 3 weeks");
+      await page.keyboard.press("r");
+      await expect(page.locator(".weekbar__label")).toHaveText(homeLabel);
+      await expect(page.getByRole("heading", { name: weekTitle })).toBeVisible();
    });
-   await page.goto("/");
-   await expect(page.locator(".weekbar__label")).toHaveText("This week");
-   await expect(page.getByRole("heading", { name: /Week 25:/ })).toBeVisible();
-   await expect(page.locator(".grid-class")).toHaveCount(0);
-   await page.keyboard.press("3");
-   await expect(page.locator(".weekbar__label")).toHaveText("In 3 weeks");
-   await page.keyboard.press("r");
-   await expect(page.locator(".weekbar__label")).toHaveText("This week");
-   await expect(page.getByRole("heading", { name: /Week 25:/ })).toBeVisible();
-});
+}
 
 test("agenda startup opens the next week with classes", async ({ page }) => {
    await page.addInitScript(() => localStorage.setItem("roster-view-mode", "agenda"));
@@ -2209,7 +2221,10 @@ for (const view of ["grid", "agenda"] as const)
    });
 
 test("a weekend source week becomes this week on Monday", async ({ page }) => {
-   await page.addInitScript(() => localStorage.setItem("test-clock", localStorage.getItem("test-clock") ?? "2026-06-21T23:55:00+02:00"));
+   await page.addInitScript(() => {
+      localStorage.setItem("test-clock", localStorage.getItem("test-clock") ?? "2026-06-21T23:55:00+02:00");
+      localStorage.setItem("roster-shown-weekdays", "1,2,3,4,5,6,7");
+   });
    await page.route("**/api/roster/weeks?*", (route) => {
       const url = new URL(route.request().url());
       return route.fulfill({ json: createShiftedRosterBatch(Number(url.searchParams.get("offset")), Number(url.searchParams.get("limit")), 1) });

@@ -30,7 +30,7 @@ import { useWeeks } from "./hooks/useWeeks";
 import { useClock } from "./hooks/useClock";
 import { useOnlineStatus } from "./hooks/useOnlineStatus";
 import { dayLabel, monthDayLabel, timeLabel, getLocalWeekStartIso, getIsoWeekday, parseIsoDateToLocal, toDayKey } from "./lib/date";
-import { ISO_WEEKDAYS, getHiddenDaysWithClasses, getWeekdaysWithClasses } from "./lib/weekLayout";
+import { getDisplayedWeekdays, getHiddenDaysWithClasses, getWeekdaysWithClasses } from "./lib/weekLayout";
 import { countClassesOutsideGridHours, getRequiredGridHours, getSmartGridHours, mergeGridHourRanges } from "./lib/gridHours";
 import { formatWeekLabel } from "./lib/weekPolicy";
 import { ErrorBoundary } from "./components/ErrorBoundary";
@@ -97,6 +97,7 @@ export default function App() {
       contextId: tokenSettings?.contextId ?? null,
       resetKey: weeksResetKey,
       verifiedBatch,
+      shownWeekdays,
       timeZone: rosterTimeZone.declaredTimeZone,
    });
    const nextClassDay = useMemo(
@@ -163,7 +164,7 @@ export default function App() {
 
    const isEmptyWeek = displayedData?.classes.length === 0;
    const hasBlankWeekUnderlay = !displayedData || isEmptyWeek;
-   const visibleWeekdays = hasBlankWeekUnderlay ? ISO_WEEKDAYS : shownWeekdays;
+   const visibleWeekdays = getDisplayedWeekdays(displayedData, shownWeekdays);
    const visibleAgendaFoldingMode = hasBlankWeekUnderlay && agendaFoldingMode !== "single" ? "all" : agendaFoldingMode;
    const { allDays, visibleDays } = useWeekDays(displayedData, weekOffset, perceivedDay, visibleWeekdays);
    const { animateAgenda, collapseAllDays, expandAllDays, resetAgenda, toggleDay, visibleExpandedDays } = useAgendaState(

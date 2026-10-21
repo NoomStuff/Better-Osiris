@@ -1,7 +1,7 @@
 import { MAX_WEEK_OFFSET, MIN_WEEK_OFFSET, type Week } from "../../shared/weeks";
 import { isoWeekNumber, shiftCalendarDate } from "../../shared/calendar";
-import { formatWeekTitle, parseLocalDateTime } from "./date";
-import { isActiveClass } from "./dayTimeline";
+import { formatWeekTitle, getIsoWeekday, toDayKey, type IsoWeekday } from "./date";
+import { DEFAULT_SHOWN_WEEKDAYS } from "./weekLayout";
 import { isSameClassDetails } from "./classSnapshot";
 import type { WeekLoadError } from "./weekLoadError";
 
@@ -96,19 +96,19 @@ export function getBatchOffsets(startOffset: number) {
    return Array.from({ length: endOffset - startOffset + 1 }, (_, index) => startOffset + index);
 }
 
-/** Prefer remaining classes this week or next; keep longer vacations visible. */
-export function getHomeWeek(entries: WeekEntries, sourceShift: number | null, now: Date): { offset: number | null; pendingOffset: number | null } {
-   for (let offset = 0; offset <= 1; offset += 1) {
-      const entry = entries[offset];
-      if (!entry?.data) {
-         if (entry?.isOmitted || (sourceShift !== null && offset < sourceShift)) continue;
-         return { offset: null, pendingOffset: offset };
-      }
-      if (entry.data.classes.some((item) => isActiveClass(item) && parseLocalDateTime(item.end) > now)) return { offset, pendingOffset: null };
-   }
-   const fallback = Math.max(0, sourceShift ?? 0);
-   if (fallback > MAX_WEEK_OFFSET || entries[fallback]?.isOmitted) return { offset: null, pendingOffset: null };
-   return entries[fallback]?.data ? { offset: fallback, pendingOffset: null } : { offset: null, pendingOffset: fallback };
+/** Open the week containing the next displayed day, including today. */
+export function getHomeWeek(
+   entries: WeekEntries,
+   sourceShift: number | null,
+   now: Date,
+   shownWeekdays: readonly IsoWeekday[] = DEFAULT_SHOWN_WEEKDAYS
+): { offset: number | null; pendingOffset: number | null } {
+   const today = getIsoWeekday(toDayKey(now));
+   const target = shownWeekdays.some((day) => day >= today) ? 0 : 1;
+   if (entries[target]?.data) return { offset: target, pendingOffset: null };
+   const offset = Math.max(target, sourceShift ?? 0);
+   if (offset > MAX_WEEK_OFFSET || entries[offset]?.isOmitted) return { offset: null, pendingOffset: null };
+   return entries[offset]?.data ? { offset, pendingOffset: null } : { offset: null, pendingOffset: offset };
 }
 
 export function canNavigateToWeek(offset: number, entries: WeekEntries, sourceShift: number | null = null) {

@@ -2,7 +2,15 @@ import assert from "node:assert/strict";
 import { afterEach, describe, it } from "node:test";
 import { getMinutesFromMidnight, toDayKey } from "./date.js";
 import { setRosterTimeZone } from "./rosterTimeZone.js";
-import { DEFAULT_SHOWN_WEEKDAYS, getDays, getHiddenDaysWithClasses, getPositionedClasses, getVisibleDays, getWeekdaysWithClasses } from "./weekLayout.js";
+import {
+   DEFAULT_SHOWN_WEEKDAYS,
+   getDisplayedWeekdays,
+   getDays,
+   getHiddenDaysWithClasses,
+   getPositionedClasses,
+   getVisibleDays,
+   getWeekdaysWithClasses,
+} from "./weekLayout.js";
 import type { Class } from "../types/weeks";
 
 function createClass(overrides: Partial<Class> = {}): Class {
@@ -144,6 +152,12 @@ void describe("roster layout", () => {
          saturday.classes.map((schoolClass) => schoolClass.id),
          ["weekend"]
       );
+   });
+
+   void it("uses the selected weekdays for loaded empty weeks", () => {
+      const week = { week: { offset: 0, number: 25, start: "2026-06-15", end: "2026-06-21" }, classes: [] };
+      assert.deepEqual(getDisplayedWeekdays(week, [4]), [4]);
+      assert.deepEqual(getDisplayedWeekdays(null, [4]), [1, 2, 3, 4, 5, 6, 7]);
    });
 
    void it("hides weekend days by default but can show any weekday", () => {

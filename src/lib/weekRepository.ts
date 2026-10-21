@@ -1,5 +1,6 @@
 import { fetchWeeks } from "../api/weeks";
-import { getLocalWeekStartIso } from "./date";
+import { DEFAULT_SHOWN_WEEKDAYS } from "./weekLayout";
+import { getLocalWeekStartIso, type IsoWeekday } from "./date";
 import { shiftCalendarDate, weekDistance } from "../../shared/calendar";
 import { MAX_WEEK_OFFSET } from "../../shared/weeks";
 import type { Week, WeekBatch } from "../types/weeks";
@@ -28,6 +29,7 @@ export interface WeekRepositoryOptions {
    contextId: string | null;
    resetKey: number;
    verifiedBatch?: WeekBatch | null;
+   shownWeekdays?: readonly IsoWeekday[];
 }
 interface Snapshot {
    entries: WeekEntries;
@@ -64,6 +66,7 @@ export class WeekRepository {
    private readonly retryTimers = new Map<number, ReturnType<typeof setTimeout>>();
    private generation = 0;
    private activeOffset = 0;
+   private shownWeekdays: readonly IsoWeekday[] = DEFAULT_SHOWN_WEEKDAYS;
    private anchor = "";
    private timeZone: string | null = null;
    private contextId: string | null = null;
@@ -135,6 +138,7 @@ export class WeekRepository {
    };
 
    configure(options: WeekRepositoryOptions, offset: number) {
+      this.shownWeekdays = options.shownWeekdays ?? DEFAULT_SHOWN_WEEKDAYS;
       if (options.timeZone && this.timeZone && options.timeZone !== this.timeZone) {
          clearWeekBrowserCache();
          this.invalidate();
@@ -383,9 +387,8 @@ export class WeekRepository {
             });
       });
       this.snapshot = { ...this.snapshot, entries: settledEntries };
-      // Use the home week the user had before this update. Cancelling its final class
-      // can advance Home, but must still notify about that cancellation.
-      const previousHome = getHomeWeek(this.snapshot.entries, this.sourceShift, new Date());
+      // Keep notification scope on the Home week shown before this update.
+      const previousHome = getHomeWeek(this.snapshot.entries, this.sourceShift, new Date(), this.shownWeekdays);
       const result = reconcileWeeks(this.raw, incomingWeeks, this.changes);
       const checkedAt = Date.now();
       result.rawWeeks.forEach((week, date) => {
@@ -411,7 +414,7 @@ export class WeekRepository {
             : this.snapshot.lastSuccessfulResetKey,
          incomingDates
       );
-      const home = previousHome.offset === null ? getHomeWeek(this.snapshot.entries, this.sourceShift, new Date()) : previousHome;
+      const home = previousHome.offset === null ? getHomeWeek(this.snapshot.entries, this.sourceShift, new Date(), this.shownWeekdays) : previousHome;
       const homeStart = home.offset === null ? null : shiftCalendarDate(this.anchor, home.offset * 7);
       const notifications = result.notifications.filter(
          (diff) =>

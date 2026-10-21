@@ -60,20 +60,38 @@ void describe("upcoming week selection", () => {
       assert.equal(isSameWeekData(left, right), false);
       assert.equal(isSameWeekData(left, structuredClone(left)), true);
    });
-   void it("keeps an ongoing class and advances when its week has no remaining classes", () => {
-      const entries = { 0: createWeekEntry(week(0, [lesson("2026-06-16")])), 1: createWeekEntry(week(1, [lesson("2026-06-23")])) };
-      assert.equal(getHomeWeek(entries, 0, new Date("2026-06-16T09:30:00+02:00")).offset, 0);
-      assert.equal(getHomeWeek(entries, 0, new Date("2026-06-16T10:00:00+02:00")).offset, 1);
-      assert.equal(getHomeWeek(entries, 0, new Date("2026-06-21T12:00:00+02:00")).offset, 1);
+   void it("keeps today through the end of Friday and rolls hidden weekends forward", () => {
+      const entries = { 0: createWeekEntry(week(0, [lesson("2026-06-16")])), 1: createWeekEntry(week(1)) };
+      for (const time of ["2026-06-16T10:00:00+02:00", "2026-06-19T23:59:59+02:00"]) {
+         assert.equal(getHomeWeek(entries, 0, new Date(time)).offset, 0);
+      }
+      for (const day of [20, 21]) {
+         const now = new Date(`2026-06-${day}T12:00:00+02:00`);
+         assert.equal(getHomeWeek(entries, 0, now).offset, 1);
+         assert.equal(getHomeWeek(entries, 0, now, [1, 2, 3, 4, 5, 6, 7]).offset, 0);
+      }
    });
-   void it("includes weekend classes and excludes cancelled classes", () => {
-      const saturday = lesson("2026-06-20");
-      const entries = { 0: createWeekEntry(week(0, [saturday])), 1: createWeekEntry(week(1, [lesson("2026-06-23")])) };
-      assert.equal(getHomeWeek(entries, 0, new Date("2026-06-20T08:00:00+02:00")).offset, 0);
-      entries[0] = createWeekEntry(
-         week(0, [{ ...saturday, status: "cancelled", previous: { ...saturday, status: "scheduled" } }, lesson("2026-06-21", "cancelled")])
-      );
+   void it("uses visible days even when they have no classes and keeps hidden classes hidden", () => {
+      const entries = { 0: createWeekEntry(week(0, [lesson("2026-06-20", "cancelled")])), 1: createWeekEntry(week(1)) };
+      assert.equal(getHomeWeek(entries, 0, new Date("2026-06-17T12:00:00+02:00"), [4]).offset, 0);
       assert.equal(getHomeWeek(entries, 0, new Date("2026-06-20T08:00:00+02:00")).offset, 1);
+      assert.equal(getHomeWeek(entries, 0, new Date("2026-06-20T08:00:00+02:00"), [6]).offset, 0);
+      assert.equal(getHomeWeek(entries, 0, new Date("2026-06-21T08:00:00+02:00"), [6]).offset, 1);
+   });
+   void it("follows visibility through an empty vacation week", () => {
+      const entries = { 0: createWeekEntry(week(0)), 1: createWeekEntry(week(1, [lesson("2026-06-23")])) };
+      assert.equal(getHomeWeek(entries, 0, new Date("2026-06-21T23:59:59+02:00")).offset, 1);
+   });
+   void it("waits for the target week without requiring classes", () => {
+      const entries = { 0: createWeekEntry(week(0, [lesson("2026-06-16")])) };
+      assert.deepEqual(getHomeWeek(entries, 0, new Date("2026-06-20T12:00:00+02:00")), { offset: null, pendingOffset: 1 });
+   });
+   void it("uses the roster date across midnight, year boundaries and daylight saving", () => {
+      const entries = { 0: createWeekEntry(week(0, [lesson("2026-06-16")])), 1: createWeekEntry(week(1)) };
+      assert.equal(getHomeWeek(entries, 0, new Date("2026-06-19T22:00:00Z")).offset, 1);
+      assert.equal(getHomeWeek(entries, 0, new Date("2027-01-03T23:00:00Z"), [1]).offset, 0);
+      assert.equal(getHomeWeek(entries, 0, new Date("2026-10-25T01:30:00Z")).offset, 1);
+      assert.equal(getHomeWeek(entries, 0, new Date("2026-03-29T01:30:00Z"), [7]).offset, 0);
    });
    void it("checks unknown earlier weeks before selecting a later cached one", () => {
       const entries = { 1: createWeekEntry(week(1, [lesson("2026-06-23")])) };
@@ -81,11 +99,11 @@ void describe("upcoming week selection", () => {
       assert.deepEqual(getHomeWeek(entries, null, now), { offset: null, pendingOffset: 0 });
       assert.deepEqual(getHomeWeek(entries, 1, now), { offset: 1, pendingOffset: null });
    });
-   void it("does not jump over a vacation and uses the source week when this week is omitted", () => {
+   void it("does not skip a cached vacation when the source advances", () => {
       const entries: WeekEntries = Object.fromEntries(Array.from({ length: 51 }, (_, offset) => [offset, createWeekEntry(week(offset))]));
       entries[7] = createWeekEntry(week(7, [lesson("2026-08-04")]));
       assert.deepEqual(getHomeWeek(entries, 0, new Date("2026-06-16T09:30:00+02:00")), { offset: 0, pendingOffset: null });
-      assert.deepEqual(getHomeWeek(entries, 1, new Date("2026-06-16T09:30:00+02:00")), { offset: 1, pendingOffset: null });
+      assert.deepEqual(getHomeWeek(entries, 1, new Date("2026-06-16T09:30:00+02:00")), { offset: 0, pendingOffset: null });
    });
    void it("keeps cached past weeks reachable while excluding unavailable dates", () => {
       const entries = { [-1]: createWeekEntry(week(-1)), 1: createWeekEntry(week(1)) };
