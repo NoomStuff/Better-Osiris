@@ -37,6 +37,22 @@ function respond(offset: number, response: Response) {
    resolve(response);
 }
 void describe("concurrent week requests", () => {
+   /** Faithful Notification double: closing fires onclose, which is how deliverNotification stops tracking an instance. */
+   const deliveries: string[] = [];
+   const shown: TestNotification[] = [];
+   class TestNotification {
+      static permission = "granted";
+      readonly tag: string;
+      onclose?: () => void;
+      constructor(_title: string, options: NotificationOptions) {
+         this.tag = options.tag ?? "";
+         deliveries.push(options.body ?? "");
+         shown.push(this);
+      }
+      close() {
+         this.onclose?.();
+      }
+   }
    beforeEach(() => {
       const items = new Map<string, string>();
       const storage = {
@@ -61,6 +77,9 @@ void describe("concurrent week requests", () => {
       repository = new WeekRepository();
    });
    afterEach(() => {
+      // Draining fires onclose, removing the deliveries from notificationDelivery's module-wide set before other test files run.
+      for (const notification of shown.splice(0)) notification.close();
+      deliveries.length = 0;
       repository.invalidate();
       pending.clear();
       globalThis.fetch = originalFetch;
@@ -159,11 +178,6 @@ void describe("concurrent week requests", () => {
    });
 
    void it("scopes change alerts to the home week when the source opens on next week", async () => {
-      const messages: string[] = [];
-      function TestNotification(_title: string, options: { body: string }) {
-         messages.push(options.body);
-      }
-      Object.defineProperty(TestNotification, "permission", { value: "granted" });
       Object.defineProperty(window, "Notification", { value: TestNotification });
       window.localStorage.setItem("roster-class-notifications", "true");
       const makeBatch = (room: string) => {
@@ -193,16 +207,11 @@ void describe("concurrent week requests", () => {
       configure(1);
       repository.refresh();
       respond(0, Response.json(makeBatch("B")));
-      await until(() => messages.length > 0);
-      assert.deepEqual(messages, ["Week 0 changed: A → B"]);
+      await until(() => deliveries.length > 0);
+      assert.deepEqual(deliveries, ["Week 0 changed: A → B"]);
    });
 
    void it("waits for concurrent batches before notifying a removal and still notifies confirmed removals", async () => {
-      const deliveries: string[] = [];
-      function TestNotification(_title: string, options: { body: string }) {
-         deliveries.push(options.body);
-      }
-      Object.defineProperty(TestNotification, "permission", { value: "granted" });
       Object.defineProperty(window, "Notification", { value: TestNotification });
       window.localStorage.setItem("roster-class-notifications", "true");
       const current = batch(0, 0);

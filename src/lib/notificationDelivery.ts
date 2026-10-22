@@ -74,8 +74,9 @@ const directNotifications = new Set<Notification>();
 export async function closeNotifications(shouldClose: (notification: Notification) => boolean) {
    for (const notification of directNotifications) {
       if (shouldClose(notification)) {
-         notification.close();
+         // The entry must stop being tracked even when a Notification shim lacks close().
          directNotifications.delete(notification);
+         (notification as Partial<Notification>).close?.();
       }
    }
    if (!("serviceWorker" in navigator)) return;
