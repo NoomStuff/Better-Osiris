@@ -57,6 +57,37 @@ test("week navigation and reset show the matching roster data", async ({ page })
    await expect(page.getByRole("heading", { name: /Week 25:/ })).toBeVisible();
 });
 
+test("background sync retries quietly until the saved roster is stale and recovers without a warning flicker", async ({ page }) => {
+   let fail = false;
+   let attempts = 0;
+   await page.route("**/api/roster/weeks?*", (route) => {
+      attempts += 1;
+      if (fail) return route.fulfill({ status: 503, json: { error: "Unavailable", retryable: true } });
+      const url = new URL(route.request().url());
+      const batch = createRosterBatch(Number(url.searchParams.get("offset")), Number(url.searchParams.get("limit")));
+      batch.fetchedAt = new Date(FIXED_NOW_ISO).getTime();
+      return route.fulfill({ json: batch });
+   });
+   await page.goto("/");
+   await expect(page.locator(".grid-class").first()).toBeVisible();
+   await expect.poll(() => attempts).toBe(2);
+   await page.clock.install({ time: new Date(FIXED_NOW_ISO) });
+   fail = true;
+   await page.evaluate(() => window.dispatchEvent(new Event("online")));
+   await expect.poll(() => attempts).toBe(3);
+   await expect(page.getByText(/Showing your saved timetable/)).toHaveCount(0);
+   await expect(page.getByText("Something went wrong while loading the roster.")).toHaveCount(0);
+   await page.clock.fastForward(17_000);
+   await expect.poll(() => attempts).toBeGreaterThanOrEqual(4);
+   await expect(page.getByText(/Showing your saved timetable/)).toHaveCount(0);
+   await page.clock.fastForward(15 * 60_000);
+   await expect(page.getByText(/Showing your saved timetable/)).toBeVisible();
+   await expect(page.locator(".grid-class").first()).toBeVisible();
+   fail = false;
+   await page.getByRole("button", { name: "Try again", exact: true }).click();
+   await expect(page.getByText(/Showing your saved timetable/)).toHaveCount(0);
+});
+
 test("the week chooser selects whole weeks, jumps months and restores keyboard focus", async ({ page }) => {
    await page.goto("/");
    await expect(page.getByRole("button", { name: "Choose week", exact: true })).toHaveCount(0);
@@ -2171,17 +2202,21 @@ for (const target of [0, 2])
 test("next-week source data remains instantly available from cache during a failed reload", async ({ page }) => {
    let offline = false;
    await page.route("**/api/roster/weeks?*", (route) => {
-      if (offline) return route.fulfill({ status: 503, json: { error: "Temporarily unavailable" } });
+      if (offline) return route.fulfill({ status: 503, json: { error: "Temporarily unavailable", retryable: true } });
       const url = new URL(route.request().url());
-      return route.fulfill({ json: createShiftedRosterBatch(Number(url.searchParams.get("offset")), Number(url.searchParams.get("limit")), 1) });
+      const batch = createShiftedRosterBatch(Number(url.searchParams.get("offset")), Number(url.searchParams.get("limit")), 1);
+      batch.fetchedAt = new Date(FIXED_NOW_ISO).getTime();
+      return route.fulfill({ json: batch });
    });
    await page.goto("/");
    await expect(page.getByRole("button", { name: "SOURCE_TITLE_1_1" })).toBeVisible();
    offline = true;
+   const failedRefresh = page.waitForResponse((response) => response.url().includes("/api/roster/weeks?offset=0") && response.status() === 503);
    await page.reload();
+   await failedRefresh;
    await expect(page.locator(".weekbar__label")).toHaveText("Next week");
    await expect(page.getByRole("button", { name: "SOURCE_TITLE_1_1" })).toBeVisible();
-   await expect(page.getByText(/Fetching your latest roster went wrong/)).toBeVisible();
+   await expect(page.getByText(/Fetching your latest roster went wrong/)).toHaveCount(0);
 });
 
 for (const view of ["grid", "agenda"] as const)

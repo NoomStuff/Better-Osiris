@@ -103,6 +103,29 @@ void describe("concurrent week requests", () => {
       assert.equal(repository.getSnapshot().knownWeeks.length, 0);
    });
 
+   void it("retries cached failures sooner, respects Retry-After and clears failures on recovery", async () => {
+      configure(0);
+      respond(0, Response.json(batch(0, 0)));
+      respond(5, Response.json(batch(5, 0)));
+      await until(() => repository.getSnapshot().knownWeeks.length === 10);
+      repository.refresh();
+      respond(0, Response.json({ error: "Unavailable", retryable: true }, { status: 503 }));
+      await until(() => Boolean(repository.getSnapshot().entries[0]?.error));
+      const failed = repository.getSnapshot().entries[0];
+      assert.ok(failed?.data);
+      assert.ok(failed.retryDelayMs >= 15_000 && failed.retryDelayMs < 16_000);
+      repository.refresh();
+      assert.equal(repository.getSnapshot().entries[0]?.error, failed.error, "Retries must keep an existing warning until they succeed");
+      respond(0, Response.json({ error: "Unavailable", retryable: true }, { status: 503, headers: { "Retry-After": "120" } }));
+      await until(() => Boolean(repository.getSnapshot().entries[0]?.retryAt));
+      assert.ok((repository.getSnapshot().entries[0]?.retryDelayMs ?? 0) >= 120_000);
+      repository.refresh();
+      respond(0, Response.json(batch(0, 0)));
+      await until(() => !repository.getSnapshot().entries[0]?.isFetching);
+      assert.equal(repository.getSnapshot().entries[0]?.error, null);
+      assert.equal(repository.getSnapshot().entries[0]?.retryAt, 0);
+   });
+
    void it("adopts a verified token batch without requesting it again", () => {
       const verifiedBatch = batch(0, 0);
       const options = { enabled: true, clearCache: false, contextId: "test", resetKey: 1, timeZone: "Europe/Amsterdam", verifiedBatch };

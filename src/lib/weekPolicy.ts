@@ -20,6 +20,14 @@ export interface WeekEntry {
 export type WeekEntries = Partial<Record<number, WeekEntry>>;
 
 export const ROSTER_BATCH_SIZE = 5;
+const SYNC_WARNING_AGE_MS = 15 * 60_000;
+
+/** Keep transient failures quiet while the upstream snapshot is still recent. */
+export function getVisibleWeekError(entry: WeekEntry | undefined, now: number): WeekLoadError | null {
+   if (!entry?.error) return null;
+   if (!entry.data || entry.error.isAuthRelated || now - entry.fetchedAt >= SYNC_WARNING_AGE_MS) return entry.error;
+   return null;
+}
 
 export function formatWeekLabel(weekOffset: number) {
    if (weekOffset === 0) {

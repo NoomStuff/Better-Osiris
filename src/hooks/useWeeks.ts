@@ -2,7 +2,7 @@ import { DEFAULT_SHOWN_WEEKDAYS } from "../lib/weekLayout";
 import { useClassReminders } from "./useClassReminders";
 import { useCallback, useEffect, useMemo, useState, useSyncExternalStore } from "react";
 import { WeekRepository, type WeekRepositoryOptions } from "../lib/weekRepository";
-import { ROSTER_BATCH_SIZE, canNavigateToWeek, getDerivedWeekTitle, getHomeWeek, getAdjacentWeekOffset } from "../lib/weekPolicy";
+import { ROSTER_BATCH_SIZE, canNavigateToWeek, getDerivedWeekTitle, getHomeWeek, getAdjacentWeekOffset, getVisibleWeekError } from "../lib/weekPolicy";
 import { useClock } from "./useClock";
 import { isRosterTimeZoneKnown } from "../lib/rosterTimeZone";
 
@@ -33,7 +33,7 @@ export function useWeeks(offset: number, options: WeekRepositoryOptions) {
       return () => window.clearInterval(timer);
    }, [retryAt]);
    const data = clearCache ? null : (active?.data ?? null);
-   const error = clearCache ? null : (active?.error ?? null);
+   const error = clearCache ? null : getVisibleWeekError(active, Date.now());
    const weekNotReturned = !clearCache && Boolean(active?.isOmitted);
    const isWeekNavigable = useCallback((target: number) => !clearCache && canNavigateToWeek(target, entries, sourceShift), [clearCache, entries, sourceShift]);
    const firstOffset = Math.max(0, sourceShift ?? 0);

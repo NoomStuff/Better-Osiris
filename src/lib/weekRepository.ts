@@ -14,7 +14,16 @@ import {
    storeWeekCache,
    type StoredWeek,
 } from "./weekPersistence";
-import { ROSTER_BATCH_SIZE, getHomeWeek, createWeekEntry, getBatchOffsets, getBatchStart, isSameWeekData, type WeekEntries } from "./weekPolicy";
+import {
+   ROSTER_BATCH_SIZE,
+   getHomeWeek,
+   createWeekEntry,
+   getBatchOffsets,
+   getBatchStart,
+   isSameWeekData,
+   getVisibleWeekError,
+   type WeekEntries,
+} from "./weekPolicy";
 import { getRosterTimeZone, isRosterTimeZoneKnown, setRosterTimeZone } from "./rosterTimeZone";
 import { getSessionEpoch, onSessionInvalidated, refreshSession } from "./sessionStore";
 import { clearWeekBrowserCache } from "./weekCache";
@@ -281,6 +290,7 @@ export class WeekRepository {
    private load(start: number, force = false, passive = false) {
       if (!this.enabled || start < 0 || start > MAX_WEEK_OFFSET || this.requests.has(start)) return;
       const offsets = getBatchOffsets(start);
+      if (passive && offsets.some((offset) => (this.snapshot.entries[offset]?.retryAt ?? 0) > Date.now())) return;
       const stale = offsets.some((offset) => {
          // A known omission cannot be refreshed; it must not invalidate the returned weeks.
          if (this.sourceShift !== null && offset < this.sourceShift) return false;
@@ -301,7 +311,7 @@ export class WeekRepository {
             isFetching: true,
             isHydrated: false,
             retryAt: 0,
-            error: old?.data ? null : (old?.error ?? null),
+            error: old?.error ?? null,
          });
       });
       this.publish(entries);
@@ -441,10 +451,12 @@ export class WeekRepository {
             offset >= -1 && offset <= MAX_WEEK_OFFSET && (this.weekSuccessRevisions.get(shiftCalendarDate(anchor, offset * 7)) ?? 0) <= successesAtDispatch
       );
       const minimumDelay =
-         loadError.retryable && !passive && failedOffsets.length > 0
+         loadError.retryable && failedOffsets.length > 0
             ? Math.max(
                  loadError.retryAfterMs ?? 0,
-                 Math.min(Math.max(...failedOffsets.map((offset) => entries[offset]?.retryDelayMs ?? 0), 1000) * 2, REFRESH_MS)
+                 failedOffsets.some((offset) => Boolean(entries[offset]?.data))
+                    ? Math.min(Math.max(...failedOffsets.map((offset) => entries[offset]?.retryDelayMs ?? 0)) * 2 || 15_000, 60_000)
+                    : Math.min(Math.max(...failedOffsets.map((offset) => entries[offset]?.retryDelayMs ?? 0), 1000) * 2, REFRESH_MS)
               )
             : 0;
       // Spread clients after an outage, never retrying earlier than upstream requested.
@@ -461,7 +473,7 @@ export class WeekRepository {
          });
       });
       this.publish(entries);
-      if (!passive && failedOffsets.includes(this.activeOffset) && !this.didNotify) {
+      if (!passive && failedOffsets.includes(this.activeOffset) && getVisibleWeekError(entries[this.activeOffset], Date.now()) && !this.didNotify) {
          this.didNotify = true;
          notifyError("Something went wrong while loading the roster.");
       }
@@ -470,7 +482,8 @@ export class WeekRepository {
             start,
             setTimeout(() => {
                this.retryTimers.delete(start);
-               this.load(start, true);
+               if (passive && document.visibilityState !== "visible") return;
+               this.load(start, true, passive);
             }, delay)
          );
    }

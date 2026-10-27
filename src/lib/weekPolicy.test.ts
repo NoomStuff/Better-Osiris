@@ -11,6 +11,7 @@ import {
    getBatchOffsets,
    getBatchStart,
    isSameWeekData,
+   getVisibleWeekError,
    type WeekEntries,
 } from "./weekPolicy";
 
@@ -48,6 +49,20 @@ function lesson(date: string, status: "scheduled" | "cancelled" = "scheduled"): 
       status,
    };
 }
+void describe("sync warnings", () => {
+   const error = { title: "Unavailable", detail: "", log: "", isAuthRelated: false, retryable: true };
+   void it("warns only once the upstream snapshot is fifteen minutes old", () => {
+      const entry = createWeekEntry(week(0), { error, fetchedAt: 1000 });
+      assert.equal(getVisibleWeekError(entry, 1000 + 15 * 60_000 - 1), null);
+      assert.equal(getVisibleWeekError(entry, 1000 + 15 * 60_000), error);
+      assert.equal(getVisibleWeekError({ ...entry, error: null }, 1000 + 30 * 60_000), null);
+   });
+   void it("shows missing data and authentication errors immediately", () => {
+      assert.equal(getVisibleWeekError(createWeekEntry(null, { error }), 1000), error);
+      const authError = { ...error, isAuthRelated: true, retryable: false };
+      assert.equal(getVisibleWeekError(createWeekEntry(week(0), { error: authError, fetchedAt: 1000 }), 1000), authError);
+   });
+});
 void describe("upcoming week selection", () => {
    void it("settles on an empty current week when the next week is omitted", () => {
       const entries = { 0: createWeekEntry(week(0)), 1: createWeekEntry(null, { isOmitted: true }) };
