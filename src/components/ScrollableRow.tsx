@@ -1,16 +1,19 @@
-import { useCallback, useEffect, useRef, useState } from "react";
-import type { ReactNode } from "react";
+import { useCallback, useEffect, useImperativeHandle, useRef, useState } from "react";
+import type { ReactNode, RefObject } from "react";
 import "./ScrollableRow.css";
 
 interface ScrollableRowProps {
    children: ReactNode;
+   scrollerRef?: RefObject<HTMLDivElement | null>;
+   onScrollPositionChange?: (position: number) => void;
 }
 
 /* Horizontal scroller for rows that may not fit their container: never shows a scrollbar,
    fades the content toward an edge that has more to scroll into, and offers arrow buttons
    on pointer devices. */
-export function ScrollableRow({ children }: ScrollableRowProps) {
+export function ScrollableRow({ children, scrollerRef: providedScrollerRef, onScrollPositionChange }: ScrollableRowProps) {
    const scrollerRef = useRef<HTMLDivElement | null>(null);
+   useImperativeHandle<HTMLDivElement | null, HTMLDivElement | null>(providedScrollerRef, () => scrollerRef.current);
    const [canScrollStart, setCanScrollStart] = useState(false);
    const [canScrollEnd, setCanScrollEnd] = useState(false);
 
@@ -54,7 +57,10 @@ export function ScrollableRow({ children }: ScrollableRowProps) {
             className="scrollable-row__scroller"
             data-fade-start={canScrollStart || undefined}
             data-fade-end={canScrollEnd || undefined}
-            onScroll={updateEdges}
+            onScroll={(event) => {
+               updateEdges();
+               onScrollPositionChange?.(event.currentTarget.scrollLeft);
+            }}
          >
             {children}
          </div>

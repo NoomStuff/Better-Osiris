@@ -1,6 +1,6 @@
 import { NotificationSettings } from "./NotificationSettings";
 import { RosterAccessSettings } from "./RosterAccessSettings";
-import { useCallback } from "react";
+import { useCallback, useRef, useState } from "react";
 import type { OsirisTokenValidationStatus } from "../types/osirisToken";
 import type { IsoWeekday } from "../lib/date";
 import { DEFAULT_GRID_HOURS, formatGridHour, GRID_HOUR_MAX, GRID_HOUR_MIN, type GridHourRange } from "../lib/gridHours";
@@ -16,6 +16,7 @@ import { IconButton } from "./IconButton";
 import { OverlayPanel } from "./OverlayPanel";
 import { RangeSlider } from "./RangeSlider";
 import { ThemePicker } from "./ThemePicker";
+import type { ThemeMode } from "../styles/themes/registry";
 import "./SettingsDialog.css";
 
 interface SettingsDialogProps {
@@ -58,6 +59,8 @@ export function SettingsDialog({
 }: SettingsDialogProps) {
    const { agendaFoldingMode, gridHours, setAgendaFoldingMode, setGridHours, setShownWeekdays, shownWeekdays } = usePreferences();
    const contentRef = useOverlayScrollbar();
+   const [themePickerMode, setThemePickerMode] = useState<ThemeMode | null>(null);
+   const themeScrollPositions = useRef<Partial<Record<ThemeMode, number>>>({});
    const { isClosing, close: closeSettings } = usePanelClose(isOpen, () => {
       onTokenDraftChange();
       onClose();
@@ -110,7 +113,7 @@ export function SettingsDialog({
          <div ref={contentRef} className="settings-dialog__content">
             <NotificationSettings />
 
-            <ThemePicker />
+            <ThemePicker mode={themePickerMode} onModeChange={setThemePickerMode} scrollPositionsRef={themeScrollPositions} />
 
             <section className="settings-section" aria-labelledby="days-settings-title">
                <div className="settings-section__header settings-section__header--with-actions">
