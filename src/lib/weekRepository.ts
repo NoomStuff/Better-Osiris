@@ -12,6 +12,7 @@ import {
    readSessionClassDiffs,
    storeSessionClassDiffs,
    storeWeekCache,
+   clearWeekBrowserCache,
    type StoredWeek,
 } from "./weekPersistence";
 import {
@@ -26,7 +27,6 @@ import {
 } from "./weekPolicy";
 import { getRosterTimeZone, isRosterTimeZoneKnown, setRosterTimeZone } from "./rosterTimeZone";
 import { getSessionEpoch, onSessionInvalidated, refreshSession } from "./sessionStore";
-import { clearWeekBrowserCache } from "./weekCache";
 import { notifyClassDiffs } from "./classNotifications";
 import { notifyError } from "./notyf";
 import { toWeekLoadError } from "./weekLoadError";
@@ -131,15 +131,24 @@ export class WeekRepository {
       this.retryTimers.clear();
       this.pendingCancellations.clear();
    }
-   invalidate = () => {
+   /** Drops every week and its history. Callers decide what to publish next. */
+   private clearContent() {
       this.abort();
       this.raw.clear();
       this.stored.clear();
       this.changes.clear();
       this.weekSuccessRevisions.clear();
-      this.contextId = null;
       this.sourceShift = null;
       this.sourceFetchedAt = 0;
+   }
+   /** The account or zone changed: nothing stored may survive, in memory or in the browser. */
+   private discard() {
+      clearWeekBrowserCache();
+      this.invalidate();
+   }
+   invalidate = () => {
+      this.clearContent();
+      this.contextId = null;
       this.enabled = false;
       this.didNotify = false;
       this.adoptedBatch = null;
@@ -148,20 +157,12 @@ export class WeekRepository {
 
    configure(options: WeekRepositoryOptions, offset: number) {
       this.shownWeekdays = options.shownWeekdays ?? DEFAULT_SHOWN_WEEKDAYS;
-      if (options.timeZone && this.timeZone && options.timeZone !== this.timeZone) {
-         clearWeekBrowserCache();
-         this.invalidate();
-      }
+      const zoneChanged = options.timeZone !== null && this.timeZone !== null && options.timeZone !== this.timeZone;
+      const accountChanged = options.clearCache
+         ? this.contextId !== null || this.raw.size > 0
+         : options.contextId !== null && this.contextId !== null && options.contextId !== this.contextId;
+      if (zoneChanged || accountChanged) this.discard();
       this.timeZone = options.timeZone ?? this.timeZone;
-      if (options.clearCache) {
-         if (this.contextId || this.raw.size) {
-            clearWeekBrowserCache();
-            this.invalidate();
-         }
-      } else if (options.contextId && this.contextId && options.contextId !== this.contextId) {
-         clearWeekBrowserCache();
-         this.invalidate();
-      }
       if (options.resetKey !== this.resetKey) this.abort();
       this.resetKey = options.resetKey;
       this.contextId = options.contextId ?? this.contextId;
@@ -177,21 +178,8 @@ export class WeekRepository {
          this.adoptedBatch = payload;
          const offsets = getBatchOffsets(0);
          this.snapshot = { ...this.snapshot, entries: { ...this.snapshot.entries, ...Object.fromEntries(offsets.map((key) => [key, createWeekEntry(null)])) } };
-         this.receiveBatch(
-            {
-               start: 0,
-               offsets,
-               controller: new AbortController(),
-               generation: this.generation,
-               epoch: getSessionEpoch(),
-               anchor: this.anchor,
-               successesAtDispatch: this.successRevision,
-               requestOffset: 0,
-               requestLimit: ROSTER_BATCH_SIZE,
-               passive: false,
-            },
-            payload
-         );
+         // The server verified the token with source offset zero, whatever the current mapping is.
+         this.receiveBatch({ ...this.createRequest(0, false), requestOffset: 0, requestLimit: ROSTER_BATCH_SIZE }, payload);
       }
       this.loadActive();
    }
@@ -315,30 +303,30 @@ export class WeekRepository {
          });
       });
       this.publish(entries);
-      const controller = new AbortController();
-      this.requests.set(start, controller);
-      const generation = this.generation;
-      const epoch = getSessionEpoch();
-      const anchor = this.anchor;
-      const successesAtDispatch = this.successRevision;
-      const requestOffset = Math.min(MAX_WEEK_OFFSET, Math.max(0, start - (this.sourceShift ?? 0)));
-      const requestLimit = Math.min(offsets.length, MAX_WEEK_OFFSET - requestOffset + 1);
-      const request: BatchRequest = {
-         start,
-         offsets,
-         controller,
-         generation,
-         epoch,
-         anchor,
-         successesAtDispatch,
-         requestOffset,
-         requestLimit,
-         passive,
-      };
-      void fetchWeeks(requestOffset, requestLimit, controller.signal)
+      const request = this.createRequest(start, passive);
+      this.requests.set(start, request.controller);
+      void fetchWeeks(request.requestOffset, request.requestLimit, request.controller.signal)
          .then((payload) => this.receiveBatch(request, payload))
          .catch((error: unknown) => this.rejectBatch(request, error))
          .finally(() => this.finishBatch(request));
+   }
+
+   /** Captures everything a response must still match when it arrives. */
+   private createRequest(start: number, passive: boolean): BatchRequest {
+      const offsets = getBatchOffsets(start);
+      const requestOffset = Math.min(MAX_WEEK_OFFSET, Math.max(0, start - (this.sourceShift ?? 0)));
+      return {
+         start,
+         offsets,
+         controller: new AbortController(),
+         generation: this.generation,
+         epoch: getSessionEpoch(),
+         anchor: this.anchor,
+         successesAtDispatch: this.successRevision,
+         requestOffset,
+         requestLimit: Math.min(offsets.length, MAX_WEEK_OFFSET - requestOffset + 1),
+         passive,
+      };
    }
 
    private isCurrentRequest(request: BatchRequest) {
@@ -354,12 +342,7 @@ export class WeekRepository {
       }
       if (payload.timeZone !== getRosterTimeZone()) {
          setRosterTimeZone(payload.timeZone);
-         this.abort();
-         this.raw.clear();
-         this.stored.clear();
-         this.changes.clear();
-         this.sourceShift = null;
-         this.sourceFetchedAt = 0;
+         this.clearContent();
          this.anchor = getLocalWeekStartIso(new Date());
          this.publish({});
          this.loadActive();

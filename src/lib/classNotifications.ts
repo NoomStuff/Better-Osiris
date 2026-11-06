@@ -11,13 +11,13 @@ import { SESSION_EPOCH_KEY } from "./sessionStore";
 let permissionRequest: Promise<NotificationPermission> | null = null;
 export const CLASS_NOTIFICATIONS_STORAGE_KEY = "roster-class-notifications";
 
-export type ClassNotificationPermission = NotificationPermission | "unsupported";
+type ClassNotificationPermission = NotificationPermission | "unsupported";
 
 export function getClassNotificationPermission(): ClassNotificationPermission {
    return typeof window === "undefined" || !("Notification" in window) ? "unsupported" : window.Notification.permission;
 }
 
-export function getClassNotificationsEnabled() {
+function getClassNotificationsEnabled() {
    return readBrowserStorage("localStorage", CLASS_NOTIFICATIONS_STORAGE_KEY) === "true";
 }
 
@@ -86,7 +86,10 @@ export async function notifyClassDiffs(diffs: SessionClassDiff[], contextId: str
          for (const status of ["added", "changed", "cancelled"] as const) {
             const group = keyed.filter((item) => item.diff.status === status && item.expiresAt > Date.now());
             if (!group.length) continue;
-            const body = getClassNotificationBodies(group.map((item) => item.diff))[0];
+            const body = formatDiffGroup(
+               group.map((item) => item.diff),
+               status
+            );
             const current = () => isCurrent() && group.every((item) => pendingChanges.get(item.key) === item.pending);
             if (!body || !current()) continue;
             const expiresAt = Math.min(...group.map((item) => item.expiresAt));

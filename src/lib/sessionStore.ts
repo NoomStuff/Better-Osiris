@@ -2,7 +2,7 @@ import { clearOsirisToken, fetchOsirisTokenSettings, saveOsirisToken } from "../
 import type { OsirisTokenSettings, WeekBatch } from "../../shared/weeks";
 import { readBrowserStorage, writeBrowserStorage } from "./browserStorage";
 import { randomId } from "./randomId";
-import { clearWeekBrowserCache } from "./weekCache";
+import { clearWeekBrowserCache } from "./weekPersistence";
 
 export const SESSION_EPOCH_KEY = "roster-session-epoch-v1";
 interface SessionState {

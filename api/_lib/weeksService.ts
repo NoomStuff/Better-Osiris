@@ -13,7 +13,7 @@ export interface WeeksRequest {
    cookieHeader: string | undefined;
 }
 
-export function parseWeeksRange(offsetValue: string | null | undefined, limitValue: string | null | undefined) {
+function parseWeeksRange(offsetValue: string | null | undefined, limitValue: string | null | undefined) {
    const offset = parseBoundedInt(offsetValue, MIN_OSIRIS_WEEK_OFFSET, MIN_OSIRIS_WEEK_OFFSET, MAX_WEEK_OFFSET);
    const limit = parseBoundedInt(limitValue, MAX_WEEK_LIMIT, 1, MAX_WEEK_LIMIT);
 

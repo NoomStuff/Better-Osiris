@@ -1,7 +1,7 @@
 import { NotificationSettings } from "./NotificationSettings";
 import { RosterAccessSettings } from "./RosterAccessSettings";
 import { useCallback, useRef, useState } from "react";
-import type { OsirisTokenValidationStatus } from "../types/osirisToken";
+import type { OsirisTokenValidationStatus } from "../lib/osirisToken";
 import type { IsoWeekday } from "../lib/date";
 import { DEFAULT_GRID_HOURS, formatGridHour, GRID_HOUR_MAX, GRID_HOUR_MIN, type GridHourRange } from "../lib/gridHours";
 import type { AgendaFoldingMode } from "../lib/agendaPolicy";

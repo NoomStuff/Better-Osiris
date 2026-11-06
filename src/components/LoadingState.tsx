@@ -1,6 +1,6 @@
 import type { ReactNode, SyntheticEvent } from "react";
-import { OSIRIS_BEARER_TOKEN_HELP_URL } from "../lib/osirisTokenHelp";
-import type { OsirisTokenValidationStatus } from "../types/osirisToken";
+import { OSIRIS_BEARER_TOKEN_HELP_URL, type OsirisTokenValidationStatus } from "../lib/osirisToken";
+import { useClock } from "../hooks/useClock";
 import "./LoadingState.css";
 import { Button } from "./Button";
 
@@ -21,7 +21,8 @@ interface ErrorStateProps {
    title: string;
    detail: string;
    log: string;
-   retryCountdownMs: number;
+   /** When the next automatic attempt starts, or 0 when none is planned. */
+   retryAt?: number;
    isRetrying: boolean;
    canRetry: boolean;
    onRetry?: () => void;
@@ -50,8 +51,9 @@ export function LoadingState({ message }: LoadingStateProps) {
    return <WeekOverlayState title="Loading roster" detail={message} spinning role="status" />;
 }
 
-export function ErrorState({ title, detail, log, retryCountdownMs, isRetrying, canRetry, onRetry }: ErrorStateProps) {
-   const secondsUntilRetry = Math.ceil(retryCountdownMs / 1_000);
+export function ErrorState({ title, detail, log, retryAt = 0, isRetrying, canRetry, onRetry }: ErrorStateProps) {
+   const now = useClock(1_000);
+   const secondsUntilRetry = Math.ceil(Math.max(0, retryAt - now.getTime()) / 1_000);
    const retryText = isRetrying ? "Retrying now..." : secondsUntilRetry > 0 ? `Retrying in ${secondsUntilRetry}s.` : "Retrying soon.";
 
    return (

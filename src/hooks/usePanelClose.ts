@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { haptic } from "../lib/haptics";
 
 /** Keep the controlled panel mounted until its 220 ms closing animation finishes. */
-export const PANEL_CLOSE_MS = 240;
+const PANEL_CLOSE_MS = 240;
 
 export function usePanelClose(identity: string | boolean | null, onClose: () => void) {
    const [isClosing, setIsClosing] = useState(false);

@@ -25,7 +25,6 @@ export function ClassReminderSettings() {
                unit="min"
                min={1}
                max={60}
-               step={1}
                onChange={(value) => {
                   writeBrowserStorage("localStorage", REMINDER_MINUTES_KEY, String(value));
                   setMinutes(value);

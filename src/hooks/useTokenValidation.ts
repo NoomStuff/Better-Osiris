@@ -2,7 +2,7 @@ import { useCallback, useState } from "react";
 import { OsirisTokenSettingsError } from "../api/settings";
 import { getSessionSnapshot, saveSessionToken } from "../lib/sessionStore";
 import { notifyError } from "../lib/notyf";
-import type { OsirisTokenValidationStatus } from "../types/osirisToken";
+import type { OsirisTokenValidationStatus } from "../lib/osirisToken";
 import type { WeekLoadError } from "../lib/weekLoadError";
 
 type Validation =

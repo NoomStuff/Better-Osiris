@@ -3,8 +3,19 @@ import { isValidTimeZone } from "../../shared/timeZone";
 import { shiftCalendarDate } from "../../shared/calendar";
 import type { Week } from "../types/weeks";
 import { readBrowserStorage, removeBrowserStorage, writeBrowserStorage } from "./browserStorage";
-import { WEEK_CACHE_KEY, SESSION_CLASS_DIFFS_KEY } from "./weekCache";
 import type { SessionClassDiffsByWeek } from "./classDiffs";
+import { closeNotifications, NOTIFICATION_DELIVERY_LEDGER_KEY } from "./notificationDelivery";
+
+export const WEEK_CACHE_KEY = "roster-weeks-v3";
+const SESSION_CLASS_DIFFS_KEY = "roster-session-class-diffs-v3";
+
+/** Forget everything stored for the current account: cached weeks, change history and shown notifications. */
+export function clearWeekBrowserCache() {
+   void closeNotifications(() => true);
+   removeBrowserStorage("localStorage", WEEK_CACHE_KEY);
+   removeBrowserStorage("sessionStorage", SESSION_CLASS_DIFFS_KEY);
+   removeBrowserStorage("localStorage", NOTIFICATION_DELIVERY_LEDGER_KEY);
+}
 
 export interface StoredWeek {
    data: Week;

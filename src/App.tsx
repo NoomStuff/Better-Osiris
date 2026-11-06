@@ -1,12 +1,10 @@
-import { onSessionInvalidated, retrySessionSettings } from "./lib/sessionStore";
+import { checkSessionAfterAuthError, retrySessionSettings } from "./lib/sessionStore";
 import { useCallback, useEffect, useMemo, useRef, useState, type AnimationEvent, type CSSProperties } from "react";
 import { AgendaView } from "./components/AgendaView";
 import { AppToolbar } from "./components/AppToolbar";
 import { GridView } from "./components/GridView";
 import { ClassDrawer } from "./components/ClassDrawer";
-import { HiddenDaysWarning } from "./components/HiddenDaysWarning";
-import { HiddenGridHoursWarning } from "./components/HiddenGridHoursWarning";
-import { WarningBanner } from "./components/WarningBanner";
+import { HiddenDaysWarning, HiddenGridHoursWarning, SyncWarning } from "./components/WarningBanner";
 import { WeekContentState } from "./components/WeekContentState";
 import { SettingsDialog } from "./components/SettingsDialog";
 import { WeekNavigator } from "./components/WeekNavigator";
@@ -19,35 +17,29 @@ import { useOsirisTokenSettings } from "./hooks/useOsirisTokenSettings";
 import { usePreferences } from "./hooks/preferences";
 import { useRosterTimeZone } from "./hooks/useRosterTimeZone";
 import { useDockedMobileBar } from "./hooks/useDockedMobileBar";
-import { useNextUpOpenPreference } from "./hooks/useNextUpOpenPreference";
+import { booleanCodec, usePersistentState } from "./hooks/usePersistentState";
 import { useWeekDays } from "./hooks/useWeekDays";
 import { useViewportMetrics } from "./hooks/useViewportMetrics";
 import { useWeekScrollRestoration } from "./hooks/useWeekScrollRestoration";
 import { useWeekSwipeNavigation } from "./hooks/useWeekSwipeNavigation";
 import { applyDevClassStatusPreview } from "./lib/devStatusPreview";
 import { useGridZoom } from "./hooks/useGridZoom";
-import { useWeeks } from "./hooks/useWeeks";
+import { useWeekNavigation } from "./hooks/useWeekNavigation";
 import { useClock } from "./hooks/useClock";
 import { useOnlineStatus } from "./hooks/useOnlineStatus";
-import { dayLabel, monthDayLabel, timeLabel, getLocalWeekStartIso, getIsoWeekday, parseIsoDateToLocal, toDayKey } from "./lib/date";
+import { dayLabel, getLocalWeekStartIso, getIsoWeekday, parseIsoDateToLocal, toDayKey } from "./lib/date";
 import { getDisplayedWeekdays, getHiddenDaysWithClasses, getWeekdaysWithClasses } from "./lib/weekLayout";
 import { countClassesOutsideGridHours, getRequiredGridHours, getSmartGridHours, mergeGridHourRanges } from "./lib/gridHours";
-import { formatWeekLabel } from "./lib/weekPolicy";
 import { ErrorBoundary } from "./components/ErrorBoundary";
 import { useTokenValidation } from "./hooks/useTokenValidation";
 import type { Class, ViewMode } from "./types/weeks";
 import "./styles/App.css";
 
-type WeekTransitionDirection = "default" | "previous" | "next" | "settled";
 type AppOverlay = { kind: "class"; id: string } | { kind: "settings" } | { kind: "week" } | null;
 
 export default function App() {
-   const [weekOffset, setWeekOffset] = useState(0);
-   const [weekTransitionDirection, setWeekTransitionDirection] = useState<WeekTransitionDirection>("default");
    const { agendaFoldingMode, devPreview, gridHours, setGridHours, setShownWeekdays, setViewMode, shownWeekdays, viewMode } = usePreferences();
    const appContentRef = useRef<HTMLElement>(null);
-   const weekOffsetRef = useRef(0);
-   const [seekingHome, setSeekingHome] = useState(true);
    const isBarDocked = useDockedMobileBar(appContentRef);
    const { gridZoom, animateGridHeight, changeGridZoom, handleGridHeightTransitionEnd } = useGridZoom(viewMode);
    const [overlay, setOverlay] = useState<AppOverlay>(null);
@@ -55,8 +47,10 @@ export default function App() {
    const isSettingsOpen = overlay?.kind === "settings";
    const clearClassSelection = useCallback(() => setOverlay((current) => (current?.kind === "class" ? null : current)), []);
    const [bearerTokenInput, setBearerTokenInput] = useState("");
-   const [nextUpOpen, setNextUpOpen] = useNextUpOpenPreference();
-   const perceivedNow = useClock(60_000, devPreview.isEnabled ? devPreview.timeOverride : null);
+   const [nextUpOpen, setNextUpOpen] = usePersistentState("roster-next-up-open", booleanCodec);
+   const timeOverride = devPreview.isEnabled ? devPreview.timeOverride : null;
+   const statusPreviewMode = devPreview.isEnabled ? devPreview.statusPreviewMode : "none";
+   const perceivedNow = useClock(60_000, timeOverride);
    const isOnline = useOnlineStatus();
    const rosterTimeZone = useRosterTimeZone();
    const {
@@ -66,7 +60,6 @@ export default function App() {
       initialLoadError: tokenSettingsLoadError,
       weeksResetKey,
       verifiedBatch,
-      refreshAfterAuthError,
    } = useOsirisTokenSettings();
    useViewportMetrics();
    const {
@@ -79,55 +72,48 @@ export default function App() {
       initialWeeks,
       knownWeeks,
       homeWeekOffset,
-      homePendingOffset,
-      previousWeekOffset,
-      nextWeekOffset,
       lastSuccessfulResetKey,
       isWeekNavigable,
       weekNotReturned,
       loading,
-      retryCountdownMs,
+      retryAt,
       retrying,
       refreshing,
       refresh,
       title,
-   } = useWeeks(weekOffset, {
-      enabled: !isTokenSettingsLoading && hasBearerToken && rosterTimeZone.isKnown,
-      clearCache: !isTokenSettingsLoading && !hasBearerToken,
-      contextId: tokenSettings?.contextId ?? null,
-      resetKey: weeksResetKey,
-      verifiedBatch,
-      shownWeekdays,
-      timeZone: rosterTimeZone.declaredTimeZone,
-   });
+      weekOffset,
+      transition: weekTransitionDirection,
+      setTransition: setWeekTransitionDirection,
+      homeRevision,
+      announcement: weekAnnouncement,
+      selectWeek,
+      goPreviousWeek,
+      goNextWeek,
+      goHome,
+      goToWeek,
+   } = useWeekNavigation(
+      {
+         enabled: !isTokenSettingsLoading && hasBearerToken && rosterTimeZone.isKnown,
+         clearCache: !isTokenSettingsLoading && !hasBearerToken,
+         contextId: tokenSettings?.contextId ?? null,
+         resetKey: weeksResetKey,
+         verifiedBatch,
+         shownWeekdays,
+         timeZone: rosterTimeZone.declaredTimeZone,
+      },
+      clearClassSelection
+   );
    const nextClassDay = useMemo(
       () => (rosterTimeZone.isKnown ? getNextClassDay(knownWeeks, perceivedNow) : null),
       [knownWeeks, perceivedNow, rosterTimeZone.isKnown]
    );
    const perceivedDayKey = rosterTimeZone.isKnown ? toDayKey(perceivedNow) : null;
    const perceivedDay = useMemo(() => (perceivedDayKey ? parseIsoDateToLocal(perceivedDayKey) : null), [perceivedDayKey]);
-   const displayedData = useMemo(
-      () => applyDevClassStatusPreview(data, devPreview.isEnabled ? devPreview.statusPreviewMode : "none"),
-      [data, devPreview.isEnabled, devPreview.statusPreviewMode]
-   );
+   const displayedData = useMemo(() => applyDevClassStatusPreview(data, statusPreviewMode), [data, statusPreviewMode]);
    useWeekScrollRestoration(`${viewMode}-${weekOffset}`, displayedData !== null);
-   const [weekAnnouncement, setWeekAnnouncement] = useState("");
-   const lastAnnouncedWeek = useRef<string | null>(null);
-   useEffect(() => {
-      if (loading) {
-         return;
-      }
-      const announcementKey = `${weekOffset}:${title}`;
-      if (lastAnnouncedWeek.current === null || lastAnnouncedWeek.current === announcementKey) {
-         lastAnnouncedWeek.current = announcementKey;
-         return;
-      }
-      lastAnnouncedWeek.current = announcementKey;
-      setWeekAnnouncement(`${formatWeekLabel(weekOffset)}, ${title}`);
-   }, [loading, title, weekOffset]);
    const nextUpWeeks = useMemo(
-      () => knownWeeks.flatMap((week) => (devPreview.isEnabled ? (applyDevClassStatusPreview(week, devPreview.statusPreviewMode) ?? []) : [week])),
-      [knownWeeks, devPreview.isEnabled, devPreview.statusPreviewMode]
+      () => (statusPreviewMode === "none" ? knownWeeks : knownWeeks.flatMap((week) => applyDevClassStatusPreview(week, statusPreviewMode) ?? [])),
+      [knownWeeks, statusPreviewMode]
    );
    const errorDetail = useMemo(() => {
       if (!error) {
@@ -155,29 +141,22 @@ export default function App() {
    }, [successfulTokenValidationKey]);
 
    useEffect(() => {
-      if (!error?.isAuthRelated) {
-         return;
-      }
-
-      void refreshAfterAuthError();
-   }, [error?.isAuthRelated, refreshAfterAuthError]);
+      if (error?.isAuthRelated) void checkSessionAfterAuthError();
+   }, [error?.isAuthRelated]);
 
    const isEmptyWeek = displayedData?.classes.length === 0;
    const hasBlankWeekUnderlay = !displayedData || isEmptyWeek;
    const visibleWeekdays = getDisplayedWeekdays(displayedData, shownWeekdays);
    const visibleAgendaFoldingMode = hasBlankWeekUnderlay && agendaFoldingMode !== "single" ? "all" : agendaFoldingMode;
    const { allDays, visibleDays } = useWeekDays(displayedData, weekOffset, perceivedDay, visibleWeekdays);
-   const { animateAgenda, collapseAllDays, expandAllDays, resetAgenda, toggleDay, visibleExpandedDays } = useAgendaState(
+   const { animateAgenda, collapseAllDays, expandAllDays, toggleDay, visibleExpandedDays } = useAgendaState(
       visibleDays,
       perceivedDay,
       visibleAgendaFoldingMode,
       weekOffset === homeWeekOffset,
-      nextClassDay
+      nextClassDay,
+      { weekOffset, homeRevision, foldingPreference: agendaFoldingMode }
    );
-   // Changing the folding preset re-applies it immediately instead of fighting old per-day toggles.
-   useEffect(() => {
-      resetAgenda(true);
-   }, [agendaFoldingMode, resetAgenda]);
 
    const hiddenDays = useMemo(() => getHiddenDaysWithClasses(allDays, shownWeekdays), [allDays, shownWeekdays]);
    const smartWeekdays = useMemo(() => getWeekdaysWithClasses(initialWeeks), [initialWeeks]);
@@ -196,57 +175,6 @@ export default function App() {
       }
    }, [expandedGridHours, setGridHours]);
 
-   const updateWeekOffset = useCallback(
-      (updater: number | ((current: number) => number), transitionDirection: WeekTransitionDirection = "default"): boolean => {
-         setSeekingHome(false);
-         const current = weekOffsetRef.current;
-         const next = typeof updater === "function" ? updater(current) : updater;
-
-         if (next === current) {
-            return false;
-         }
-
-         weekOffsetRef.current = next;
-         /* Week changes play the .view-enter animation on the frame itself, under the toolbar. The
-            View Transition snapshot system is parked: its top layer covered the mobile toolbar on
-            every real browser and no layering or containment trick fixed it. Restoring the
-            startViewTransition branch from git history brings the overlap back with it. */
-         setWeekTransitionDirection(transitionDirection);
-         setWeekOffset(next);
-         clearClassSelection();
-         resetAgenda();
-         return true;
-      },
-      [resetAgenda, clearClassSelection]
-   );
-
-   useEffect(() => {
-      if (!seekingHome) return;
-      const target = homeWeekOffset ?? homePendingOffset;
-      if (target === null) return;
-      const timer = window.setTimeout(() => {
-         if (homeWeekOffset !== null) {
-            updateWeekOffset(target);
-            resetAgenda(true);
-         } else {
-            // Follow the week being checked, without treating it as a user selection.
-            weekOffsetRef.current = target;
-            setWeekOffset(target);
-         }
-      }, 0);
-      return () => window.clearTimeout(timer);
-   }, [seekingHome, homeWeekOffset, homePendingOffset, updateWeekOffset, resetAgenda]);
-
-   useEffect(
-      () =>
-         onSessionInvalidated(() => {
-            clearClassSelection();
-            updateWeekOffset(0);
-            setSeekingHome(true);
-         }),
-      [updateWeekOffset, clearClassSelection]
-   );
-
    const selectedClass: Class | null = useMemo(() => {
       if (!selectedClassId) {
          return null;
@@ -264,48 +192,22 @@ export default function App() {
       setOverlay({ kind: "class", id: schoolClass.id });
    }, []);
 
-   const goPreviousWeek = useCallback(() => {
-      if (previousWeekOffset === null) {
-         return false;
-      }
-
-      return updateWeekOffset(previousWeekOffset, "previous");
-   }, [previousWeekOffset, updateWeekOffset]);
-
-   const goNextWeek = useCallback(() => {
-      if (nextWeekOffset === null) {
-         return false;
-      }
-
-      return updateWeekOffset(nextWeekOffset, "next");
-   }, [nextWeekOffset, updateWeekOffset]);
-
-   const handleCurrentWeek = useCallback(() => {
-      clearClassSelection();
-      if (homeWeekOffset === null) setSeekingHome(true);
-      else {
-         updateWeekOffset(homeWeekOffset);
-         resetAgenda(true);
-      }
-   }, [homeWeekOffset, resetAgenda, updateWeekOffset, clearClassSelection]);
-
    const hasOpenOverlay = overlay?.kind === "class" ? selectedClass !== null : overlay !== null;
    useWeekSwipeNavigation(appContentRef, !hasOpenOverlay, goPreviousWeek, goNextWeek);
 
-   const handleWeekTransitionEnd = useCallback((event: AnimationEvent<HTMLElement>) => {
-      if (event.currentTarget !== event.target) {
-         return;
-      }
-
-      setWeekTransitionDirection("settled");
-   }, []);
+   const handleWeekTransitionEnd = useCallback(
+      (event: AnimationEvent<HTMLElement>) => {
+         if (event.currentTarget === event.target) setWeekTransitionDirection("settled");
+      },
+      [setWeekTransitionDirection]
+   );
 
    const changeViewMode = useCallback(
       (nextViewMode: ViewMode) => {
          setWeekTransitionDirection("default");
          setViewMode(nextViewMode);
       },
-      [setViewMode]
+      [setViewMode, setWeekTransitionDirection]
    );
 
    const openSettings = useCallback(() => {
@@ -324,15 +226,13 @@ export default function App() {
       isWeekNavigable,
       goPreviousWeek,
       goNextWeek,
-      goCurrentWeek: handleCurrentWeek,
+      goCurrentWeek: goHome,
       changeViewMode,
       changeGridZoom,
       expandAllAgenda: expandAllDays,
       collapseAllAgenda: collapseAllDays,
       openSettings,
-      goToWeek: (targetOffset, transitionDirection) => {
-         if (isWeekNavigable(targetOffset)) updateWeekOffset(targetOffset, transitionDirection);
-      },
+      goToWeek,
    });
 
    const hasDisplayedData = Boolean(displayedData);
@@ -367,7 +267,7 @@ export default function App() {
                homeWeekOffset={homeWeekOffset}
                onPreviousWeek={goPreviousWeek}
                onNextWeek={goNextWeek}
-               onCurrentWeek={handleCurrentWeek}
+               onCurrentWeek={goHome}
                canGoPrevious={canGoPrevious}
                canGoNext={canGoNext}
                canChooseWeek={rosterTimeZone.isKnown}
@@ -377,27 +277,18 @@ export default function App() {
 
          <main className="app-content" ref={appContentRef}>
             {(error || !isOnline || tokenSettingsLoadError || rosterTimeZone.configError) && displayedData ? (
-               <WarningBanner
-                  icon="fa-solid fa-cloud-arrow-down"
-                  {...(isOnline
-                     ? {
-                          action: error?.isAuthRelated
-                             ? { label: "Replace token", onClick: openSettings }
-                             : {
-                                  label: "Try again",
-                                  onClick: () => {
-                                     if (tokenSettingsLoadError) retrySessionSettings();
-                                     if (rosterTimeZone.configError) rosterTimeZone.retry();
-                                     if (error) refresh();
-                                  },
-                               },
-                       }
-                     : {})}
-               >
-                  Showing your saved timetable
-                  {fetchedAt ? ` from ${monthDayLabel.format(new Date(fetchedAt))} at ${timeLabel.format(new Date(fetchedAt))}` : ""}.{" "}
-                  {isOnline ? (error ? `Fetching your latest roster went wrong: ${errorDetail}` : "Can't check for updates.") : "You're offline."}
-               </WarningBanner>
+               <SyncWarning
+                  fetchedAt={fetchedAt}
+                  isOnline={isOnline}
+                  errorDetail={error ? errorDetail : null}
+                  isAuthError={error?.isAuthRelated === true}
+                  onReplaceToken={openSettings}
+                  onRetry={() => {
+                     if (tokenSettingsLoadError) retrySessionSettings();
+                     if (rosterTimeZone.configError) rosterTimeZone.retry();
+                     if (error) refresh();
+                  }}
+               />
             ) : null}
             {hiddenDays.length > 0 ? <HiddenDaysWarning labels={hiddenDays.map((day) => dayLabel.format(day.date))} onShow={showHiddenDays} /> : null}
             {viewMode === "grid" && expandedGridHours && hiddenGridClassCount > 0 ? (
@@ -406,13 +297,7 @@ export default function App() {
 
             {/* Floating free of both views: the strip anchors to the content frame's top edge without occupying layout space. */}
             {rosterTimeZone.isKnown ? (
-               <NextUpCard
-                  weeks={nextUpWeeks}
-                  timeOverride={devPreview.isEnabled ? devPreview.timeOverride : null}
-                  isOpen={nextUpOpen}
-                  onChangeOpen={setNextUpOpen}
-                  onSelectClass={selectClass}
-               />
+               <NextUpCard weeks={nextUpWeeks} timeOverride={timeOverride} isOpen={nextUpOpen} onChangeOpen={setNextUpOpen} onSelectClass={selectClass} />
             ) : null}
 
             <section
@@ -426,29 +311,29 @@ export default function App() {
                style={frameStyle}
                key={`${viewMode}-${weekOffset}`}
             >
-               {rosterTimeZone.isKnown && viewMode === "agenda" ? (
+               {rosterTimeZone.isKnown ? (
                   <ErrorBoundary variant="view">
-                     <AgendaView
-                        inert={hasOverlayUnderlay}
-                        days={visibleDays}
-                        expandedDays={visibleExpandedDays}
-                        animate={animateAgenda}
-                        now={perceivedNow}
-                        timeOverride={devPreview.isEnabled ? devPreview.timeOverride : null}
-                        onToggleDay={toggleDay}
-                        onSelectClass={selectClass}
-                     />
-                  </ErrorBoundary>
-               ) : rosterTimeZone.isKnown ? (
-                  <ErrorBoundary variant="view">
-                     <GridView
-                        inert={hasOverlayUnderlay}
-                        days={visibleDays}
-                        hours={gridHours}
-                        zoom={visibleGridZoom}
-                        now={perceivedNow}
-                        onSelectClass={selectClass}
-                     />
+                     {viewMode === "agenda" ? (
+                        <AgendaView
+                           inert={hasOverlayUnderlay}
+                           days={visibleDays}
+                           expandedDays={visibleExpandedDays}
+                           animate={animateAgenda}
+                           now={perceivedNow}
+                           timeOverride={timeOverride}
+                           onToggleDay={toggleDay}
+                           onSelectClass={selectClass}
+                        />
+                     ) : (
+                        <GridView
+                           inert={hasOverlayUnderlay}
+                           days={visibleDays}
+                           hours={gridHours}
+                           zoom={visibleGridZoom}
+                           now={perceivedNow}
+                           onSelectClass={selectClass}
+                        />
+                     )}
                   </ErrorBoundary>
                ) : null}
                <WeekContentState
@@ -466,7 +351,7 @@ export default function App() {
                   loading={loading}
                   error={error}
                   errorDetail={errorDetail}
-                  retryCountdownMs={retryCountdownMs}
+                  retryAt={retryAt}
                   retrying={retrying}
                   refresh={refresh}
                   weekNotReturned={weekNotReturned}
@@ -483,7 +368,7 @@ export default function App() {
                onClose={closeOverlay}
                onSelect={(offset) => {
                   setOverlay(null);
-                  updateWeekOffset(offset, offset < weekOffset ? "previous" : "next");
+                  selectWeek(offset, offset < weekOffset ? "previous" : "next");
                }}
             />
          ) : null}

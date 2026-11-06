@@ -2,8 +2,7 @@ import { useCallback, useEffect, useState, type SyntheticEvent } from "react";
 import { useOsirisTokenSettings } from "../hooks/useOsirisTokenSettings";
 import { clearSessionToken } from "../lib/sessionStore";
 import { notifyError, notifySuccess, notifyWarning } from "../lib/notyf";
-import { OSIRIS_BEARER_TOKEN_HELP_URL } from "../lib/osirisTokenHelp";
-import type { OsirisTokenValidationStatus } from "../types/osirisToken";
+import { OSIRIS_BEARER_TOKEN_HELP_URL, type OsirisTokenValidationStatus } from "../lib/osirisToken";
 import { Button } from "./Button";
 import { ConfirmDialog } from "./ConfirmDialog";
 

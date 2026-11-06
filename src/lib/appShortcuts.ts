@@ -27,7 +27,7 @@ export const APP_SHORTCUT_LABELS: Record<AppShortcutId, string> = {
    nextToolbarAction: formatShortcut(APP_SHORTCUTS.nextToolbarAction),
 };
 
-export function formatShortcut(shortcut: Pick<KeyboardShortcut, "altKey" | "ctrlKey" | "key" | "metaKey" | "shiftKey">) {
+function formatShortcut(shortcut: Pick<KeyboardShortcut, "altKey" | "ctrlKey" | "key" | "metaKey" | "shiftKey">) {
    const parts = [
       shortcut.ctrlKey ? "Ctrl" : null,
       shortcut.altKey ? "Alt" : null,

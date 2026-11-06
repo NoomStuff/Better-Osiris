@@ -2,7 +2,6 @@ import type { WeekBatch } from "../types/weeks";
 import { parseApiErrorPayload, parseWeekBatch } from "../../shared/rosterValidation";
 import { fetchWithTimeout, tryReadJson } from "./fetch";
 import { readRetryAfter } from "../../shared/retryAfter";
-export { readRetryAfter } from "../../shared/retryAfter";
 
 export async function fetchWeeks(offset: number, limit: number, signal?: AbortSignal): Promise<WeekBatch> {
    const response = await fetchWithTimeout(`/api/roster/weeks?offset=${offset}&limit=${limit}`, signal ? { signal } : undefined);

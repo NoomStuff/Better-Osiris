@@ -25,13 +25,7 @@ export function useWeeks(offset: number, options: WeekRepositoryOptions) {
    useEffect(() => {
       if (enabled && home?.pendingOffset !== null && home?.pendingOffset !== undefined) repository.ensureWeek(home.pendingOffset);
    }, [enabled, home?.pendingOffset, entries, repository]);
-   const [now, setNow] = useState(Date.now);
    const retryAt = active?.retryAt ?? 0;
-   useEffect(() => {
-      if (!retryAt) return;
-      const timer = window.setInterval(() => setNow(Date.now()), 1000);
-      return () => window.clearInterval(timer);
-   }, [retryAt]);
    const data = clearCache ? null : (active?.data ?? null);
    const error = clearCache ? null : getVisibleWeekError(active, Date.now());
    const weekNotReturned = !clearCache && Boolean(active?.isOmitted);
@@ -66,7 +60,7 @@ export function useWeeks(offset: number, options: WeekRepositoryOptions) {
       loading: enabled && !data && !error && (!weekNotReturned || Boolean(active?.isFetching)),
       refreshing: Boolean(data && active?.isFetching),
       retrying: Boolean(!data && active?.isFetching && error),
-      retryCountdownMs: retryAt ? Math.max(0, retryAt - now) : 0,
+      retryAt,
       refresh: repository.refresh,
       title: clearCache ? "Loading week..." : getDerivedWeekTitle(offset, entries),
    };

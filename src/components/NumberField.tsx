@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { canStepNumberFieldValue, normalizeNumberFieldValue, parseNumberFieldInput, stepNumberFieldValue, type NumberFieldBounds } from "../lib/numberField";
 import "./NumberField.css";
-export interface NumberFieldProps extends NumberFieldBounds {
+interface NumberFieldProps extends NumberFieldBounds {
    label: string;
    value: number;
    unit?: string;
@@ -55,7 +55,7 @@ export function NumberField({ label, value, unit, disabled = false, onChange, ..
                ref={input}
                className="number-field__input"
                type="text"
-               inputMode="decimal"
+               inputMode="numeric"
                aria-label={label}
                disabled={disabled}
                value={draft}

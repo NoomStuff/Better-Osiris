@@ -10,7 +10,7 @@ interface CookieOptions {
 }
 
 export const OSIRIS_TOKEN_COOKIE_NAME = "osiris_bearer";
-export const OSIRIS_TOKEN_COOKIE_MAX_AGE_SECONDS = 60 * 60 * 24 * 365;
+const OSIRIS_TOKEN_COOKIE_MAX_AGE_SECONDS = 60 * 60 * 24 * 365;
 
 export function parseCookie(header: string | undefined, name: string): string | null {
    if (!header) {
@@ -40,7 +40,7 @@ export function parseCookie(header: string | undefined, name: string): string | 
    return null;
 }
 
-export function serializeCookie(name: string, value: string, options: CookieOptions = {}): string {
+function serializeCookie(name: string, value: string, options: CookieOptions = {}): string {
    const segments = [`${name}=${encodeURIComponent(value)}`];
 
    if (options.maxAge !== undefined) {

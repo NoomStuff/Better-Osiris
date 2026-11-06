@@ -3,9 +3,36 @@ import { getDefaultExpandedDays } from "../lib/agendaPolicy";
 import type { AgendaFoldingMode } from "../lib/agendaPolicy";
 import type { Day } from "../types/weeks";
 
-export function useAgendaState(days: Day[], perceivedDay: Date | null, foldingMode: AgendaFoldingMode, isHomeWeek: boolean, nextClassDay: string | null) {
-   const [expandedOverrides, setExpandedOverrides] = useState<Map<string, boolean>>(new Map());
-   const [animateAgenda, setAnimateAgenda] = useState(false);
+interface AgendaResetKey {
+   weekOffset: number;
+   homeRevision: number;
+   foldingPreference: AgendaFoldingMode;
+}
+
+/**
+ * Manual folding is absolute per day and lasts until the week changes, Home is applied again, or
+ * the folding preference changes. Only the last two animate: a new week mounts a fresh frame.
+ */
+export function useAgendaState(
+   days: Day[],
+   perceivedDay: Date | null,
+   foldingMode: AgendaFoldingMode,
+   isHomeWeek: boolean,
+   nextClassDay: string | null,
+   resetKey: AgendaResetKey
+) {
+   const [expandedOverrides, setExpandedOverrides] = useState<ReadonlyMap<string, boolean>>(new Map());
+   const [animateAgenda, setAnimateAgenda] = useState(true);
+   const [seenResetKey, setSeenResetKey] = useState(resetKey);
+   if (
+      seenResetKey.weekOffset !== resetKey.weekOffset ||
+      seenResetKey.homeRevision !== resetKey.homeRevision ||
+      seenResetKey.foldingPreference !== resetKey.foldingPreference
+   ) {
+      setSeenResetKey(resetKey);
+      setExpandedOverrides(new Map());
+      setAnimateAgenda(seenResetKey.weekOffset === resetKey.weekOffset);
+   }
    const autoExpandedDays = useMemo(
       () => getDefaultExpandedDays(days, perceivedDay, foldingMode, isHomeWeek, nextClassDay),
       [days, foldingMode, perceivedDay, isHomeWeek, nextClassDay]
@@ -29,26 +56,20 @@ export function useAgendaState(days: Day[], perceivedDay: Date | null, foldingMo
       [autoExpandedDays]
    );
 
-   const expandAllDays = useCallback(() => {
-      setAnimateAgenda(true);
-      setExpandedOverrides(new Map(allDayKeys.map((key) => [key, true])));
-   }, [allDayKeys]);
-
-   const collapseAllDays = useCallback(() => {
-      setAnimateAgenda(true);
-      setExpandedOverrides(new Map(allDayKeys.map((key) => [key, false])));
-   }, [allDayKeys]);
-
-   const resetAgenda = useCallback((animate = false) => {
-      setAnimateAgenda(animate);
-      setExpandedOverrides(new Map());
-   }, []);
+   const setAllDays = useCallback(
+      (open: boolean) => {
+         setAnimateAgenda(true);
+         setExpandedOverrides(new Map(allDayKeys.map((key) => [key, open])));
+      },
+      [allDayKeys]
+   );
+   const expandAllDays = useCallback(() => setAllDays(true), [setAllDays]);
+   const collapseAllDays = useCallback(() => setAllDays(false), [setAllDays]);
 
    return {
       animateAgenda,
       collapseAllDays,
       expandAllDays,
-      resetAgenda,
       toggleDay,
       visibleExpandedDays: expandedDays,
    };

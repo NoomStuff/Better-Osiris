@@ -2,7 +2,7 @@ import { retrySessionSettings } from "../lib/sessionStore";
 import { getEmptyWeekMessage } from "../lib/flavor";
 import type { Week, WeekMeta } from "../types/weeks";
 import type { WeekLoadError } from "../lib/weekLoadError";
-import type { OsirisTokenValidationStatus } from "../types/osirisToken";
+import type { OsirisTokenValidationStatus } from "../lib/osirisToken";
 import { BearerTokenState, ErrorState, LoadingState, WeekOverlayState } from "./LoadingState";
 import { Button } from "./Button";
 
@@ -23,7 +23,7 @@ interface WeekContentStateProps {
    loading: boolean;
    error: WeekLoadError | null;
    errorDetail: string;
-   retryCountdownMs: number;
+   retryAt: number;
    retrying: boolean;
    refresh: () => void;
    weekNotReturned: boolean;
@@ -48,7 +48,7 @@ export function WeekContentState({
    loading,
    error,
    errorDetail,
-   retryCountdownMs,
+   retryAt,
    retrying,
    refresh,
    weekNotReturned,
@@ -64,7 +64,6 @@ export function WeekContentState({
             title="Roster configuration unavailable"
             detail="The server did not declare which time zone the roster uses, so roster data cannot be interpreted safely."
             log={rosterTimeZone.configError ?? "The roster time zone was not declared."}
-            retryCountdownMs={0}
             isRetrying={false}
             canRetry={false}
             onRetry={rosterTimeZone.retry}
@@ -78,7 +77,6 @@ export function WeekContentState({
                title="Roster server unavailable"
                detail="Your bearer token settings could not be loaded. The app keeps retrying on its own."
                log={tokenSettingsLoadError}
-               retryCountdownMs={0}
                isRetrying={false}
                canRetry={false}
                onRetry={retrySessionSettings}
@@ -100,7 +98,7 @@ export function WeekContentState({
             title={error.title}
             detail={errorDetail}
             log={error.log}
-            retryCountdownMs={retryCountdownMs}
+            retryAt={retryAt}
             isRetrying={retrying}
             canRetry={error.retryable}
             onRetry={refresh}

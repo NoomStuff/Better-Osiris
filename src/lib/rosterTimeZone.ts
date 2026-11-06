@@ -1,7 +1,7 @@
 import { isValidTimeZone, resolveCanonicalTimeZone } from "../../shared/timeZone";
 import { readBrowserStorage, writeBrowserStorage } from "./browserStorage";
 
-export const ROSTER_TIME_ZONE_STORAGE_KEY = "roster-time-zone-v1";
+const ROSTER_TIME_ZONE_STORAGE_KEY = "roster-time-zone-v1";
 
 let currentTimeZone: string | null = readStoredTimeZone();
 
@@ -27,20 +27,12 @@ export function getRosterTimeZone() {
    }
    return currentTimeZone;
 }
-
-/**
- * Adopts the server-declared roster time zone and persists it for the next boot.
- * Returns true when it differs from the previously known zone, meaning cached roster data
- * was interpreted under a different zone and must be discarded.
- */
+/** Adopts the server-declared roster time zone and persists it for the next boot. */
 export function setRosterTimeZone(timeZone: string) {
    if (!isValidTimeZone(timeZone)) {
       throw new Error(`"${timeZone}" is not a valid IANA time zone.`);
    }
 
-   const canonicalZone = resolveCanonicalTimeZone(timeZone);
-   const previousZone = currentTimeZone;
-   currentTimeZone = canonicalZone;
-   writeBrowserStorage("localStorage", ROSTER_TIME_ZONE_STORAGE_KEY, canonicalZone);
-   return previousZone !== null && previousZone !== canonicalZone;
+   currentTimeZone = resolveCanonicalTimeZone(timeZone);
+   writeBrowserStorage("localStorage", ROSTER_TIME_ZONE_STORAGE_KEY, currentTimeZone);
 }

@@ -1,6 +1,6 @@
 # Better Osiris, remaining improvements
 
-Updated 30 September 2026 after the third implementation pass. Numbers in `Original` refer to the [full review](architecture-review-2026-09-30.md). Related entries are combined here. This is a decision list, not a promise to build every experiment.
+Updated 6 November 2026 after the fourth implementation pass. Numbers in `Original` refer to the [full review](architecture-review-2026-09-30.md). Related entries are combined here. This is a decision list, not a promise to build every experiment.
 
 Completed original entries 1, 2, 3, 4, 5, 7, 8, 9, 11, 12, 37, 57, 80, and 85. Also removed unused conflict calculations, moved shortcut formatting out of its React hook, preserved and validated upstream seconds, standardized the icon command on Bun, documented missing configuration, and added transition regressions. Existing race tests remain intact.
 
@@ -20,7 +20,7 @@ Completed original entries 1, 2, 3, 4, 5, 7, 8, 9, 11, 12, 37, 57, 80, and 85. A
 9. Extract pure repository planning and response transitions. Separate batch request state from dated content while preserving overlapping-response and account-generation protections. Original 18, 19.
 10.   Select weeks by Monday date. Define whether an open page follows Home or stays on its selected date across midnight and source rollover. Original 20.
 11.   Move notification delivery out of the repository. Reconciliation produces events, and a separate owner handles scope, settlement, grouping, and deduplication. Original 22.
-12.   Give preferences a small shared persistence policy. Keep named validators and synchronize useful choices between tabs. Original 24.
+12.   Synchronize useful preference choices between tabs. Every saved preference now reads and writes through one typed codec helper. Original 24.
 13.   Share token-entry behavior between startup and settings. Keep their layouts distinct. Original 27.
 14.   Organize files around the resulting owners. Shortcut formatting is already a pure library function. Avoid reorganizing before the ownership decisions. Original 28.
 
@@ -56,8 +56,8 @@ Completed original entries 1, 2, 3, 4, 5, 7, 8, 9, 11, 12, 37, 57, 80, and 85. A
 33. Define deployment guarantees for per-process cache and limits. Bound upstream concurrency if public load warrants it, and make proxy trust consistent across rate limits and origin checks. Original 70, 71, 72.
 34. Validate named immutable production configuration once and resolve credentials once per request. Add safe cache and stage diagnostics plus copyable request IDs. Original 73, 74.
 35. Add graceful shutdown if self-hosting is the supported default. HTTPS hosting, cookie-secret rotation, cookie lifetime, and per-process serverless limits are documented. Original 75.
-36. Replace brittle CSS assertions with useful interaction and visual checks. Split the browser suite by behavior and add remaining visible transition cases, especially a one-week empty horizon and configuration response replacement. Preserve the existing race coverage. Original 76, 77, 78, 79.
-37. Fix incomplete environment mocks, remove unreachable downstream fallbacks, and narrow NumberField only if reusable fractional behavior has no intended role. Keep corruption recovery and external input guards. Original 82, 83, 84.
+36. Add remaining visible transition cases, especially a one-week empty horizon and configuration response replacement. The browser suite is split by behavior over a shared auto fixture, and the two computed-style assertions are gone. Preserve the existing race coverage. Original 76, 77, 78, 79.
+37. Fix incomplete environment mocks and remove unreachable downstream fallbacks. NumberField is now integer-only, matching its single use. Keep corruption recovery and external input guards. Original 82, 83, 84.
 38. Add reproducible CI with locked Bun dependencies, browser installation, traces, and a compatibility cadence. Document dependency overrides and verify icon regeneration after development edits. Full source, test, and tooling typechecking and production smoke are now part of verification. Original 86, 87.
 
 ## Bigger bets
@@ -74,6 +74,8 @@ Completed original entries 1, 2, 3, 4, 5, 7, 8, 9, 11, 12, 37, 57, 80, and 85. A
 The second pass implemented warning-only freshness, absolute agenda choices, verified-batch reuse, clocks outside preferences, visibility-aware ticking, mutually exclusive overlays, shared panel closing and styling, direct date navigation, and offline app launch. Healthy browsing has no new status label. Offline launch uses versioned public files and leaves API responses out of service-worker caching.
 
 The third pass replaces the native date field with a custom month calendar that selects whole weeks immediately. It includes five visible weeks, snapped vertical scrolling, direct month selection, keyboard week navigation, and focused selection on opening. Its entry button is hidden for now. The picker remains in the code for further revision, and the month label updates after scrolling settles. It also separates agenda measurement from progress ticks, keeps content subscriptions stable during refresh, contains swipes to the timetable, respects reduced motion in the theme picker, and preserves upstream retry timing with bounded extra delay.
+
+The fourth pass moves week selection, Home seeking, transitions and announcements out of App into `useWeekNavigation`. Agenda folding resets follow the selected week and Home revision instead of imperative calls. Five preference hooks collapsed into codecs over `usePersistentState`. The repository has one content reset and one request constructor. The retry countdown ticks inside the error view instead of re-rendering the whole app every second.
 
 Cache trust and daylight-saving correctness are the next decisions I would settle. Larger application and repository rewrites still need measured reasons and explicit behavioral rules.
 

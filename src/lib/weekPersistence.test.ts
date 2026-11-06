@@ -7,9 +7,9 @@ import {
    storeWeekCache,
    readSessionClassDiffs,
    storeSessionClassDiffs,
+   WEEK_CACHE_KEY,
    type StoredWeek,
 } from "./weekPersistence";
-import { WEEK_CACHE_KEY } from "./weekCache";
 import { reconcileWeeks, applySessionClassDiffs, type SessionClassDiffsByWeek } from "./classDiffs";
 import { isoWeekNumber, shiftCalendarDate } from "../../shared/calendar";
 import type { Week } from "../types/weeks";
