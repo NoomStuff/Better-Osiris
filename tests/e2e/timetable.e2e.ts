@@ -620,6 +620,9 @@ test("the browser back button closes overlays and UI closes hand the history bac
    await expect(drawer).toBeVisible();
    await drawer.getByRole("button", { name: "Close", exact: true }).click();
    await expect(drawer).toBeHidden();
+   // The panel hands its entry back with an asynchronous history.back() after unmounting. Pressing
+   // back before that traversal lands would race it, so wait until the overlay entry is gone.
+   await expect.poll(() => page.evaluate(() => (history.state as Record<string, unknown> | null)?.["betterOsirisOverlay"] ?? null)).toBeNull();
    await page.goBack();
    await expect(page).toHaveURL("about:blank");
 });
