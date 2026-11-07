@@ -132,7 +132,13 @@ export function GridView({ inert, days, zoom: zoomId, hours, now, onSelectClass 
                   ) : null}
 
                   {days.map((group) => (
-                     <div className="grid-day-column" key={group.key} role="group" aria-labelledby={`grid-day-${group.key}`}>
+                     <div
+                        className="grid-day-column"
+                        key={group.key}
+                        data-today={group.key === todayKey}
+                        role="group"
+                        aria-labelledby={`grid-day-${group.key}`}
+                     >
                         {timeMarks.map((minutes) => (
                            <div
                               className="grid-line"
@@ -178,6 +184,7 @@ export function GridView({ inert, days, zoom: zoomId, hours, now, onSelectClass 
                                  className={`grid-class ${isCompact ? "is-tight is-compact" : ""} ${isTiny ? "is-tiny" : ""} status-${schoolClass.status}`}
                                  type="button"
                                  key={schoolClass.id}
+                                 data-past={schoolClass.endDate.getTime() <= now.getTime()}
                                  onClick={() => onSelectClass(schoolClass)}
                                  style={{
                                     top: `calc(${top}% + 2.5px)`,

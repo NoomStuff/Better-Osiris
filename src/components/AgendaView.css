@@ -399,3 +399,39 @@
       transition: none;
    }
 }
+
+/* Finished classes step back a little so what is still ahead reads first. Hover restores them. */
+.agenda-class[data-past="true"] {
+   opacity: 0.72;
+   transition:
+      opacity 220ms ease-out,
+      scale 220ms var(--bounce-overshoot),
+      background 220ms ease-out;
+}
+
+.agenda-class[data-past="true"]:is(:hover, :focus-visible) {
+   opacity: 1;
+}
+
+/* A cancelled class is information, not an alarm: it keeps its slot but reads as struck. */
+.agenda-class.status-cancelled {
+   color: var(--text-muted);
+   border-color: transparent;
+   background: repeating-linear-gradient(-45deg, hsl(from var(--danger) h s l / 0.05) 0 8px, transparent 8px 16px);
+}
+
+.agenda-class.status-cancelled .agenda-class__time,
+.agenda-class.status-cancelled .agenda-class__time > span:last-child {
+   color: hsl(from var(--danger) h s l / 0.75);
+}
+
+.agenda-class.status-cancelled .agenda-class__body strong {
+   color: var(--text-dim);
+   text-decoration: line-through;
+   text-decoration-color: hsl(from var(--danger) h s l / 0.7);
+   text-decoration-thickness: 2px;
+}
+
+.agenda-class.status-cancelled .agenda-class__body p {
+   color: var(--text-muted);
+}

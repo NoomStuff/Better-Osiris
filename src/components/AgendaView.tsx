@@ -192,6 +192,7 @@ export function AgendaView({ inert, days, expandedDays, animate, now, timeOverri
                                        className={`agenda-class status-${schoolClass.status}`}
                                        type="button"
                                        data-current-segment={schoolClass.id}
+                                       data-past={schoolClass.endDate.getTime() <= now.getTime()}
                                        onClick={() => onSelectClass(schoolClass)}
                                     >
                                        <div className="agenda-class__time">
