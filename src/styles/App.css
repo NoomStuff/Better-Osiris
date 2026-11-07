@@ -280,7 +280,8 @@
    /* The week reads as a title flanked by its arrows, no box: it is a heading, not a control group. */
    .mobile-bottom-bar > .weekbar {
       grid-area: 1 / 2 / 2 / 3;
-      grid-template-columns: 32px minmax(220px, auto) 32px;
+      /* Fixed so the arrows never move: fits the longest title, "Week 37: 14 Sept - 20 Sept". */
+      grid-template-columns: 32px 256px 32px;
       gap: 8px;
       padding: 0;
    }
