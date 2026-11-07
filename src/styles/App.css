@@ -250,10 +250,9 @@
    }
 }
 
-/* Desktop chrome on one line: name left, the week centred between its arrows, tools right.
-   The week arrows sit next to the week instead of the far screen edges, and the
-   timetable gets ~50px more height. */
-@media (min-width: 641px) {
+/* Wide screens put the chrome on one line: name left, the week centred between its arrows,
+   tools right. Below 960px the three no longer fit side by side, so the two-row layout stays. */
+@media (min-width: 960px) {
    /* Bar height + top page padding + content gap, kept in sync with the fixed bar height below. */
    html:root {
       --chrome-height: 80px;
@@ -275,6 +274,15 @@
 
    .mobile-bottom-bar > .app-toolbar > * {
       pointer-events: auto;
+   }
+
+   /* The tools keep to their half of the row, clear of the centred week group (336px wide). */
+   .mobile-bottom-bar > .app-toolbar .app-toolbar__actions {
+      max-width: calc(50% - 180px);
+   }
+
+   .mobile-bottom-bar > .app-toolbar .action-group {
+      min-width: 120px;
    }
 
    /* The week reads as a title flanked by its arrows, no box: it is a heading, not a control group. */
