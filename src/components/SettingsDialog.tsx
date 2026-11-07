@@ -32,7 +32,7 @@ interface SettingsDialogProps {
    tokenValidationStatus: OsirisTokenValidationStatus;
 }
 
-const IS_DEV_SERVER = import.meta.env.DEV;
+const HAS_DEV_TOOLS = import.meta.env.DEV || import.meta.env.VITE_DEV_TOOLS;
 
 const AGENDA_FOLDING_OPTIONS: readonly ActionOption<AgendaFoldingMode>[] = [
    { id: "single", label: "Single", tooltip: "Open only the day of your next class across all weeks" },
@@ -212,7 +212,7 @@ export function SettingsDialog({
                tokenValidationStatus={tokenValidationStatus}
             />
 
-            {IS_DEV_SERVER ? <DevToolsSettings /> : null}
+            {HAS_DEV_TOOLS ? <DevToolsSettings /> : null}
          </div>
       </OverlayPanel>
    );

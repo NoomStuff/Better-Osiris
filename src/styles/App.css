@@ -169,7 +169,7 @@
    }
 }
 
-@media (max-width: 640px) {
+@media (max-width: 480px) {
    :root {
       --mobile-toolbar-clearance: calc(130px + env(safe-area-inset-bottom));
    }
@@ -247,5 +247,116 @@
          var(--grid-min-height, 2080px),
          calc(var(--stable-vh-quad, 400vh) - (var(--chrome-height) * 4) - (var(--app-padding) * 2) - env(safe-area-inset-bottom))
       );
+   }
+}
+
+/* Wide screens put the chrome on one line: name left, the week centred between its arrows,
+   tools right. Below 960px the three no longer fit side by side, so the two-row layout stays. */
+@media (min-width: 960px) {
+   /* Bar height + top page padding + content gap, kept in sync with the fixed bar height below. */
+   html:root {
+      --chrome-height: 80px;
+   }
+
+   .mobile-bottom-bar {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+      align-items: center;
+      height: 52px;
+   }
+
+   /* The toolbar spans the row underneath the week group, so only its own controls take clicks. */
+   .mobile-bottom-bar > .app-toolbar {
+      grid-area: 1 / 1 / 2 / 4;
+      padding-bottom: 0;
+      pointer-events: none;
+   }
+
+   .mobile-bottom-bar > .app-toolbar > * {
+      pointer-events: auto;
+   }
+
+   /* The tools keep to their half of the row, clear of the centred week group (336px wide). */
+   .mobile-bottom-bar > .app-toolbar .app-toolbar__actions {
+      max-width: calc(50% - 180px);
+   }
+
+   .mobile-bottom-bar > .app-toolbar .action-group {
+      min-width: 120px;
+   }
+
+   /* The week reads as a title flanked by its arrows, no box: it is a heading, not a control group. */
+   .mobile-bottom-bar > .weekbar {
+      grid-area: 1 / 2 / 2 / 3;
+      /* Fixed so the arrows never move: fits the longest title, "Week 37: 14 Sept - 20 Sept". */
+      grid-template-columns: 32px 256px 32px;
+      gap: 8px;
+      padding: 0;
+   }
+
+   .mobile-bottom-bar > .weekbar .weekbar__content {
+      padding: 2px 12px;
+   }
+
+   .mobile-bottom-bar > .weekbar .weekbar__label {
+      font-size: 0.62rem;
+   }
+
+   .mobile-bottom-bar > .weekbar .weekbar__title {
+      font-size: 1.05rem;
+   }
+}
+
+/* ---- Hierarchy pass -------------------------------------------------------------------
+   Same layout, fewer competing signals in the grid: quieter rule lines, roomier cards, and
+   type that steps down in clear stages. The agenda keeps its colours and only gains a firmer
+   start time. */
+.app-content-frame {
+   box-shadow:
+      0 1px 0 hsl(from var(--highlight) h s l / 0.04) inset,
+      0 30px 60px -30px hsl(0 0% 0% / 0.5);
+}
+
+.agenda-class__time > span:first-child {
+   font-weight: 650;
+}
+
+.grid-line {
+   --line-opacity: 0.22;
+}
+
+.grid-line[data-major="true"] {
+   --line-opacity: 0.55;
+}
+
+.grid-class {
+   padding: 8px 10px 8px 11px;
+   border-radius: 10px;
+   gap: 3px;
+}
+
+.grid-class strong {
+   font-size: 0.92rem;
+   font-weight: 650;
+   letter-spacing: -0.005em;
+}
+
+.grid-class span {
+   color: var(--text-dim);
+   font-size: 0.74rem;
+}
+
+.grid-class small {
+   color: var(--text-muted);
+   letter-spacing: 0.01em;
+}
+
+@media (max-width: 480px) {
+   .grid-class {
+      padding: 4px 4px 4px 5px;
+   }
+
+   .grid-class strong {
+      font-size: 0.7rem;
    }
 }

@@ -332,7 +332,7 @@
    }
 }
 
-@media (max-width: 640px) {
+@media (max-width: 480px) {
    .grid-header {
       grid-template-columns: 46px repeat(var(--grid-day-count, 5), minmax(0, 1fr));
    }
@@ -400,4 +400,41 @@
       transform: scaleY(1);
       transform-origin: top center;
    }
+}
+
+/* Finished classes step back a little so what is still ahead reads first. Hover restores them. */
+.grid-class[data-past="true"] {
+   opacity: 0.72;
+   transition:
+      opacity 220ms ease-out,
+      scale 220ms var(--bounce-overshoot),
+      background 220ms ease-out;
+}
+
+.grid-class[data-past="true"]:is(:hover, :focus-visible) {
+   opacity: 1;
+}
+
+/* Today's column carries a faint tint that fades out toward the end of the day. */
+.grid-day-column[data-today="true"] {
+   background: linear-gradient(to bottom, hsl(from var(--accent) h s l / 0.035), transparent);
+}
+
+/* A cancelled class keeps its slot but reads as struck: hatched, muted, title crossed out. */
+.grid-class.status-cancelled {
+   border-color: hsl(from var(--danger) h s l / 0.18);
+   border-left-color: hsl(from var(--danger) h s l / 0.6);
+   background: repeating-linear-gradient(-45deg, hsl(from var(--danger) h s l / 0.08) 0 6px, transparent 6px 12px), hsl(from var(--surface) h s l / 0.6);
+   box-shadow: none;
+}
+
+.grid-class.status-cancelled strong {
+   color: var(--text-dim);
+   text-decoration: line-through;
+   text-decoration-color: hsl(from var(--danger) h s l / 0.75);
+   text-decoration-thickness: 2px;
+}
+
+.grid-class.status-cancelled span {
+   color: var(--text-muted);
 }

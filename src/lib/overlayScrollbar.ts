@@ -16,7 +16,7 @@ export function attachOverlayScrollbar(host: HTMLElement): () => void {
    // Mobile browsers already provide an overlay scrollbar that understands rubber-band
    // scrolling and browser chrome. Adding a translated page child there changes the page's
    // scrollable bounds and makes fixed controls jitter during overscroll.
-   if (window.matchMedia("(max-width: 640px), (hover: none), (pointer: coarse)").matches) {
+   if (window.matchMedia("(max-width: 480px), (hover: none), (pointer: coarse)").matches) {
       return () => undefined;
    }
 

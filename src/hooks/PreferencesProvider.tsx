@@ -10,7 +10,7 @@ import { DEFAULT_SHOWN_WEEKDAYS, ISO_WEEKDAYS } from "../lib/weekLayout";
 import type { ThemeId } from "../styles/themes/registry";
 import type { ViewMode } from "../types/weeks";
 
-const viewModeCodec = enumCodec<ViewMode>(["agenda", "grid"], () => (window.matchMedia("(max-width: 640px)").matches ? "agenda" : "grid"));
+const viewModeCodec = enumCodec<ViewMode>(["agenda", "grid"], () => (window.matchMedia("(max-width: 480px)").matches ? "agenda" : "grid"));
 const agendaFoldingCodec = enumCodec<AgendaFoldingMode>(["single", "smart", "all"], "smart");
 const themeCodec: StorageCodec<ThemeId> = { read: (stored) => (isThemeId(stored) ? stored : getDeviceThemeMode()), write: (theme) => theme };
 
