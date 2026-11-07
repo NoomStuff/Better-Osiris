@@ -5,14 +5,14 @@ import { readBrowserStorage, removeBrowserStorage, writeBrowserStorage } from ".
 const ENABLED_KEY = "roster-devtools-enabled";
 const TIME_KEY = "roster-devtools-time-override";
 const STATUS_KEY = "roster-devtools-status-preview";
-const IS_DEV_SERVER = import.meta.env.DEV;
+const HAS_DEV_TOOLS = import.meta.env.DEV || import.meta.env.VITE_DEV_TOOLS;
 
 function getInitialEnabled() {
-   return IS_DEV_SERVER && readBrowserStorage("localStorage", ENABLED_KEY) === "true";
+   return HAS_DEV_TOOLS && readBrowserStorage("localStorage", ENABLED_KEY) === "true";
 }
 
 function getInitialTimeOverride(): Date | null {
-   if (!IS_DEV_SERVER) return null;
+   if (!HAS_DEV_TOOLS) return null;
    const stored = readBrowserStorage("localStorage", TIME_KEY);
    if (!stored) return null;
    const date = new Date(stored);
@@ -20,7 +20,7 @@ function getInitialTimeOverride(): Date | null {
 }
 
 function getInitialStatus(): DevClassStatusPreviewMode {
-   if (!IS_DEV_SERVER) return "none";
+   if (!HAS_DEV_TOOLS) return "none";
    const stored = readBrowserStorage("localStorage", STATUS_KEY);
    return isDevClassStatusPreviewMode(stored) ? stored : "none";
 }
@@ -31,25 +31,25 @@ export function useDevPreview() {
    const [statusPreviewMode, setStatusPreviewMode] = useState<DevClassStatusPreviewMode>(getInitialStatus);
 
    useEffect(() => {
-      if (IS_DEV_SERVER) writeBrowserStorage("localStorage", ENABLED_KEY, String(isEnabled));
+      if (HAS_DEV_TOOLS) writeBrowserStorage("localStorage", ENABLED_KEY, String(isEnabled));
    }, [isEnabled]);
    useEffect(() => {
-      if (!IS_DEV_SERVER) return;
+      if (!HAS_DEV_TOOLS) return;
       if (timeOverride) writeBrowserStorage("localStorage", TIME_KEY, timeOverride.toISOString());
       else removeBrowserStorage("localStorage", TIME_KEY);
    }, [timeOverride]);
    useEffect(() => {
-      if (IS_DEV_SERVER) writeBrowserStorage("localStorage", STATUS_KEY, statusPreviewMode);
+      if (HAS_DEV_TOOLS) writeBrowserStorage("localStorage", STATUS_KEY, statusPreviewMode);
    }, [statusPreviewMode]);
 
    const toggle = useCallback((enabled: boolean) => {
-      if (!IS_DEV_SERVER) return;
+      if (!HAS_DEV_TOOLS) return;
       setIsEnabled(enabled);
       if (!enabled) setTimeOverride(null);
    }, []);
 
    const changeTimeOverride = useCallback((date: Date | null) => {
-      if (!IS_DEV_SERVER) return;
+      if (!HAS_DEV_TOOLS) return;
       setTimeOverride(date);
    }, []);
 

@@ -256,14 +256,14 @@
 @media (min-width: 641px) {
    /* Bar height + top page padding + content gap, kept in sync with the fixed bar height below. */
    html:root {
-      --chrome-height: 90px;
+      --chrome-height: 80px;
    }
 
    .mobile-bottom-bar {
       display: grid;
       grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
       align-items: center;
-      height: 62px;
+      height: 52px;
    }
 
    /* The toolbar spans the row underneath the week group, so only its own controls take clicks. */
@@ -277,160 +277,41 @@
       pointer-events: auto;
    }
 
+   /* The week reads as a title flanked by its arrows, no box: it is a heading, not a control group. */
    .mobile-bottom-bar > .weekbar {
       grid-area: 1 / 2 / 2 / 3;
-      grid-template-columns: 36px minmax(240px, auto) 36px;
-      gap: 6px;
-      padding: 4px;
-      border: 1px solid var(--chrome-line);
-      border-radius: 16px;
-      background: hsl(from var(--chrome-highlight) h s l / 0.025);
+      grid-template-columns: 32px minmax(220px, auto) 32px;
+      gap: 8px;
+      padding: 0;
    }
 
    .mobile-bottom-bar > .weekbar .weekbar__content {
-      padding: 3px 14px;
+      padding: 2px 12px;
+   }
+
+   .mobile-bottom-bar > .weekbar .weekbar__label {
+      font-size: 0.62rem;
+   }
+
+   .mobile-bottom-bar > .weekbar .weekbar__title {
+      font-size: 1.05rem;
    }
 }
 
 /* ---- Hierarchy pass -------------------------------------------------------------------
-   Same layout, fewer competing signals. One border weight, one accent per region, and type
-   that steps down in clear stages: what > when > where > the rest. */
+   Same layout, fewer competing signals in the grid: quieter rule lines, roomier cards, and
+   type that steps down in clear stages. The agenda keeps its colours and only gains a firmer
+   start time. */
 .app-content-frame {
-   border-width: 1px;
-   border-color: hsl(from var(--line) h s l / calc(alpha * 1.15));
    box-shadow:
       0 1px 0 hsl(from var(--highlight) h s l / 0.04) inset,
       0 30px 60px -30px hsl(0 0% 0% / 0.5);
 }
 
-.weekbar__title {
-   font-size: clamp(1rem, 1.7vw, 1.32rem);
-   letter-spacing: -0.01em;
-}
-
-.weekbar__label {
-   letter-spacing: 0.2em;
-}
-
-/* Agenda: day headers */
-.day-group {
-   border-bottom-color: hsl(from var(--line) h s l / calc(alpha * 0.7));
-}
-
-.day-group__header {
-   padding-block: 10px;
-}
-
-.day-group__daymark {
-   gap: 10px;
-   padding: 10px 18px;
-}
-
-.day-group__weekday {
-   font-size: 1.02rem;
-   font-weight: 700;
-   letter-spacing: -0.005em;
-}
-
-.day-group__date {
-   font-size: 0.86rem;
-   font-variant-numeric: tabular-nums;
-}
-
-.day-group__meta {
-   font-size: 0.8rem;
-}
-
-.day-group[data-today="true"] .day-group__header {
-   background: linear-gradient(90deg, hsl(from var(--accent) h s l / 0.1), transparent 70%);
-   box-shadow: inset 3px 0 0 var(--accent);
-}
-
-.day-group[data-today="true"] .day-group__daymark {
-   min-width: 0;
-   background: none;
-   box-shadow: none;
-}
-
-.day-group[data-today="true"] .day-group__weekday {
-   color: var(--accent);
-}
-
-.day-group[data-today="true"] .day-group__date {
-   color: var(--text-dim);
-}
-
-/* Agenda: rows */
-.day-group[data-expanded="true"] .day-group__body-inner {
-   padding: 6px 10px 12px;
-   gap: 2px;
-}
-
-.agenda-class {
-   grid-template-columns: 72px minmax(0, 1fr) 16px;
-   gap: 16px;
-   padding: 12px 14px;
-   border-width: 1px;
-}
-
-.agenda-class__time {
-   gap: 1px;
-   padding-right: 14px;
-   border-right: 1px solid var(--line);
-}
-
 .agenda-class__time > span:first-child {
-   color: var(--text-strong);
-   font-weight: 700;
-   font-size: 0.98rem;
-}
-
-.agenda-class__time > span:last-child {
-   font-size: 0.82rem;
-}
-
-.agenda-class__body {
-   gap: 2px;
-}
-
-.agenda-class__body strong {
-   font-size: 1rem;
    font-weight: 650;
-   color: var(--text-strong);
 }
 
-.agenda-class__body p {
-   color: var(--text-dim);
-   font-size: 0.86rem;
-}
-
-.agenda-class__body small {
-   color: var(--text-muted);
-   font-size: 0.76rem;
-   letter-spacing: 0.01em;
-}
-
-.agenda-class:is(.status-added, .status-changed) .agenda-class__time > span:first-child {
-   color: var(--warning);
-}
-
-.agenda-class.status-cancelled .agenda-class__time > span:first-child {
-   color: hsl(from var(--danger) h s l / 0.75);
-}
-
-.agenda-breaktime {
-   min-height: 26px;
-   color: var(--text-muted);
-   font-size: 0.74rem;
-   font-weight: 600;
-}
-
-.agenda-breaktime__label i {
-   color: var(--text-muted);
-   opacity: 1;
-}
-
-/* Grid */
 .grid-line {
    --line-opacity: 0.22;
 }
@@ -441,8 +322,6 @@
 
 .grid-class {
    padding: 8px 10px 8px 11px;
-   border: 1px solid hsl(from var(--class-border) h s l / calc(alpha * 0.7));
-   border-left: 3px solid hsl(from var(--accent) h s l / 0.8);
    border-radius: 10px;
    gap: 3px;
 }
@@ -464,44 +343,6 @@
 }
 
 @media (max-width: 640px) {
-   .agenda-class {
-      grid-template-columns: 58px minmax(0, 1fr) 12px;
-      gap: 12px;
-      padding: 10px 10px 10px 12px;
-   }
-
-   .agenda-class__time {
-      padding-right: 10px;
-   }
-
-   .agenda-class__time > span:first-child {
-      font-size: 0.9rem;
-   }
-
-   .agenda-class__time > span:last-child {
-      font-size: 0.76rem;
-   }
-
-   .agenda-class__body strong {
-      font-size: 0.92rem;
-   }
-
-   .agenda-class__body p {
-      font-size: 0.78rem;
-   }
-
-   .agenda-class__body small {
-      font-size: 0.7rem;
-   }
-
-   .day-group__daymark {
-      padding: 6px 14px;
-   }
-
-   .day-group__weekday {
-      font-size: 0.96rem;
-   }
-
    .grid-class {
       padding: 4px 4px 4px 5px;
    }
