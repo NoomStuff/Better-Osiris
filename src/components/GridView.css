@@ -415,12 +415,7 @@
    opacity: 1;
 }
 
-/* Today's column carries a faint tint that peaks where the header meets the timetable:
-   the header fades out upward, the day fades out downward. */
-.grid-header__day[data-today="true"] {
-   background: linear-gradient(to top, hsl(from var(--accent) h s l / 0.035), transparent);
-}
-
+/* Today's column carries a faint tint that fades out toward the end of the day. */
 .grid-day-column[data-today="true"] {
    background: linear-gradient(to bottom, hsl(from var(--accent) h s l / 0.035), transparent);
 }
