@@ -474,7 +474,7 @@
    }
 }
 
-@media (max-width: 640px) {
+@media (max-width: 480px) {
    .theme-picker__option {
       flex: 0 0 auto;
       width: 72px;

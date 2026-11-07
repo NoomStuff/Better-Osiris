@@ -132,7 +132,7 @@
    }
 }
 
-@media (max-width: 640px) {
+@media (max-width: 480px) {
    .overlay-panel--sheet {
       padding: 10px;
    }

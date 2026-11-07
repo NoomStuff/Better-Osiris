@@ -346,7 +346,7 @@
    }
 }
 
-@media (max-width: 640px) {
+@media (max-width: 480px) {
    .day-group__header {
       padding: 12px 10px 12px 0;
       gap: 8px;

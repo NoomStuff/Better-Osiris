@@ -260,7 +260,7 @@
    font-variant-numeric: tabular-nums;
 }
 
-@media (max-width: 640px) {
+@media (max-width: 480px) {
    .next-up {
       bottom: calc(var(--mobile-toolbar-clearance, 130px) + 6px);
       width: min(100% - 20px, 430px);

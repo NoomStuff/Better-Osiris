@@ -204,7 +204,7 @@ button {
    animation-timing-function: var(--ease-out);
 }
 
-@media (max-width: 640px) {
+@media (max-width: 480px) {
    html,
    body,
    #app {

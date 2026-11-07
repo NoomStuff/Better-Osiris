@@ -272,7 +272,7 @@
    text-decoration-thickness: 2px;
 }
 
-@media (max-width: 640px) {
+@media (max-width: 480px) {
    .class-panel__content {
       padding-bottom: 20px;
    }

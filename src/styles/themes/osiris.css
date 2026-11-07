@@ -45,7 +45,7 @@ html[data-theme="osiris"],
 
 /* On desktop the header is bare against the page, so this theme paints the banner itself.
    On mobile the bar already uses --chrome-surface and gets the same banner as a card. */
-@media (min-width: 641px) {
+@media (min-width: 481px) {
    html[data-theme="osiris"] .mobile-bottom-bar {
       display: flex;
       flex-direction: column;
@@ -58,6 +58,19 @@ html[data-theme="osiris"],
 
    html[data-theme="osiris"] .weekbar {
       padding: 0;
+   }
+}
+
+/* The one-row header keeps the banner; its padding sits outside the 52px row. */
+@media (min-width: 960px) {
+   html[data-theme="osiris"] {
+      --chrome-height: 96px;
+   }
+
+   html[data-theme="osiris"] .mobile-bottom-bar {
+      display: grid;
+      height: 68px;
+      padding: 8px 16px;
    }
 }
 
